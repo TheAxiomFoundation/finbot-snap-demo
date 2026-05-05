@@ -60,7 +60,7 @@ export interface ExecutionRequest {
   queries: QueryRequest[];
 }
 
-export type Outcome = "holds" | "not_holds";
+type Outcome = "holds" | "not_holds";
 
 export type OutputValue =
   | { kind: "scalar"; name: string; id: string; dtype: string; unit?: string | null; value: { kind: string; value: string | number | boolean } }
@@ -144,7 +144,7 @@ async function ensureBinary(): Promise<void> {
   }
 }
 
-export async function artifactPath(slug: string): Promise<string> {
+async function artifactPath(slug: string): Promise<string> {
   const p = path.join(ARTIFACTS_DIR, `${slug}.compiled.json`);
   try {
     await fs.access(p, fs.constants.R_OK);
