@@ -16,15 +16,13 @@ import {
   type ExecutionResponse,
   type FactScalar,
   type InputRecord,
-  type Interval,
   fact,
   monthInterval,
   readOutput,
-  recordsForEntity,
   runCompiled,
 } from "../engine";
 
-export const ARTIFACT_SLUG = "co-snap";
+const ARTIFACT_SLUG = "co-snap";
 
 /** The friendly fact contract the LLM tools speak. Each maps to one or more
  *  underlying input slot names in {@link FRIENDLY_TO_SLOT}. This list is
@@ -75,21 +73,8 @@ function legalInputId(slotName: string): string {
   return SYNTHETIC_INPUT_PREFIX + slotName;
 }
 
-/** Build a complete {slotName: scalar} map for one entity, defaulting every
- *  slot from the auto-generated schema and applying friendly-fact overrides. */
-function buildEntityInputs(
-  baseInputs: ReadonlyArray<{ name: string; dtype: string; default: unknown }>,
-  overrides: Record<string, FactScalar>
-): Record<string, FactScalar> {
-  const out: Record<string, FactScalar> = {};
-  for (const input of baseInputs) {
-    out[input.name] = (overrides[input.name] ?? input.default) as FactScalar;
-  }
-  return out;
-}
-
 /** Apply user-facing overrides to the auto-generated base schema. */
-export function applyOverrides(facts: CoSnapFacts): {
+function applyOverrides(facts: CoSnapFacts): {
   household_overrides: Record<string, FactScalar>;
   primary_member_overrides: Record<string, FactScalar>;
   resolved: CoSnapFacts;
@@ -123,7 +108,7 @@ export function applyOverrides(facts: CoSnapFacts): {
 }
 
 /** Build the engine ExecutionRequest. */
-export function buildRequest(facts: CoSnapFacts, mode: "fast" | "explain" = "explain"): {
+function buildRequest(facts: CoSnapFacts, mode: "fast" | "explain" = "explain"): {
   request: ExecutionRequest;
   resolved: CoSnapFacts;
 } {
@@ -317,7 +302,7 @@ function shapeResult(response: ExecutionResponse, resolved: CoSnapFacts): CoSnap
 }
 
 /** Each output id encodes its legal source. */
-export function citationsFor(outputs: Record<string, unknown>): Array<{ id: string; url: string }> {
+function citationsFor(outputs: Record<string, unknown>): Array<{ id: string; url: string }> {
   const seen = new Set<string>();
   const cites: Array<{ id: string; url: string }> = [];
   for (const id of Object.keys(outputs)) {

@@ -36,10 +36,6 @@ export const CATALOG: EncodedProgram[] = [
   },
 ];
 
-export function programBySlug(slug: string): EncodedProgram | undefined {
-  return CATALOG.find((p) => p.slug === slug);
-}
-
 export function programsForJurisdiction(jurisdiction?: string): EncodedProgram[] {
   if (!jurisdiction) return CATALOG;
   return CATALOG.filter((p) => p.jurisdiction === jurisdiction);

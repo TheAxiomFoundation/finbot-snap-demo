@@ -178,5 +178,3 @@ export const tools = {
     },
   }),
 };
-
-export type FinbotTools = typeof tools;
