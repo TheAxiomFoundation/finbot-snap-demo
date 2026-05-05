@@ -123,6 +123,12 @@ export function monthInterval(period: string): { interval: Interval; period: { p
   return { interval: { start, end }, period: { period_kind: "month", start, end } };
 }
 
+/** Where to send compute requests when running in production (Vercel).
+ *  Points at the Modal-hosted axiom-engine service; see modal_app.py. When
+ *  unset, the runtime falls back to spawning the binary locally — that's the
+ *  development path on a machine where `bun run engine:setup` has run. */
+const ENGINE_URL = process.env.AXIOM_ENGINE_URL?.replace(/\/$/, "");
+
 let cachedBinaryOk: boolean | null = null;
 
 async function ensureBinary(): Promise<void> {
@@ -133,7 +139,7 @@ async function ensureBinary(): Promise<void> {
   } catch {
     cachedBinaryOk = false;
     throw new Error(
-      `axiom-rules binary not found at ${BINARY}. Run \`bun run engine:setup\` first.`
+      `axiom-rules binary not found at ${BINARY}. Run \`bun run engine:setup\` first, or set AXIOM_ENGINE_URL to a deployed engine.`
     );
   }
 }
@@ -148,8 +154,37 @@ export async function artifactPath(slug: string): Promise<string> {
   }
 }
 
-/** Run a compiled artifact against a built request. Throws on engine error. */
+/** Run a compiled artifact against a built request. Throws on engine error.
+ *
+ *  Two transports, picked by env:
+ *    - `AXIOM_ENGINE_URL` set → POST to {url}/run (production path).
+ *    - unset → spawn the local binary against the local artifact (dev path).
+ *
+ *  Both transports share the same request/response shape so callers don't
+ *  care which is in use.
+ */
 export async function runCompiled(
+  slug: string,
+  request: ExecutionRequest
+): Promise<ExecutionResponse> {
+  if (ENGINE_URL) return runViaHttp(slug, request);
+  return runViaSubprocess(slug, request);
+}
+
+async function runViaHttp(slug: string, request: ExecutionRequest): Promise<ExecutionResponse> {
+  const r = await fetch(`${ENGINE_URL}/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ program: slug, request }),
+  });
+  if (!r.ok) {
+    const body = await r.text();
+    throw new Error(`axiom-engine ${r.status}: ${body.slice(0, 500)}`);
+  }
+  return (await r.json()) as ExecutionResponse;
+}
+
+async function runViaSubprocess(
   slug: string,
   request: ExecutionRequest
 ): Promise<ExecutionResponse> {
