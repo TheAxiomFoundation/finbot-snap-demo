@@ -73,12 +73,26 @@ export async function POST(req: Request) {
   }
 
   // ── Phase 2: forced response pass ────────────────────────────────────────
+  // We hand phase 1's tool calls + results to phase 2 as a serialized JSON
+  // appendix on a user message, instead of passing role: "tool" messages
+  // directly (which gpt-5.x's API path rejects with "Unsupported role: tool").
+  // Functionally equivalent: phase 2 sees the same tool-result data, just
+  // packaged into one user-role payload.
+  const phase1Trace = serializePhase1Trace(
+    phase1 as unknown as { steps: ReadonlyArray<Phase2Step> }
+  );
   let phase2;
   try {
     phase2 = await generateText({
       model: finbotModel(),
       system: RESPONSE_SYSTEM_PROMPT,
-      messages: [...messages, ...phase1.response.messages],
+      messages: [
+        ...messages,
+        {
+          role: "user",
+          content: `[ENGINE TRACE — these are the tool calls and results from the previous step. Use them to populate the respond/decline arguments.]\n\n${phase1Trace}`,
+        },
+      ],
       tools: responseTools,
       toolChoice: "required",
       maxSteps: 1,
@@ -116,6 +130,24 @@ export async function POST(req: Request) {
 interface Phase2Step {
   toolCalls: Array<{ toolCallId: string; toolName: string; args: unknown }>;
   toolResults: Array<{ toolCallId: string; toolName: string; result: unknown }>;
+}
+
+/** Serialize phase 1's tool calls + results as a JSON appendix that phase 2
+ *  reads as a user message. Avoids passing role: "tool" messages through
+ *  OpenAI's Responses API path, which rejects them. */
+function serializePhase1Trace(phase: { steps: ReadonlyArray<Phase2Step> }): string {
+  const trace: Array<{ tool: string; args: unknown; result: unknown }> = [];
+  for (const step of phase.steps) {
+    const resultsById = new Map(step.toolResults.map((r) => [r.toolCallId, r.result]));
+    for (const call of step.toolCalls) {
+      trace.push({
+        tool: call.toolName,
+        args: call.args,
+        result: resultsById.get(call.toolCallId) ?? null,
+      });
+    }
+  }
+  return JSON.stringify(trace, null, 2);
 }
 
 /** Encode a phase's tool calls + results as a chunk of the AI SDK data-stream

@@ -99,11 +99,19 @@ async function runAxiomPipeline(
     temperature: 0.2,
   });
 
-  // Phase 2: forced respond/decline.
+  // Phase 2: forced respond/decline. Pass phase 1's trace as a serialized
+  // user message instead of role: "tool" messages — see chat/route.ts for why.
+  const phase1Trace = serializePhase1Trace(phase1.steps);
   const phase2 = await generateText({
     model: finbotModel(),
     system: RESPONSE_SYSTEM_PROMPT,
-    messages: [userMessage, ...phase1.response.messages],
+    messages: [
+      userMessage,
+      {
+        role: "user",
+        content: `[ENGINE TRACE — tool calls and results from the previous step. Use them to populate respond/decline.]\n\n${phase1Trace}`,
+      },
+    ],
     tools: responseTools,
     toolChoice: "required",
     maxSteps: 1,
@@ -134,4 +142,26 @@ async function runAxiomPipeline(
     }
   }
   return { invocations };
+}
+
+interface PipelineStep {
+  toolCalls: ReadonlyArray<{ toolCallId: string; toolName: string; args: unknown }>;
+  toolResults: ReadonlyArray<{ toolCallId: string; toolName: string; result: unknown }>;
+}
+
+/** Serialize phase 1's tool calls + results as a JSON appendix that phase 2
+ *  reads as a user message. Matches the helper in chat/route.ts. */
+function serializePhase1Trace(steps: ReadonlyArray<PipelineStep>): string {
+  const trace: Array<{ tool: string; args: unknown; result: unknown }> = [];
+  for (const step of steps) {
+    const resultsById = new Map(step.toolResults.map((r) => [r.toolCallId, r.result]));
+    for (const call of step.toolCalls) {
+      trace.push({
+        tool: call.toolName,
+        args: call.args,
+        result: resultsById.get(call.toolCallId) ?? null,
+      });
+    }
+  }
+  return JSON.stringify(trace, null, 2);
 }

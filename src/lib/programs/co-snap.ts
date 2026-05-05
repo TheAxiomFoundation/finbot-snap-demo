@@ -199,6 +199,55 @@ export interface CoSnapResult {
   citations: Array<{ id: string; url: string }>;
 }
 
+interface OutputMeta {
+  name: string;
+  id: string;
+  entity: string;
+  semantics: string;
+  dtype: string | null;
+  unit: string | null;
+  source: string | null;
+}
+
+const ALL_OUTPUTS = CO_SNAP_BASE.all_outputs as ReadonlyArray<OutputMeta>;
+
+/** Tolerant resolver — accepts either a full legal_id or just the trailing
+ *  `#name`/`name` portion. Returns undefined if no match (or ambiguous match).
+ *
+ *  Why: the model often guesses the file-path prefix wrong (e.g. it picks
+ *  `us:policies/usda/snap/fy-2026-cola/deductions` for snap_earned_income_deduction
+ *  when it actually lives at `us:statutes/7/2014/e/2`). The output NAME is
+ *  unique across the program, so we let the suffix do the work. */
+function resolveOutput(legal_id: string): OutputMeta | undefined {
+  const exact = ALL_OUTPUTS.find((o) => o.id === legal_id);
+  if (exact) return exact;
+  const namePart = legal_id.includes("#") ? legal_id.split("#").pop()! : legal_id;
+  const byName = ALL_OUTPUTS.filter((o) => o.name === namePart);
+  if (byName.length === 1) return byName[0];
+  return undefined;
+}
+
+/** Helpful error when resolution fails — includes close matches so the model
+ *  can self-correct without going back to list_encoded_outputs. */
+function buildLookupError(legal_id: string): string {
+  const namePart = legal_id.includes("#") ? legal_id.split("#").pop()! : legal_id;
+  const ambiguous = ALL_OUTPUTS.filter((o) => o.name === namePart);
+  if (ambiguous.length > 1) {
+    const ids = ambiguous.map((o) => o.id).join(", ");
+    return `legal_id ${legal_id} is ambiguous — multiple outputs share the name "${namePart}". Use one of: ${ids}`;
+  }
+  // Look for substring matches on the local name to suggest alternatives.
+  const needle = namePart.toLowerCase();
+  const close = ALL_OUTPUTS.filter(
+    (o) => o.name.toLowerCase().includes(needle) || needle.includes(o.name.toLowerCase())
+  ).slice(0, 5);
+  if (close.length > 0) {
+    const ids = close.map((o) => o.id).join(", ");
+    return `unknown legal_id: ${legal_id}. Did you mean one of: ${ids}?`;
+  }
+  return `unknown legal_id: ${legal_id} — call list_encoded_outputs(search="${namePart}") to find the right id.`;
+}
+
 /** Run the engine with arbitrary query outputs. Used by lookup_value to
  *  query any of the 168 derived outputs by legal ID, routed to the right
  *  entity_id based on the rule's entity scope. */
@@ -216,20 +265,13 @@ export async function lookupValue(
   source: string | null;
   applied_facts: CoSnapFacts;
 }> {
-  const meta = (CO_SNAP_BASE.all_outputs as ReadonlyArray<{
-    name: string;
-    id: string;
-    entity: string;
-    semantics: string;
-    dtype: string | null;
-    unit: string | null;
-    source: string | null;
-  }>).find((o) => o.id === legal_id);
+  const meta = resolveOutput(legal_id);
   if (!meta) {
-    throw new Error(
-      `unknown legal_id: ${legal_id} — call list_encoded_outputs to see what's available`
-    );
+    throw new Error(buildLookupError(legal_id));
   }
+  // Use the resolved canonical id for the engine query — the model's input
+  // may have had a wrong file prefix that we just fixed up.
+  legal_id = meta.id;
 
   const { request, resolved } = buildRequest(facts, "explain");
   const period = request.queries[0].period;

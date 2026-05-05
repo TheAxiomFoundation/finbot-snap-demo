@@ -99,6 +99,14 @@ export const tools = {
     },
   }),
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Engine tools. Errors are returned as data ({error, ...hints}) instead of
+  // thrown, so the model can read them and retry with corrected args. A
+  // thrown error fails the whole streamText; a returned error is just
+  // another tool result the model gets to react to. That self-correction
+  // path is the harness move that prevents "model guessed a legal_id
+  // wrong → chat shows a 500" failure modes.
+  // ──────────────────────────────────────────────────────────────────────
   compute_co_snap: tool({
     description:
       `Run the Colorado SNAP FY-2026 RuleSpec against a household and return its monthly benefit and eligibility breakdown.
@@ -122,8 +130,9 @@ export const tools = {
       try {
         return await compute(facts as CoSnapFacts);
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         console.error("[finbot] compute_co_snap failed:", err, "facts:", facts);
-        throw err;
+        return { error: message };
       }
     },
   }),
@@ -137,8 +146,9 @@ export const tools = {
         const ranked = await rankNextQuestions(facts as CoSnapFacts);
         return { ranked };
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         console.error("[finbot] rank_next_question failed:", err);
-        throw err;
+        return { error: message };
       }
     },
   }),
@@ -154,8 +164,11 @@ export const tools = {
       try {
         return await lookupValue(legal_id, (facts ?? {}) as CoSnapFacts);
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         console.error("[finbot] lookup_value failed:", err, "legal_id:", legal_id);
-        throw err;
+        // Returned (not thrown) so the model can read the "did you mean"
+        // suggestion in the error message and retry with the correct id.
+        return { error: message, retry_hint: "If the error contains 'did you mean', call lookup_value again with one of those legal_ids." };
       }
     },
   }),
@@ -172,8 +185,9 @@ export const tools = {
       try {
         return await fetchCitation(legal_id);
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         console.error("[finbot] fetch_citation failed:", err);
-        throw err;
+        return { error: message };
       }
     },
   }),
