@@ -1,6 +1,8 @@
 "use client";
 import type { ToolInvocation } from "ai";
 
+import { SURFACE_OUTPUT_DESCRIPTIONS } from "@/lib/programs/co-snap-meta";
+
 interface Props {
   invocation: ToolInvocation;
 }
@@ -56,22 +58,30 @@ function judgmentBadge(v: "holds" | "not_holds" | undefined) {
 
 function CoSnapResultSummary({ result }: { result: any }) {
   const o = result.outputs ?? {};
+  const rows: Array<[string, string, string]> = [
+    ["Gross income", fmt(o.gross_income), "gross_income"],
+    ["Net income", fmt(o.snap_net_income), "snap_net_income"],
+    ["Max allotment (size)", fmt(o.snap_maximum_allotment), "snap_maximum_allotment"],
+    ["Standard utility allow.", fmt(o.snap_standard_utility_allowance), "snap_standard_utility_allowance"],
+    ["Std deduction", fmt(o.snap_standard_deduction), "snap_standard_deduction"],
+    ["Earned income deduction", fmt(o.snap_earned_income_deduction), "snap_earned_income_deduction"],
+    ["Excess shelter deduction", fmt(o.excess_shelter_deduction), "excess_shelter_deduction"],
+    ["Shelter costs", fmt(o.shelter_costs), "shelter_costs"],
+  ];
   return (
     <div>
-      <div style={{ display: "flex", gap: 12, alignItems: "baseline", marginBottom: 8, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "baseline", marginBottom: 4, flexWrap: "wrap" }}>
         <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{fmt(o.snap_regular_month_allotment)}</span>
         <span style={{ fontSize: 12, color: "#6b7280" }}>regular monthly allotment</span>
         {judgmentBadge(o.snap_eligible)}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6, fontSize: 12 }}>
-        <Row label="Gross income" value={fmt(o.gross_income)} />
-        <Row label="Net income" value={fmt(o.snap_net_income)} />
-        <Row label="Max allotment (size)" value={fmt(o.snap_maximum_allotment)} />
-        <Row label="Standard utility allow." value={fmt(o.snap_standard_utility_allowance)} />
-        <Row label="Std deduction" value={fmt(o.snap_standard_deduction)} />
-        <Row label="Earned income deduction" value={fmt(o.snap_earned_income_deduction)} />
-        <Row label="Excess shelter deduction" value={fmt(o.excess_shelter_deduction)} />
-        <Row label="Shelter costs" value={fmt(o.shelter_costs)} />
+      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
+        {SURFACE_OUTPUT_DESCRIPTIONS.snap_regular_month_allotment}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, fontSize: 12 }}>
+        {rows.map(([label, value, key]) => (
+          <Row key={key} label={label} value={value} description={SURFACE_OUTPUT_DESCRIPTIONS[key]} />
+        ))}
       </div>
       <div style={{ marginTop: 8, fontSize: 11, color: "#6b7280" }}>
         Sources:{" "}
@@ -172,11 +182,18 @@ function CitationSummary({ result }: { result: any }) {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, description }: { label: string; value: string; description?: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "2px 0" }}>
-      <span style={{ color: "#6b7280" }}>{label}</span>
-      <span className="mono">{value}</span>
+    <div style={{ padding: "4px 0" }}>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <span style={{ color: "#374151" }}>{label}</span>
+        <span className="mono">{value}</span>
+      </div>
+      {description && (
+        <div style={{ fontSize: 10.5, color: "#6b7280", marginTop: 2, lineHeight: 1.35 }}>
+          {description}
+        </div>
+      )}
     </div>
   );
 }
