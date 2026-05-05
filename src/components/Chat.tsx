@@ -115,7 +115,7 @@ export function Chat() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="input-pill" style={{ alignItems: "flex-end" }}>
+      <form onSubmit={handleSubmit} className="input-pill">
         <textarea
           ref={textareaRef}
           name="prompt"
