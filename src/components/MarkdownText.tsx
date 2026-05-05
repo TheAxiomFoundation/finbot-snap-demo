@@ -129,10 +129,11 @@ export function MarkdownText({ source }: { source: string }) {
             <p
               key={i}
               style={{
-                margin: first ? "0 0 10px" : "12px 0 10px",
-                fontSize: 16.5,
+                margin: first ? "0 0 12px" : "14px 0 12px",
+                fontSize: 19,
                 fontWeight: 700,
-                lineHeight: 1.4,
+                lineHeight: 1.3,
+                letterSpacing: -0.01,
               }}
             >
               {block.text}
@@ -144,11 +145,10 @@ export function MarkdownText({ source }: { source: string }) {
             <div
               key={i}
               style={{
-                margin: "12px 0 4px",
-                fontSize: 13,
+                margin: "14px 0 6px",
+                fontSize: 14.5,
                 fontWeight: 700,
-                color: "#374151",
-                letterSpacing: 0.01,
+                color: "#0b1220",
               }}
             >
               {block.text.replace(/:\s*$/, "")}
