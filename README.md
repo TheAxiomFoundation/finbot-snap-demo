@@ -62,3 +62,14 @@ The system prompt in `src/lib/prompts.ts` is intentionally generic about the cat
 ## Verification
 
 `bun run engine:test` reproduces the verified base case: single applicant aged 60 in Colorado, $1,000/mo wages, $500 shelter cost, separate heating → **$298 monthly allotment, eligible**, matching `rules-us-co` test fixture exactly.
+
+## Deployment
+
+Two services on PolicyEngine accounts:
+
+- **Modal** hosts the `axiom-rules` binary at `https://policyengine--axiom-engine-web.modal.run` (`modal_app.py`).
+- **Vercel** hosts the Next.js app, calling Modal via `AXIOM_ENGINE_URL`.
+
+Local dev keeps working without either — the engine adapter falls back to the local Rust binary when `AXIOM_ENGINE_URL` is unset.
+
+Step-by-step in [DEPLOY.md](./DEPLOY.md).
