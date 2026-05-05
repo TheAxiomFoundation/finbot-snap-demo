@@ -30,6 +30,7 @@ export function Compare() {
   const [prompt, setPrompt] = useState(SCENARIOS[0].prompt);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
+    model?: string;
     raw?: { text?: string; error?: string };
     axiom?: { text?: string; invocations?: WireInvocation[]; error?: string };
   } | null>(null);
@@ -85,10 +86,16 @@ export function Compare() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <Pane title="OpenAI alone" subtitle="GPT-4o, no tools, no axiom" tone="neutral" body={result?.raw} loading={loading} />
+        <Pane
+          title="OpenAI alone"
+          subtitle={`${result?.model ?? "OpenAI"}, no tools, no axiom`}
+          tone="neutral"
+          body={result?.raw}
+          loading={loading}
+        />
         <Pane
           title="OpenAI + Axiom"
-          subtitle="Same model, axiom-rules tools wired in"
+          subtitle={`Same model${result?.model ? ` (${result.model})` : ""}, axiom-rules tools wired in`}
           tone="grounded"
           body={result?.axiom}
           loading={loading}

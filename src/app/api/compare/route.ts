@@ -5,7 +5,7 @@
  */
 import { generateText } from "ai";
 
-import { finbotModel } from "@/lib/model";
+import { FINBOT_MODEL_NAME, finbotModel } from "@/lib/model";
 import { SYSTEM_PROMPT } from "@/lib/prompts";
 import { tools } from "@/lib/tools";
 
@@ -62,6 +62,7 @@ export async function POST(req: Request) {
     : [];
 
   const result = {
+    model: FINBOT_MODEL_NAME,
     raw: raw.status === "fulfilled" ? { text: raw.value.text } : { error: String(raw.reason) },
     axiom:
       axiom.status === "fulfilled"
