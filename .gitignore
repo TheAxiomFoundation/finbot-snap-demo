@@ -10,3 +10,4 @@ engine/artifacts/
 *.log
 .vercel
 tsconfig.tsbuildinfo
+__pycache__/
