@@ -101,7 +101,22 @@ export const tools = {
 
   compute_co_snap: tool({
     description:
-      "Run the Colorado SNAP FY-2026 RuleSpec against a household. Returns the regular monthly allotment, eligibility judgments, and intermediate values. ALL dollar figures and eligibility verdicts you cite to the user MUST come from this tool — do not estimate.",
+      `Run the Colorado SNAP FY-2026 RuleSpec against a household and return its monthly benefit and eligibility breakdown.
+
+      HEADLINE FIELD. The user-facing dollar amount is \`outputs.snap_regular_month_allotment\`. Don't lead with \`snap_maximum_allotment\` (size-based ceiling, larger but not what's paid) or \`snap_allotment\` (CO post-proration final, often equal to regular but distinct).
+
+      ELIGIBILITY FIELDS. If \`outputs.snap_eligible\` is "not_holds", these sub-judgments locate which test failed:
+      - \`snap_resource_eligible\` (countable assets vs. asset limit)
+      - \`snap_income_eligible\` (gross / net income tests)
+      - \`snap_work_requirement_eligible\` (general / ABAWD work requirements)
+      - \`snap_residency_citizenship_eligible\` (state residency + at least one citizen-or-eligible-alien member)
+      Name the failing sub-judgment in your reply.
+
+      FACT INFERENCES the user expects you to make:
+      - "X hrs/week at $Y/hr" → monthly_earnings_per_adult ≈ X × Y × 4.33. Show the math when you state the assumption.
+      - "Single mom of two kids" / "family of four" → household_size = total people in the SNAP household.
+      - Default oldest_member_age = 30 for working-age users; primary_member_is_us_citizen = true. State both as inferred assumptions.
+      - Don't pad facts the user didn't volunteer (assets, unearned income, separate utilities, shelter cost). Leaving them undefined makes them show up in rank_next_question's variance ranking, which is the right place for them.`,
     parameters: CoSnapFactsSchema,
     execute: async (facts) => {
       try {
