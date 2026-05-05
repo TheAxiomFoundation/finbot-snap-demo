@@ -79,10 +79,24 @@ function applyOverrides(facts: CoSnapFacts): {
   primary_member_overrides: Record<string, FactScalar>;
   resolved: CoSnapFacts;
 } {
+  // Friendly-contract defaults — applied for any field the caller didn't
+  // volunteer. These intentionally diverge from the auto-generated base's
+  // defaults, which mirror the test fixture's first case (a specific
+  // household scenario) and would otherwise leak into the engine for facts
+  // the user never mentioned. Conservative defaults: $0 for amounts,
+  // false for utility-allowance flags, no elderly/disabled member, age 30,
+  // citizen=true. The user provides positive overrides only.
   const resolved: CoSnapFacts = {
     period: facts.period ?? "2026-01",
     household_size: facts.household_size ?? 1,
-    ...facts,
+    monthly_earnings_per_adult: facts.monthly_earnings_per_adult ?? 0,
+    monthly_unearned_income: facts.monthly_unearned_income ?? 0,
+    monthly_shelter_costs: facts.monthly_shelter_costs ?? 0,
+    pays_separate_heating_or_cooling: facts.pays_separate_heating_or_cooling ?? false,
+    liquid_resources: facts.liquid_resources ?? 0,
+    oldest_member_age: facts.oldest_member_age ?? 30,
+    any_member_elderly_or_disabled: facts.any_member_elderly_or_disabled ?? false,
+    primary_member_is_us_citizen: facts.primary_member_is_us_citizen ?? true,
   };
 
   const household_overrides: Record<string, FactScalar> = {};
