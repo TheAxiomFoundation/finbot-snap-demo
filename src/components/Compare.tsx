@@ -29,6 +29,7 @@ export function Compare() {
   const [scenarioId, setScenarioId] = useState(SCENARIOS[0].id);
   const [prompt, setPrompt] = useState(SCENARIOS[0].prompt);
   const [loading, setLoading] = useState(false);
+  const [showTools, setShowTools] = useState(true);
   const [result, setResult] = useState<{
     model?: string;
     raw?: { text?: string; error?: string };
@@ -79,9 +80,17 @@ export function Compare() {
         style={{ fontSize: 13, resize: "vertical", outline: 0, lineHeight: 1.5 }}
       />
 
-      <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button type="button" className="btn" onClick={run} disabled={loading || !prompt.trim()}>
           {loading ? "running both…" : "Run side-by-side"}
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ fontSize: 12 }}
+          onClick={() => setShowTools((v) => !v)}
+        >
+          {showTools ? "hide" : "show"} tool calls
         </button>
       </div>
 
@@ -92,11 +101,13 @@ export function Compare() {
           tone="neutral"
           body={result?.raw}
           loading={loading}
+          showTools={showTools}
         />
         <Pane
           title="OpenAI + Axiom"
           subtitle={`Same model${result?.model ? ` (${result.model})` : ""}, axiom-rules tools wired in`}
           tone="grounded"
+          showTools={showTools}
           body={result?.axiom}
           loading={loading}
         />
@@ -130,12 +141,14 @@ function Pane({
   tone,
   body,
   loading,
+  showTools,
 }: {
   title: string;
   subtitle: string;
   tone: "neutral" | "grounded";
   body?: { text?: string; invocations?: WireInvocation[]; error?: string };
   loading: boolean;
+  showTools: boolean;
 }) {
   return (
     <div className="card" style={{ background: tone === "grounded" ? "#f0fdfa" : "white", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -154,6 +167,7 @@ function Pane({
         <AssistantTurn
           toolInvocations={body.invocations?.map(toAiSdkInvocation)}
           text={body.text}
+          showTools={showTools}
           fluid
         />
       )}
