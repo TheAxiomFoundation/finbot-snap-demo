@@ -11,7 +11,7 @@ const STARTERS = [
 ];
 
 export function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, setInput } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error, setInput, setMessages, append } = useChat({
     api: "/api/chat",
     maxSteps: 6,
     onError(err) {
@@ -49,7 +49,15 @@ export function Chat() {
               padding: "10px 12px",
               height: "auto",
             }}
-            onClick={() => setInput(s)}
+            disabled={isLoading}
+            onClick={() => {
+              // Reset the conversation and run this example as a fresh turn.
+              // Clicking a different starter mid-conversation shouldn't append
+              // to the previous interaction — each example is its own demo.
+              setMessages([]);
+              setInput("");
+              void append({ role: "user", content: s });
+            }}
           >
             {s}
           </button>
