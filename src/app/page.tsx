@@ -49,7 +49,7 @@ export default function Page() {
         <a className="cite" href="https://github.com/TheAxiomFoundation/rules-us-co" target="_blank" rel="noreferrer">
           rules-us-co
         </a>
-        . No PolicyEngine; no fallback estimates.
+        .
       </footer>
     </main>
   );
