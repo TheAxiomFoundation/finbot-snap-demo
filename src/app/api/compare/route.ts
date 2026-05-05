@@ -3,9 +3,9 @@
  * - "raw": OpenAI with no tools, no axiom context. Whatever the model knows.
  * - "axiom": OpenAI with axiom tools enabled. Uses real RuleSpec computations.
  */
-import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
 
+import { finbotModel } from "@/lib/model";
 import { SYSTEM_PROMPT } from "@/lib/prompts";
 import { tools } from "@/lib/tools";
 
@@ -32,13 +32,13 @@ export async function POST(req: Request) {
 
   const [raw, axiom] = await Promise.allSettled([
     generateText({
-      model: openai("gpt-4o"),
+      model: finbotModel(),
       system: RAW_SYSTEM,
       prompt,
       temperature: 0.2,
     }),
     generateText({
-      model: openai("gpt-4o"),
+      model: finbotModel(),
       system: SYSTEM_PROMPT,
       prompt,
       tools,

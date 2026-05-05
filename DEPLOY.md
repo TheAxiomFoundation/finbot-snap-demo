@@ -51,6 +51,8 @@ Set the two env vars Vercel needs:
 ```bash
 vercel env add OPENAI_API_KEY        # paste the key when prompted, all envs
 vercel env add AXIOM_ENGINE_URL      # paste the Modal URL from step 1
+# Optional: override the OpenAI model (default is gpt-5.4-mini, see lib/model.ts).
+# vercel env add FINBOT_MODEL          # e.g. gpt-5.5, gpt-5.4, gpt-5.1
 ```
 
 Deploy:

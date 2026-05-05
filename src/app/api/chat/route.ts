@@ -1,6 +1,6 @@
-import { openai } from "@ai-sdk/openai";
 import { streamText, type CoreMessage } from "ai";
 
+import { finbotModel } from "@/lib/model";
 import { SYSTEM_PROMPT } from "@/lib/prompts";
 import { tools } from "@/lib/tools";
 
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const { messages } = (await req.json()) as { messages: CoreMessage[] };
 
   const result = streamText({
-    model: openai("gpt-4o"),
+    model: finbotModel(),
     system: SYSTEM_PROMPT,
     messages,
     tools,
