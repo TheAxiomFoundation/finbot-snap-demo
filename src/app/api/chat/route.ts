@@ -1,11 +1,48 @@
-import { streamText, type CoreMessage } from "ai";
+/**
+ * Two-phase chat handler. The harness owns the response shape:
+ *
+ *   Phase 1 (engine pass): the model calls list_encoded_outputs, compute_co_snap,
+ *   lookup_value, rank_next_question, fetch_citation as needed.
+ *
+ *   Phase 2 (response pass): a separate model call with tool_choice forced to
+ *   `respond` or `decline_out_of_scope`. Sees phase 1's full transcript and
+ *   has to pick one — there's no "stop without producing output" path.
+ *
+ * The two-phase shape decouples tool calling from response rendering. The
+ * model can't bail silently like it did when respond was just one of several
+ * tools it could optionally use. Both phases are non-streaming and emitted
+ * as a single data-stream the client renders incrementally — losing the
+ * streaming text animation but guaranteeing structured output.
+ */
+import { generateText, type CoreMessage } from "ai";
 
 import { finbotModel } from "@/lib/model";
 import { SYSTEM_PROMPT } from "@/lib/prompts";
 import { tools } from "@/lib/tools";
 
-export const runtime = "nodejs"; // we need child_process to spawn axiom-rules
-export const maxDuration = 60;
+export const runtime = "nodejs";
+export const maxDuration = 90;
+
+const { respond, decline_out_of_scope, ...engineTools } = tools;
+const responseTools = { respond, decline_out_of_scope };
+
+const RESPONSE_SYSTEM_PROMPT = `You are FinBot. The previous turn ran any engine tools needed; now you produce the user-facing response.
+
+You MUST call exactly one of:
+- \`respond\` — the normal benefits answer.
+- \`decline_out_of_scope\` — when the user's question was about a program Axiom hasn't encoded (federal EITC, Medicaid, another state's SNAP) or a non-benefits topic.
+
+For \`respond\`, you pick a \`kind\` and the harness builds the headline FROM YOUR ENGINE RESULTS. You do NOT write the headline string yourself for the common cases. Pick:
+- \`kind: "household_benefit"\` when you ran compute_co_snap and the user asked what THEY would get. The harness reads snap_regular_month_allotment + snap_eligible from compute_co_snap and builds the headline — including the "Not eligible — the X test failed" form when snap_eligible is "not_holds". USE THIS for not-eligible cases too; do NOT fall back to free_form for denials.
+- \`kind: "parameter_value"\` when you ran lookup_value for a specific encoded threshold/limit/rate. The harness reads the value from lookup_value and builds the headline. Pass \`parameter_label\` for context (e.g., "gross income limit for a household of 4").
+- \`kind: "free_form"\` only as a last resort, when neither path applies. Then pass \`custom_headline\` with markdown bold around the key value.
+
+Other fields you still own:
+- assumptions: facts you inferred, with derivations. Skip if no inference was needed.
+- what_could_change: FACTS about the user's situation, from rank_next_question variances. Never include capabilities ("I can fetch..." — those go in action).
+- action: a closing one-liner.
+
+Don't editorialize. Don't characterize numbers as small/large/surprising/fair. Don't volunteer mechanics ("this is low because...") unless the user asked.`;
 
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
@@ -16,27 +53,106 @@ export async function POST(req: Request) {
   }
   const { messages } = (await req.json()) as { messages: CoreMessage[] };
 
-  const result = streamText({
-    model: finbotModel(),
-    system: SYSTEM_PROMPT,
-    messages,
-    tools,
-    maxSteps: 6,
-    temperature: 0.2,
-    onError({ error }) {
-      console.error("[finbot] streamText error:", error);
-    },
-  });
+  // ── Phase 1: engine pass ─────────────────────────────────────────────────
+  let phase1;
+  try {
+    phase1 = await generateText({
+      model: finbotModel(),
+      system: SYSTEM_PROMPT,
+      messages,
+      tools: engineTools,
+      maxSteps: 6,
+      temperature: 0.2,
+    });
+  } catch (err) {
+    console.error("[finbot] phase 1 engine pass failed:", err);
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
-  return result.toDataStreamResponse({
-    // Surface the actual reason instead of the SDK's "An error occurred" default.
-    getErrorMessage(error) {
-      if (error instanceof Error) return `${error.name}: ${error.message}`;
-      try {
-        return JSON.stringify(error);
-      } catch {
-        return String(error);
-      }
+  // ── Phase 2: forced response pass ────────────────────────────────────────
+  let phase2;
+  try {
+    phase2 = await generateText({
+      model: finbotModel(),
+      system: RESPONSE_SYSTEM_PROMPT,
+      messages: [...messages, ...phase1.response.messages],
+      tools: responseTools,
+      toolChoice: "required",
+      maxSteps: 1,
+      temperature: 0.2,
+    });
+  } catch (err) {
+    console.error("[finbot] phase 2 forced-respond failed:", err);
+    return new Response(
+      JSON.stringify({ error: err instanceof Error ? err.message : String(err) }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Emit one combined data-stream: phase 1's tool calls (so the user sees
+  // what was computed), then phase 2's respond/decline call (the structured
+  // reply the renderer turns into the bubble).
+  const body =
+    encodePhaseTail(
+      phase1 as unknown as { steps: ReadonlyArray<Phase2Step> },
+      `msg-engine-${Date.now()}`
+    ) +
+    encodePhaseTail(
+      phase2 as unknown as { steps: ReadonlyArray<Phase2Step> },
+      `msg-respond-${Date.now()}`
+    );
+
+  return new Response(body, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "x-vercel-ai-data-stream": "v1",
     },
   });
+}
+
+interface Phase2Step {
+  toolCalls: Array<{ toolCallId: string; toolName: string; args: unknown }>;
+  toolResults: Array<{ toolCallId: string; toolName: string; result: unknown }>;
+}
+
+/** Encode a phase's tool calls + results as a chunk of the AI SDK data-stream
+ *  protocol, ready to send to the client. Used for both phase 1 (engine
+ *  tools) and phase 2 (respond/decline) so they render as a single assistant
+ *  turn on the client. */
+function encodePhaseTail(
+  phase: { steps: ReadonlyArray<Phase2Step> },
+  messageId: string
+): string {
+  const lines: string[] = [];
+  lines.push(`f:${JSON.stringify({ messageId })}\n`);
+  for (const step of phase.steps) {
+    for (const call of step.toolCalls) {
+      lines.push(
+        `9:${JSON.stringify({
+          toolCallId: call.toolCallId,
+          toolName: call.toolName,
+          args: call.args,
+        })}\n`
+      );
+    }
+    for (const result of step.toolResults) {
+      lines.push(
+        `a:${JSON.stringify({
+          toolCallId: result.toolCallId,
+          toolName: result.toolName,
+          result: result.result,
+        })}\n`
+      );
+    }
+  }
+  lines.push(
+    `e:${JSON.stringify({ finishReason: "stop", usage: { promptTokens: 0, completionTokens: 0 }, isContinued: false })}\n`
+  );
+  lines.push(
+    `d:${JSON.stringify({ finishReason: "stop", usage: { promptTokens: 0, completionTokens: 0 } })}\n`
+  );
+  return lines.join("");
 }

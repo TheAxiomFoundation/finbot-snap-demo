@@ -177,4 +177,90 @@ export const tools = {
       }
     },
   }),
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Response harness. The `respond` and `decline` tools own the user-facing
+  // reply: the model picks args, the client renders structurally. This is
+  // the harness pivot — instead of trusting the model to format prose
+  // correctly, we eliminate the prose path entirely. The model can't
+  // editorialize, can't pollute the "What could change this" section with
+  // system-capability bullets, and can't substitute a definition for a
+  // numeric lookup, because there's no free-form text channel to do those
+  // things in.
+  // ────────────────────────────────────────────────────────────────────────
+
+  respond: tool({
+    description:
+      `REQUIRED FINAL STEP. Picks the response shape; the harness builds the user-facing headline from your engine tool results — you do NOT write the headline string yourself.
+
+      \`kind\` says what kind of answer this is:
+      - "household_benefit": the user asked what THEY would get; you ran compute_co_snap. The harness will read \`snap_regular_month_allotment\` and \`snap_eligible\` from the most recent compute_co_snap result and build the headline. Use this for not-eligible cases too — the harness builds the "Not eligible — the X test failed" headline from the failing \`*_eligible\` sub-judgment automatically. Do NOT fall back to free_form for denials.
+      - "parameter_value": the user asked for an encoded threshold/limit/rate; you ran lookup_value. The harness will read the value from the most recent lookup_value result and build the headline.
+      - "free_form": rare edge cases where neither tool ran. ONLY then do you pass \`custom_headline\`.
+
+      assumptions, what_could_change, action are still your job — same as before. NEVER include your own capabilities in what_could_change ("I can fetch the source"); those belong in action.`,
+    parameters: z.object({
+      kind: z
+        .enum(["household_benefit", "parameter_value", "free_form"])
+        .describe("How the harness should build the headline."),
+      custom_headline: z
+        .string()
+        .optional()
+        .describe("Only used when kind === 'free_form'. Use markdown bold around the key number or verdict."),
+      parameter_label: z
+        .string()
+        .optional()
+        .describe("Only used when kind === 'parameter_value'. Short, user-facing label like 'gross income limit for a household of 4' that the headline reads as 'The [label] is $X'."),
+      assumptions: z
+        .array(
+          z.object({
+            key: z.string().describe("Short label, e.g. 'Household size' or 'Monthly wages'."),
+            value: z.string().describe("Inferred value with derivation, e.g. 'applicant + 2 children = **3**' or '$15.50/hr × 25 × 4.33 ≈ **$1,679**'."),
+          })
+        )
+        .optional()
+        .describe("Facts inferred from the user's question. Omit when no inference was needed."),
+      what_could_change: z
+        .array(
+          z.object({
+            label: z.string().describe("Short fact name, e.g. 'Liquid resources' or 'Monthly shelter costs'."),
+            detail: z.string().describe("How the answer changes if this fact differs. Cite engine numbers when rank_next_question gave bracket extremes."),
+          })
+        )
+        .optional()
+        .describe("Facts that would move the answer. Pull from rank_next_question. Skip if every variance is $0 or the answer is fully determined."),
+      action: z
+        .string()
+        .optional()
+        .describe("Closing one-liner. Capability offers go here, not in what_could_change."),
+    }),
+    execute: async (args) => args, // identity — the renderer builds the headline from engine results
+  }),
+
+  decline_out_of_scope: tool({
+    description:
+      `Use INSTEAD of respond when the user asks about a program Axiom hasn't encoded yet (federal EITC, Medicaid, SNAP in another state, ACA, etc.) or about a non-benefits topic. Produces a fixed, polite refusal that names the encoded catalog. Don't write your own version of this message — call this tool with the topic name.`,
+    parameters: z.object({
+      topic: z
+        .string()
+        .describe("What the user asked about, e.g. 'federal EITC', 'New York SNAP', 'the weather'."),
+      kind: z
+        .enum(["program_not_encoded", "off_subject"])
+        .describe("'program_not_encoded' if it's a real benefits/tax program just not in our catalog; 'off_subject' if the question is unrelated to benefits entirely."),
+    }),
+    execute: async ({ topic, kind }) => {
+      if (kind === "program_not_encoded") {
+        return {
+          headline: `**Axiom hasn't encoded ${topic} yet.**`,
+          body: `The encoded catalog is currently Colorado SNAP (FY 2026) only. I can't produce numbers for ${topic} without the engine to back them up.`,
+          action: `If your situation is in Colorado, I can model your SNAP eligibility — want to try?`,
+        };
+      }
+      return {
+        headline: `**I can only answer about encoded benefit programs.**`,
+        body: `That question is outside the scope of FinBot. The encoded catalog is currently Colorado SNAP — anything else, including general advice, isn't grounded in the rules engine.`,
+        action: `Ask about Colorado SNAP eligibility, deductions, or thresholds and I'll compute it.`,
+      };
+    },
+  }),
 };

@@ -91,7 +91,7 @@ export function Chat() {
               <AssistantTurn
                 key={m.id}
                 toolInvocations={m.toolInvocations}
-                text={m.content}
+                fallbackText={m.content}
                 showTools={showSources}
                 indentTools
               />

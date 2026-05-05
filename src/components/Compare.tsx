@@ -166,7 +166,7 @@ function Pane({
       {body && (body.text || body.invocations?.length) && (
         <AssistantTurn
           toolInvocations={body.invocations?.map(toAiSdkInvocation)}
-          text={body.text}
+          fallbackText={body.text}
           showTools={showTools}
           fluid
         />
