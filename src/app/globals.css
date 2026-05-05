@@ -17,8 +17,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-
 
 .bubble {
   border-radius: 14px;
-  padding: 12px 14px;
-  line-height: 1.45;
+  padding: 14px 16px;
+  line-height: 1.55;
   max-width: 760px;
   font-size: 14.5px;
 }
