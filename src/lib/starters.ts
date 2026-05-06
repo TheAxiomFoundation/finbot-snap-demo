@@ -1,7 +1,14 @@
 /** Pre-written starter prompts shared by the FinBot chat and the Side-by-side
- *  comparison. One source of truth so the two surfaces stay in sync. */
+ *  comparison. One source of truth so the two surfaces stay in sync.
+ *
+ *  Ordered by complexity, left → right. The left card is a pure parameter
+ *  lookup (the engine only needs lookup_value); the middle is a single-
+ *  person eligibility check; the right is a full household calculation
+ *  exercising the earned-income deduction and the shelter deduction.
+ *  All three are SNAP-only — no questions about adjacent benefits,
+ *  since the demo only encodes the Colorado SNAP rulebook. */
 export const STARTERS: readonly string[] = [
-  "I live in Colorado, single mom of two kids, work part-time at $15.50/hr for 25 hours a week. About $500/month rent. Will I get SNAP?",
-  "What's the maximum SNAP allotment for a household of 4 in Colorado right now?",
-  "I'm 65, retired, $900/month from Social Security, $200 in checking. Anything I'd qualify for?",
+  "What's the maximum SNAP allotment for a household of 4 in Colorado?",
+  "I'm single in Colorado earning $1,400/month before taxes. Would I qualify for SNAP?",
+  "I'm in Colorado with two kids, work 30 hrs/week at $16/hr, and pay $1,300/month rent. What would my SNAP benefit be?",
 ];
