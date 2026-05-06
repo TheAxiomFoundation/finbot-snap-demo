@@ -5,15 +5,26 @@
 :root {
   color-scheme: light;
   --ink: #0b1220;
+  --ink-soft: #1f2937;
+  --ink-mute: #6b7280;
   --paper: #f7f7f3;
   --hairline: #e6e6df;
+  /* Axiom Foundation amber — pulled directly from the official wordmark
+     gradient. Used sparingly on hover states and the lone product mark. */
+  --accent: #b45309;
+  --accent-deep: #8a3d08;
 }
 
-html, body { background: var(--paper); color: var(--ink); }
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+}
 
-body { font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; }
+body {
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
 
-.mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+.mono { font-family: var(--font-mono), "JetBrains Mono", ui-monospace, Menlo, monospace; }
 
 .bubble {
   border-radius: 14px;
@@ -66,14 +77,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-
   align-items: center;
 }
 
-.input-pill input {
-  flex: 1;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: 14.5px;
-}
-
 .btn {
   background: var(--ink);
   color: white;
@@ -86,25 +89,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-
 }
 
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.btn-ghost {
-  background: white;
-  color: var(--ink);
-  border: 1px solid var(--hairline);
-}
-
-.tab {
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  color: #6b7280;
-}
-.tab.active {
-  background: var(--ink);
-  color: white;
-}
 
 a.cite {
   color: #075985;
@@ -205,3 +189,104 @@ a.cite:hover { color: #0b1220; }
 }
 .thinking-dots > span:nth-child(2) { animation-delay: 0.15s; }
 .thinking-dots > span:nth-child(3) { animation-delay: 0.3s; }
+
+/* ─────────────────────────────────────────────────────────────────
+   Top app bar — Axiom Foundation house style. Sticky, hairline-
+   bottom, paper background. Axiom logo on the left followed by
+   "FinBot" as a sub-mark (parent · product pattern). The logo links
+   to axiom-foundation.org; "FinBot" is plain text.
+   ───────────────────────────────────────────────────────────────── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(247, 247, 243, 0.85);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--hairline);
+}
+.topbar-inner {
+  padding: 16px 32px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 120ms ease;
+}
+.brand-link:hover { opacity: 0.75; }
+
+.brand-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* The Axiom Foundation wordmark, scaled down. The SVG fills via the
+   amber gradient defined inside the file; we just constrain height. */
+.brand-axiom {
+  display: inline-block;
+  height: 26px;
+  width: auto;
+}
+
+.brand-divider {
+  display: inline-block;
+  width: 1px;
+  height: 22px;
+  background: var(--hairline);
+}
+
+/* "FinBot" as a sub-mark next to Axiom — Geist Sans light-weight to
+   match the Axiom wordmark's weight (300/400). */
+.brand-product {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  line-height: 1;
+}
+
+/* Page intro — light-weight Geist headline in the Axiom register,
+   then a smaller mute paragraph underneath. */
+.page-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+.page-intro h1 {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 300;
+  font-size: clamp(32px, 4.6vw, 44px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin: 0;
+  max-width: 720px;
+}
+.page-intro h1 em {
+  font-style: normal;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-deep) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 400;
+}
+.page-intro p {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-mute);
+  max-width: 620px;
+  margin: 0;
+}
+.page-intro p strong {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
