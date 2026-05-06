@@ -1,19 +1,6 @@
-"use client";
-import { useState } from "react";
-
 import { Chat } from "@/components/Chat";
-import { Compare } from "@/components/Compare";
-import { Walkthrough } from "@/components/Walkthrough";
-
-const TABS = [
-  { id: "chat", label: "FinBot" },
-  { id: "compare", label: "Side-by-side" },
-  { id: "walkthrough", label: "Walkthrough" },
-];
 
 export default function Page() {
-  const [tab, setTab] = useState("chat");
-
   return (
     <main style={{ maxWidth: 980, margin: "0 auto", padding: "32px 20px 80px" }}>
       <header style={{ marginBottom: 24 }}>
@@ -23,22 +10,7 @@ export default function Page() {
         </p>
       </header>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={`tab ${tab === t.id ? "active" : ""}`}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "chat" && <Chat />}
-      {tab === "walkthrough" && <Walkthrough />}
-      {tab === "compare" && <Compare />}
+      <Chat />
 
       <footer style={{ marginTop: 48, paddingTop: 20, borderTop: "1px solid #e6e6df", fontSize: 12, color: "#6b7280" }}>
         Built on{" "}

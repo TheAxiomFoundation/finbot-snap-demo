@@ -2,29 +2,38 @@
 import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef, useState } from "react";
 
-import { AssistantTurn } from "./AssistantTurn";
+import { STARTERS } from "@/lib/starters";
 
-const STARTERS = [
-  "I live in Colorado, single mom of two kids, work part-time at $15.50/hr for 25 hours a week. About $500/month rent. Will I get SNAP?",
-  "What's the maximum SNAP allotment for a household of 4 in Colorado right now?",
-  "I'm 65, retired, $900/month from Social Security, $200 in checking. Anything I'd qualify for?",
-];
+import { AssistantTurn } from "./AssistantTurn";
+import { MarkdownText } from "./MarkdownText";
 
 export function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, setInput, setMessages, append } = useChat({
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    error,
+    setInput,
+    setMessages,
+    append,
+  } = useChat({
     api: "/api/chat",
     maxSteps: 6,
     onError(err) {
-      // Surface real reason in the browser console for diagnosis.
       console.error("[finbot] chat error:", err);
     },
   });
-  const [showSources, setShowSources] = useState(true);
+  const [compareMode, setCompareMode] = useState(false);
+  /** Raw-LLM responses keyed by the id of the user message they answer.
+   *  null = pending (request in flight); string = completed text; absent = no
+   *  request was made (compare mode was off when the user submitted). */
+  const [rawResponses, setRawResponses] = useState<Record<string, string | null>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Resize the textarea whenever `input` changes — including programmatic
-  // updates from the starter buttons. The inline onChange only fires for
-  // user typing, so without this the box stays one line until you focus it.
+  // updates from the starter buttons.
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -32,80 +41,130 @@ export function Chat() {
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
   }, [input]);
 
+  /** Fire a /api/raw call for compare mode. The axiom side flows through
+   *  useChat normally; we just fan out a parallel raw fetch and stash the
+   *  result keyed by the latest user message id. */
+  async function fanOutRaw(messagesForRaw: Array<{ role: string; content: string }>, userMsgId: string) {
+    setRawResponses((m) => ({ ...m, [userMsgId]: null }));
+    try {
+      const r = await fetch("/api/raw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: messagesForRaw }),
+      });
+      const json = (await r.json()) as { text?: string; error?: string };
+      setRawResponses((m) => ({ ...m, [userMsgId]: json.text ?? `error: ${json.error ?? "no text"}` }));
+    } catch (e) {
+      setRawResponses((m) => ({ ...m, [userMsgId]: `error: ${String(e)}` }));
+    }
+  }
+
+  function submitMessage(content: string, options: { reset?: boolean } = {}) {
+    if (!content.trim()) return;
+    if (options.reset) setMessages([]);
+    setInput("");
+    void append({ role: "user", content }).then((id) => {
+      // append returns the full id of the assistant turn it kicks off; the
+      // user message id we want is the last user message in state.
+      // We capture it after state settles by reading messages on the next tick.
+      // (See effect below — fanOutRaw fires when a new user message is added
+      // in compareMode.)
+      void id;
+    });
+  }
+
+  // When a new user message is added AND compareMode is on, fire the raw
+  // fetch. The raw side gets its OWN conversation history — user messages
+  // plus its own previous raw replies — so the comparison stays fair. The
+  // axiom-grounded assistant replies (the right-hand column) are NOT fed
+  // into the raw side; otherwise the plain LLM would get to read the
+  // engine-grounded answers as context for follow-ups.
+  useEffect(() => {
+    if (!compareMode) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "user") return;
+    if (rawResponses[last.id] !== undefined) return; // already fired
+
+    const rawHistory: Array<{ role: "user" | "assistant"; content: string }> = [];
+    for (const m of messages) {
+      if (m.role !== "user") continue;
+      rawHistory.push({ role: "user", content: m.content });
+      const prevRaw = rawResponses[m.id];
+      // Include this user's raw reply only if we already have a completed one
+      // (skips the currently-in-flight turn we're about to fire).
+      if (typeof prevRaw === "string") {
+        rawHistory.push({ role: "assistant", content: prevRaw });
+      }
+    }
+    void fanOutRaw(rawHistory, last.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, compareMode]);
+
   return (
     <div className="flex flex-col gap-4">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
         {STARTERS.map((s, i) => (
           <button
             key={i}
             type="button"
-            className="btn btn-ghost"
-            style={{
-              fontSize: 12,
-              fontWeight: 500,
-              textAlign: "left",
-              lineHeight: 1.4,
-              whiteSpace: "normal",
-              padding: "10px 12px",
-              height: "auto",
-            }}
+            className="starter-card"
             disabled={isLoading}
-            onClick={() => {
-              // Reset the conversation and run this example as a fresh turn.
-              // Clicking a different starter mid-conversation shouldn't append
-              // to the previous interaction — each example is its own demo.
-              setMessages([]);
-              setInput("");
-              void append({ role: "user", content: s });
-            }}
+            onClick={() => submitMessage(s, { reset: true })}
           >
             {s}
           </button>
         ))}
       </div>
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={{ fontSize: 12 }}
-          onClick={() => setShowSources((v) => !v)}
-        >
-          {showSources ? "hide" : "show"} tool calls
-        </button>
-      </div>
 
-      <div className="card" style={{ minHeight: 480 }}>
-        {messages.length === 0 && (
-          <div className="text-sm" style={{ color: "#6b7280" }}>
-            Ask anything about Colorado SNAP. Every dollar amount and eligibility verdict
-            below comes from a real <span className="mono">axiom-rules</span> compute.
-          </div>
-        )}
+      {/* The conversation card only appears once a query has been run.
+          The empty state is just starters + a clean canvas; the input
+          stays sticky at the bottom of the viewport. */}
+      {messages.length > 0 && (
+      <div className="card">
         <div className="flex flex-col gap-3">
-          {messages.map((m) =>
-            m.role === "user" ? (
-              <div key={m.id} className="bubble bubble-user">
-                <div style={{ whiteSpace: "pre-wrap" }}>{m.content}</div>
-              </div>
-            ) : (
+          {messages.map((m, idx) => {
+            if (m.role === "user") {
+              return (
+                <div key={m.id} className="bubble bubble-user">
+                  <div style={{ whiteSpace: "pre-wrap" }}>{m.content}</div>
+                </div>
+              );
+            }
+            const isStreaming = isLoading && idx === messages.length - 1;
+            // Find the user message this assistant turn answers — the one
+            // immediately above it. If a raw response exists for that user
+            // message, render two columns.
+            const precedingUser = idx > 0 ? messages[idx - 1] : null;
+            const rawForTurn = precedingUser?.role === "user" ? rawResponses[precedingUser.id] : undefined;
+
+            const axiomTurn = (
               <AssistantTurn
-                key={m.id}
                 toolInvocations={m.toolInvocations}
                 text={m.content}
-                showTools={showSources}
                 indentTools
+                isStreaming={isStreaming}
               />
-            )
-          )}
+            );
+
+            if (rawForTurn === undefined) return <div key={m.id}>{axiomTurn}</div>;
+
+            return (
+              <div key={m.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <Column title="OpenAI alone" subtitle="no tools, no axiom" tone="neutral">
+                  {rawForTurn === null ? <RunningPill label="running" /> : <RawBubble text={rawForTurn} />}
+                </Column>
+                <Column title="OpenAI + Axiom" subtitle="axiom-rules tools wired in" tone="grounded">
+                  {axiomTurn}
+                </Column>
+              </div>
+            );
+          })}
           {isLoading && (
-            <div className="bubble bubble-assistant">
-              <span className="mono" style={{ fontSize: 12, color: "#6b7280" }}>
-                thinking · running axiom-rules…
-              </span>
-            </div>
+            <RunningPill label="running axiom-rules" />
           )}
         </div>
       </div>
+      )}
 
       {error && (
         <div className="card" style={{ background: "#fee2e2", borderColor: "#fca5a5" }}>
@@ -115,6 +174,20 @@ export function Chat() {
         </div>
       )}
 
+      <div
+        style={{
+          position: "sticky",
+          bottom: 0,
+          background: "var(--paper)",
+          paddingTop: 12,
+          paddingBottom: 8,
+          marginTop: messages.length > 0 ? 4 : "auto",
+          zIndex: 5,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
       <form onSubmit={handleSubmit} className="input-pill">
         <textarea
           ref={textareaRef}
@@ -122,7 +195,6 @@ export function Chat() {
           value={input}
           onChange={(e) => handleInputChange(e as unknown as React.ChangeEvent<HTMLInputElement>)}
           onKeyDown={(e) => {
-            // Enter submits; Shift+Enter inserts a newline.
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               if (input.trim() && !isLoading) {
@@ -152,6 +224,84 @@ export function Chat() {
           Send
         </button>
       </form>
+
+      <label className="compare-toggle">
+        <input
+          type="checkbox"
+          checked={compareMode}
+          onChange={(e) => {
+            // Toggling the comparison view resets the conversation so the
+            // chat history doesn't mix single-column and two-column turns.
+            setCompareMode(e.target.checked);
+            setMessages([]);
+            setRawResponses({});
+            setInput("");
+          }}
+        />
+        Compare side-by-side with plain AI (no axiom-rules)
+      </label>
+      </div>
+    </div>
+  );
+}
+
+function Column({
+  title,
+  subtitle,
+  tone,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  tone: "neutral" | "grounded";
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="card"
+      style={{
+        background: tone === "grounded" ? "#f0fdfa" : "white",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
+        <div style={{ fontSize: 12, color: "#6b7280" }}>{subtitle}</div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function RawBubble({ text }: { text: string }) {
+  return (
+    <div className="bubble bubble-assistant" style={{ maxWidth: "none" }}>
+      <MarkdownText source={text} />
+    </div>
+  );
+}
+
+function RunningPill({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 12px",
+        background: "#fafaf6",
+        border: "1px solid #e6e6df",
+        borderRadius: 999,
+        alignSelf: "flex-start",
+        color: "#6b7280",
+      }}
+    >
+      <span className="mono" style={{ fontSize: 11.5 }}>{label}</span>
+      <span className="thinking-dots" aria-hidden="true">
+        <span /><span /><span />
+      </span>
     </div>
   );
 }

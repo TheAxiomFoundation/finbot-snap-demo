@@ -214,6 +214,7 @@ export async function lookupValue(
   semantics: "scalar" | "judgment" | string;
   value: number | "holds" | "not_holds" | null;
   source: string | null;
+  url: string;
   applied_facts: CoSnapFacts;
 }> {
   const meta = (CO_SNAP_BASE.all_outputs as ReadonlyArray<{
@@ -256,6 +257,7 @@ export async function lookupValue(
     semantics: meta.semantics,
     value,
     source: meta.source,
+    url: legalIdToUrl(legal_id),
     applied_facts: resolved,
   };
 }
