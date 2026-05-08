@@ -21,6 +21,11 @@ const CODE = /^`([^`]+)`$/;
 const BOLD_ONLY_LINE = /^\s*\*\*([^*]+)\*\*\s*$/;
 const BULLET_LINE = /^\s*[-*]\s+(.*)$/;
 const ORDERED_LINE = /^\s*\d+\.\s+(.*)$/;
+/** ATX-style heading: 1-6 leading hashes, a space, then the title text.
+ *  The plain-LLM side (no tools, no system prompt instructing markdown
+ *  shape) commonly emits these — without this rule we'd render the
+ *  literal `###` as text. */
+const HEADING_LINE = /^\s*(#{1,6})\s+(.+?)\s*$/;
 
 function renderInline(text: string): ReactNode[] {
   const parts = text.split(TOKEN).filter(Boolean);
@@ -48,6 +53,7 @@ function renderInline(text: string): ReactNode[] {
 type Block =
   | { type: "headline"; text: string }
   | { type: "section_label"; text: string }
+  | { type: "heading"; level: number; text: string }
   | { type: "paragraph"; lines: string[] }
   | { type: "list"; ordered: boolean; items: string[] };
 
@@ -87,6 +93,13 @@ function parse(source: string): Block[] {
     if (line.trim() === "") {
       flushPara();
       flushList();
+      continue;
+    }
+    const heading = line.match(HEADING_LINE);
+    if (heading) {
+      flushPara();
+      flushList();
+      blocks.push({ type: "heading", level: heading[1].length, text: heading[2] });
       continue;
     }
     const bullet = line.match(BULLET_LINE);
@@ -152,6 +165,27 @@ export function MarkdownText({ source }: { source: string }) {
               }}
             >
               {block.text.replace(/:\s*$/, "")}
+            </div>
+          );
+        }
+        if (block.type === "heading") {
+          // Map levels to a small set of sizes that match the rest of the
+          // bubble's typographic scale. h1/h2 get the headline size; h3+
+          // collapse to the section-label size so a wall of `###` from
+          // the plain model doesn't dwarf the surrounding body.
+          const isLarge = block.level <= 2;
+          return (
+            <div
+              key={i}
+              style={{
+                margin: first ? "0 0 8px" : "14px 0 6px",
+                fontSize: isLarge ? 17 : 14.5,
+                fontWeight: 700,
+                lineHeight: 1.3,
+                color: "#0b1220",
+              }}
+            >
+              {renderInline(block.text)}
             </div>
           );
         }

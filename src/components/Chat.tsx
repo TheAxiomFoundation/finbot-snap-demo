@@ -150,18 +150,43 @@ export function Chat() {
 
             return (
               <div key={m.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <Column title="OpenAI alone" subtitle="no tools, no axiom" tone="neutral">
+                <Column title="OpenAI alone" tone="neutral">
                   {rawForTurn === null ? <RunningPill label="running" /> : <RawBubble text={rawForTurn} />}
                 </Column>
-                <Column title="OpenAI + Axiom" subtitle="axiom-rules tools wired in" tone="grounded">
+                <Column title="OpenAI + Axiom" tone="grounded">
                   {axiomTurn}
                 </Column>
               </div>
             );
           })}
-          {isLoading && (
+          {/* In-flight indicator. Once the assistant message lands in
+              `messages`, the per-turn rendering above owns the running
+              state — we only show this for the gap before that first
+              stream event. In compare mode, mirror the column layout so
+              "running axiom-rules" sits inside the right card the same
+              way "running" sits inside the left. */}
+          {isLoading && !compareMode && (
             <RunningPill label="running axiom-rules" />
           )}
+          {isLoading
+            && compareMode
+            && messages[messages.length - 1]?.role === "user"
+            && (() => {
+              const lastUserId = messages[messages.length - 1].id;
+              const rawForUser = rawResponses[lastUserId];
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <Column title="OpenAI alone" tone="neutral">
+                    {typeof rawForUser === "string"
+                      ? <RawBubble text={rawForUser} />
+                      : <RunningPill label="running" />}
+                  </Column>
+                  <Column title="OpenAI + Axiom" tone="grounded">
+                    <RunningPill label="running axiom-rules" />
+                  </Column>
+                </div>
+              );
+            })()}
         </div>
       </div>
       )}
@@ -247,12 +272,10 @@ export function Chat() {
 
 function Column({
   title,
-  subtitle,
   tone,
   children,
 }: {
   title: string;
-  subtitle: string;
   tone: "neutral" | "grounded";
   children: React.ReactNode;
 }) {
@@ -266,10 +289,7 @@ function Column({
         gap: 10,
       }}
     >
-      <div>
-        <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
-        <div style={{ fontSize: 12, color: "#6b7280" }}>{subtitle}</div>
-      </div>
+      <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
       {children}
     </div>
   );
