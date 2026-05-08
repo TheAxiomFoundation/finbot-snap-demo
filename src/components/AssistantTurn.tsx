@@ -3,6 +3,7 @@ import type { ToolInvocation } from "ai";
 import { useState } from "react";
 
 import { MarkdownText } from "./MarkdownText";
+import { RunningPill } from "./RunningPill";
 import { ToolCallCard } from "./ToolCallCard";
 
 /**
@@ -37,6 +38,13 @@ export function AssistantTurn({
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Bridge the gap between tool-call rounds and the final text
+          streaming in. While streaming, the per-turn tool disclosure
+          and Sources are hidden; without this pill the bubble area is
+          empty for several seconds and reads as "stuck". */}
+      {isStreaming && !hasText && (
+        <RunningPill label="running axiom-rules" />
+      )}
       {hasTools && !isStreaming && (
         <div style={indentTools ? { marginLeft: 8 } : undefined}>
           <button

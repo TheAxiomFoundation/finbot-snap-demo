@@ -6,6 +6,7 @@ import { STARTERS } from "@/lib/starters";
 
 import { AssistantTurn } from "./AssistantTurn";
 import { MarkdownText } from "./MarkdownText";
+import { RunningPill } from "./RunningPill";
 
 export function Chat() {
   const {
@@ -165,9 +166,12 @@ export function Chat() {
               stream event. In compare mode, mirror the column layout so
               "running axiom-rules" sits inside the right card the same
               way "running" sits inside the left. */}
-          {isLoading && !compareMode && (
-            <RunningPill label="running axiom-rules" />
-          )}
+          {isLoading
+            && !compareMode
+            && messages[messages.length - 1]?.role === "user"
+            && (
+              <RunningPill label="running axiom-rules" />
+            )}
           {isLoading
             && compareMode
             && messages[messages.length - 1]?.role === "user"
@@ -303,25 +307,3 @@ function RawBubble({ text }: { text: string }) {
   );
 }
 
-function RunningPill({ label }: { label: string }) {
-  return (
-    <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "6px 12px",
-        background: "#fafaf6",
-        border: "1px solid #e6e6df",
-        borderRadius: 999,
-        alignSelf: "flex-start",
-        color: "#6b7280",
-      }}
-    >
-      <span className="mono" style={{ fontSize: 11.5 }}>{label}</span>
-      <span className="thinking-dots" aria-hidden="true">
-        <span /><span /><span />
-      </span>
-    </div>
-  );
-}
