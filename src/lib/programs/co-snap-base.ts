@@ -145,7 +145,7 @@ export const CO_SNAP_BASE = {
     {
       "name": "employee_wages_received",
       "dtype": "integer",
-      "default": 1000
+      "default": 0
     },
     {
       "name": "estimated_monthly_child_support_paid",
@@ -255,7 +255,7 @@ export const CO_SNAP_BASE = {
     {
       "name": "household_incurred_or_anticipated_heating_or_cooling_costs_separate_from_rent_or_mortgage",
       "dtype": "bool",
-      "default": true
+      "default": false
     },
     {
       "name": "household_intends_to_build_permanent_home_on_property",
@@ -335,7 +335,7 @@ export const CO_SNAP_BASE = {
     {
       "name": "household_shelter_costs_incurred",
       "dtype": "integer",
-      "default": 500
+      "default": 0
     },
     {
       "name": "household_size",
@@ -907,7 +907,7 @@ export const CO_SNAP_BASE = {
     {
       "name": "member_age",
       "dtype": "integer",
-      "default": 60
+      "default": 0
     },
     {
       "name": "member_age_16_or_17_is_not_household_head_or_attends_school_or_training_half_time",
