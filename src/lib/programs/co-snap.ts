@@ -1,5 +1,5 @@
 /**
- * Colorado SNAP — typed user-facing fact contract bound to axiom-rules legal IDs.
+ * Colorado SNAP — typed user-facing fact contract bound to axiom-rules-engine legal IDs.
  *
  * The schema (every input the program reaches, per entity, with dtype) comes
  * from {@link CO_SNAP_BASE}, which is auto-generated from the compiled program

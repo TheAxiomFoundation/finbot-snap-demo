@@ -1,7 +1,7 @@
 /**
- * Engine adapter — TypeScript wrapper around the axiom-rules Rust binary.
+ * Engine adapter — TypeScript wrapper around the axiom-rules-engine Rust binary.
  *
- * Spawns `axiom-rules run-compiled` per request, writes a JSON request to stdin,
+ * Spawns `axiom-rules-engine run-compiled` per request, writes a JSON request to stdin,
  * parses the JSON response from stdout. The compiled artifact is loaded fresh
  * each call; that costs ~80–150ms but keeps the surface trivial.
  *
@@ -15,8 +15,8 @@ import path from "node:path";
 
 const ROOT = path.resolve(process.cwd());
 const BINARY =
-  process.env.AXIOM_RULES_BINARY ||
-  path.join(ROOT, "engine/axiom-rules/target/release/axiom-rules");
+  process.env.AXIOM_RULES_ENGINE_BINARY ||
+  path.join(ROOT, "engine/axiom-rules-engine/target/release/axiom-rules-engine");
 const ARTIFACTS_DIR =
   process.env.AXIOM_ARTIFACTS_DIR || path.join(ROOT, "engine/artifacts");
 
@@ -139,7 +139,7 @@ async function ensureBinary(): Promise<void> {
   } catch {
     cachedBinaryOk = false;
     throw new Error(
-      `axiom-rules binary not found at ${BINARY}. Run \`bun run engine:setup\` first, or set AXIOM_ENGINE_URL to a deployed engine.`
+      `axiom-rules-engine binary not found at ${BINARY}. Run \`bun run engine:setup\` first, or set AXIOM_ENGINE_URL to a deployed engine.`
     );
   }
 }
@@ -201,7 +201,7 @@ async function runViaSubprocess(
     child.on("error", reject);
     child.on("close", (code) => {
       if (code !== 0) {
-        reject(new Error(`axiom-rules exited ${code}: ${stderr.trim()}`));
+        reject(new Error(`axiom-rules-engine exited ${code}: ${stderr.trim()}`));
         return;
       }
       try {

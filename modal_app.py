@@ -1,6 +1,6 @@
-"""Modal deployment for the FinBot axiom-rules engine.
+"""Modal deployment for the FinBot axiom-rules-engine engine.
 
-Hosts the Rust ``axiom-rules`` binary as an HTTP service, with the compiled
+Hosts the Rust ``axiom-rules-engine`` binary as an HTTP service, with the compiled
 CO SNAP artifact baked into the image. The Vercel-hosted Next.js app calls
 this service from its tool layer (see src/lib/engine.ts).
 
@@ -36,7 +36,7 @@ RULES_US_CO_SHA = "ba00673d73c19f262d542cfa597b0b365a1313b7"
 # Rules content baked into the image. Each entry: (slug, rules-co-repo path).
 # Add a new line + a matching artifact below to expose another program.
 PROGRAMS = [
-    ("co-snap", "rules-us-co/policies/cdhs/snap/fy-2026-benefit-calculation.yaml"),
+    ("co-snap", "rulespec-us-co/policies/cdhs/snap/fy-2026-benefit-calculation.yaml"),
 ]
 
 image = (
@@ -51,17 +51,17 @@ image = (
         # Layer cache key for the source-repo + binary layer.
         f"echo 'engine: {ENGINE_VERSION}'",
         # Pinned SHAs — see top of file for the upgrade procedure.
-        "git clone https://github.com/TheAxiomFoundation/axiom-rules.git /opt/axiom-rules",
-        f"cd /opt/axiom-rules && git checkout {AXIOM_RULES_SHA}",
-        "git clone https://github.com/TheAxiomFoundation/rules-us.git /opt/rules-us",
-        f"cd /opt/rules-us && git checkout {RULES_US_SHA}",
-        "git clone https://github.com/TheAxiomFoundation/rules-us-co.git /opt/rules-us-co",
-        f"cd /opt/rules-us-co && git checkout {RULES_US_CO_SHA}",
-        ". $HOME/.cargo/env && cd /opt/axiom-rules && cargo build --release",
+        "git clone https://github.com/TheAxiomFoundation/axiom-rules-engine.git /opt/axiom-rules-engine",
+        f"cd /opt/axiom-rules-engine && git checkout {AXIOM_RULES_SHA}",
+        "git clone https://github.com/TheAxiomFoundation/rulespec-us.git /opt/rulespec-us",
+        f"cd /opt/rulespec-us && git checkout {RULES_US_SHA}",
+        "git clone https://github.com/TheAxiomFoundation/rulespec-us-co.git /opt/rulespec-us-co",
+        f"cd /opt/rulespec-us-co && git checkout {RULES_US_CO_SHA}",
+        ". $HOME/.cargo/env && cd /opt/axiom-rules-engine && cargo build --release",
         "mkdir -p /opt/artifacts",
         # Compile each program to a JSON artifact. Path uses /opt/<repo>/<rulespec_path>.
         *[
-            f"/opt/axiom-rules/target/release/axiom-rules compile "
+            f"/opt/axiom-rules-engine/target/release/axiom-rules-engine compile "
             f"--program /opt/{path} "
             f"--output /opt/artifacts/{slug}.compiled.json"
             for slug, path in PROGRAMS
@@ -79,7 +79,7 @@ image = (
 @modal.concurrent(max_inputs=10)
 @modal.asgi_app(label="axiom-engine")
 def web():
-    """HTTP wrapper around the axiom-rules binary.
+    """HTTP wrapper around the axiom-rules-engine binary.
 
     POST /run         {program, request}  → ExecutionResponse
     GET  /health      → {ok, programs, binary_version}
@@ -91,7 +91,7 @@ def web():
     from fastapi import FastAPI, HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
 
-    BIN = "/opt/axiom-rules/target/release/axiom-rules"
+    BIN = "/opt/axiom-rules-engine/target/release/axiom-rules-engine"
     ARTIFACTS = {slug: f"/opt/artifacts/{slug}.compiled.json" for slug, _ in PROGRAMS}
 
     api = FastAPI(title="Axiom Engine", version="0.1.0")
@@ -141,7 +141,7 @@ def web():
         if proc.returncode != 0:
             raise HTTPException(
                 status_code=500,
-                detail=f"axiom-rules exited {proc.returncode}: {proc.stderr.strip()}",
+                detail=f"axiom-rules-engine exited {proc.returncode}: {proc.stderr.strip()}",
             )
         try:
             return json.loads(proc.stdout)

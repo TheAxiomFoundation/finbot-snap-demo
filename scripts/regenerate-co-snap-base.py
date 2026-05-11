@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Derive the CO SNAP runtime schema from the compiled axiom-rules artifact.
+"""Derive the CO SNAP runtime schema from the compiled axiom-rules-engine artifact.
 
 This script does NOT maintain a list of expected inputs — it walks the compiled
 program's IR, finds every ``{kind: input, name: X}`` reference, groups by the
@@ -10,7 +10,7 @@ Output: src/lib/programs/co-snap-base.ts — a generated module the runtime uses
 to assemble a complete engine request with sensible defaults for every input
 the program reaches, then overlays the user-facing facts on top.
 
-Re-run this whenever rules-us-co or rules-us change shape:
+Re-run this whenever rulespec-us-co or rulespec-us change shape:
     bash scripts/build-artifacts.sh && python3 scripts/regenerate-co-snap-base.py
 """
 
@@ -24,7 +24,7 @@ ARTIFACT = Path(
     "/Users/pavelmakarchuk/finbot-snap-demo/engine/artifacts/co-snap.compiled.json"
 )
 TEST_FIXTURE = Path(
-    "/Users/pavelmakarchuk/finbot-snap-demo/engine/rules-us-co/policies/cdhs/snap/"
+    "/Users/pavelmakarchuk/finbot-snap-demo/engine/rulespec-us-co/policies/cdhs/snap/"
     "fy-2026-benefit-calculation.test.yaml"
 )
 OUTPUT = Path(
@@ -226,7 +226,7 @@ def main() -> int:
         o["name"]: o["id"] for o in all_outputs if o["entity"] == "Household"
     }
 
-    # Walk every rulespec YAML in rules-us and rules-us-co; map the file path
+    # Walk every rulespec YAML in rulespec-us and rulespec-us-co; map the file path
     # used as a legal-ID prefix (e.g. ``us:statutes/7/2017/a``) onto the
     # corpus_citation_path declared in module.source_verification (e.g.
     # ``us/statute/7/2017/a``). Used by fetch_citation so we hit a real
@@ -234,8 +234,8 @@ def main() -> int:
     import yaml
     corpus_paths: dict[str, str] = {}
     repos = {
-        "us": Path("/Users/pavelmakarchuk/finbot-snap-demo/engine/rules-us"),
-        "us-co": Path("/Users/pavelmakarchuk/finbot-snap-demo/engine/rules-us-co"),
+        "us": Path("/Users/pavelmakarchuk/finbot-snap-demo/engine/rulespec-us"),
+        "us-co": Path("/Users/pavelmakarchuk/finbot-snap-demo/engine/rulespec-us-co"),
     }
     for prefix, root in repos.items():
         if not root.exists():
@@ -261,7 +261,7 @@ def main() -> int:
             if not corpus_path:
                 continue
             # Build the legal-id prefix from the file path: e.g. file
-            # rules-us-co/regulations/10-ccr-2506-1/4.207.3.yaml under repo
+            # rulespec-us-co/regulations/10-ccr-2506-1/4.207.3.yaml under repo
             # ``us-co`` becomes ``us-co:regulations/10-ccr-2506-1/4.207.3``.
             rel = yaml_path.relative_to(root).with_suffix("").as_posix()
             corpus_paths[f"{prefix}:{rel}"] = corpus_path
@@ -289,7 +289,7 @@ def main() -> int:
     body = (
         "// Auto-generated from engine/artifacts/co-snap.compiled.json.\n"
         "// Run: bash scripts/build-artifacts.sh && python3 scripts/regenerate-co-snap-base.py\n"
-        "// Schema is derived from the compiled axiom-rules program — every input the\n"
+        "// Schema is derived from the compiled axiom-rules-engine program — every input the\n"
         "// engine reaches is listed here with an inferred dtype and a sensible default.\n"
         "// DO NOT EDIT BY HAND.\n\n"
         f"export const CO_SNAP_BASE = {json.dumps(out, indent=2)} as const;\n"

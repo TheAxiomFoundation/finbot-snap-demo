@@ -17,17 +17,17 @@ clone_or_pull() {
   fi
 }
 
-clone_or_pull axiom-rules
-clone_or_pull rules-us
-clone_or_pull rules-us-co
+clone_or_pull axiom-rules-engine
+clone_or_pull rulespec-us
+clone_or_pull rulespec-us-co
 
 if ! command -v cargo >/dev/null; then
   echo "cargo not found — install Rust first: https://rustup.rs"
   exit 1
 fi
 
-echo "==> building axiom-rules (release)"
-( cd engine/axiom-rules && cargo build --release )
+echo "==> building axiom-rules-engine (release)"
+( cd engine/axiom-rules-engine && cargo build --release )
 
 bash scripts/build-artifacts.sh
-echo "==> done. binary: engine/axiom-rules/target/release/axiom-rules"
+echo "==> done. binary: engine/axiom-rules-engine/target/release/axiom-rules-engine"

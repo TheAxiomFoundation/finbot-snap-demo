@@ -4,7 +4,7 @@ import { finbotModel } from "@/lib/model";
 import { SYSTEM_PROMPT } from "@/lib/prompts";
 import { tools } from "@/lib/tools";
 
-export const runtime = "nodejs"; // we need child_process to spawn axiom-rules
+export const runtime = "nodejs"; // we need child_process to spawn axiom-rules-engine
 export const maxDuration = 60;
 
 export async function POST(req: Request) {

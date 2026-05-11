@@ -164,13 +164,13 @@ export function Chat() {
               `messages`, the per-turn rendering above owns the running
               state — we only show this for the gap before that first
               stream event. In compare mode, mirror the column layout so
-              "running axiom-rules" sits inside the right card the same
+              "running axiom-rules-engine" sits inside the right card the same
               way "running" sits inside the left. */}
           {isLoading
             && !compareMode
             && messages[messages.length - 1]?.role === "user"
             && (
-              <RunningPill label="running axiom-rules" />
+              <RunningPill label="running axiom-rules-engine" />
             )}
           {isLoading
             && compareMode
@@ -186,7 +186,7 @@ export function Chat() {
                       : <RunningPill label="running" />}
                   </Column>
                   <Column title="OpenAI + Axiom" tone="grounded">
-                    <RunningPill label="running axiom-rules" />
+                    <RunningPill label="running axiom-rules-engine" />
                   </Column>
                 </div>
               );
@@ -267,7 +267,7 @@ export function Chat() {
             setInput("");
           }}
         />
-        Compare side-by-side with plain AI (no axiom-rules)
+        Compare side-by-side with plain AI (no axiom-rules-engine)
       </label>
       </div>
     </div>

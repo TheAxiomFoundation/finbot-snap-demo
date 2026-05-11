@@ -4,7 +4,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-BIN="engine/axiom-rules/target/release/axiom-rules"
+BIN="engine/axiom-rules-engine/target/release/axiom-rules-engine"
 mkdir -p engine/artifacts
 
 if [ ! -x "$BIN" ]; then
@@ -18,7 +18,7 @@ compile() {
   "$BIN" compile --program "$rulespec" --output "engine/artifacts/${slug}.compiled.json" >/dev/null
 }
 
-compile co-snap engine/rules-us-co/policies/cdhs/snap/fy-2026-benefit-calculation.yaml
+compile co-snap engine/rulespec-us-co/policies/cdhs/snap/fy-2026-benefit-calculation.yaml
 
 echo "==> artifacts:"
 ls -lh engine/artifacts/

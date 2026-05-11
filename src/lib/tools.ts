@@ -37,7 +37,7 @@ const CoSnapFactsSchema = z.object({
 export const tools = {
   list_encoded_outputs: tool({
     description:
-      "List benefit and tax programs that axiom-rules has actually encoded, with optional name-substring search across the 168 derived outputs in CO SNAP. Call this BEFORE answering any program question. Pass `search` (e.g. 'income limit', 'utility allowance', 'standard deduction') to find the legal_id of a specific encoded value you can then read with lookup_value.",
+      "List benefit and tax programs that axiom-rules-engine has actually encoded, with optional name-substring search across the 168 derived outputs in CO SNAP. Call this BEFORE answering any program question. Pass `search` (e.g. 'income limit', 'utility allowance', 'standard deduction') to find the legal_id of a specific encoded value you can then read with lookup_value.",
     parameters: z.object({
       jurisdiction: z
         .string()
@@ -162,7 +162,7 @@ export const tools = {
 
   fetch_citation: tool({
     description:
-      "Pull the legal text behind an axiom-rules legal ID, e.g. 'us:statutes/7/2017/a' or 'us-co:regulations/10-ccr-2506-1/4.207.3'. Use this when the user asks for the source of a number or rule.",
+      "Pull the legal text behind an axiom-rules-engine legal ID, e.g. 'us:statutes/7/2017/a' or 'us-co:regulations/10-ccr-2506-1/4.207.3'. Use this when the user asks for the source of a number or rule.",
     parameters: z.object({
       legal_id: z
         .string()

@@ -3,9 +3,9 @@ node_modules/
 .env
 .env.local
 .DS_Store
-engine/axiom-rules/
-engine/rules-us/
-engine/rules-us-co/
+engine/axiom-rules-engine/
+engine/rulespec-us/
+engine/rulespec-us-co/
 engine/artifacts/
 *.log
 .vercel

@@ -1,6 +1,6 @@
 // Auto-generated from engine/artifacts/co-snap.compiled.json.
 // Run: bash scripts/build-artifacts.sh && python3 scripts/regenerate-co-snap-base.py
-// Schema is derived from the compiled axiom-rules program — every input the
+// Schema is derived from the compiled axiom-rules-engine program — every input the
 // engine reaches is listed here with an inferred dtype and a sensible default.
 // DO NOT EDIT BY HAND.
 

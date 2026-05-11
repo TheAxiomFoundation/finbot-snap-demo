@@ -43,7 +43,7 @@ export function AssistantTurn({
           and Sources are hidden; without this pill the bubble area is
           empty for several seconds and reads as "stuck". */}
       {isStreaming && !hasText && (
-        <RunningPill label="running axiom-rules" />
+        <RunningPill label="running axiom-rules-engine" />
       )}
       {hasTools && !isStreaming && (
         <div style={indentTools ? { marginLeft: 8 } : undefined}>
