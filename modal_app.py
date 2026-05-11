@@ -29,11 +29,11 @@ ENGINE_VERSION = "v3-pinned-shas"
 # `bash scripts/build-artifacts.sh && python3 scripts/regenerate-co-snap-base.py`,
 # verify `bun run engine:test` still passes, then update these SHAs and bump
 # ENGINE_VERSION.
-AXIOM_RULES_SHA = "9106f44e34ec3eae92a1adf2246560c5eac00094"
-RULES_US_SHA = "2f3a30991e1f8279c2fa664e51f068a63d905591"
-RULES_US_CO_SHA = "ba00673d73c19f262d542cfa597b0b365a1313b7"
+AXIOM_RULES_ENGINE_SHA = "9106f44e34ec3eae92a1adf2246560c5eac00094"
+RULESPEC_US_SHA = "2f3a30991e1f8279c2fa664e51f068a63d905591"
+RULESPEC_US_CO_SHA = "ba00673d73c19f262d542cfa597b0b365a1313b7"
 
-# Rules content baked into the image. Each entry: (slug, rules-co-repo path).
+# RuleSpec content baked into the image. Each entry: (slug, rulespec repo path).
 # Add a new line + a matching artifact below to expose another program.
 PROGRAMS = [
     ("co-snap", "rulespec-us-co/policies/cdhs/snap/fy-2026-benefit-calculation.yaml"),
@@ -52,11 +52,11 @@ image = (
         f"echo 'engine: {ENGINE_VERSION}'",
         # Pinned SHAs — see top of file for the upgrade procedure.
         "git clone https://github.com/TheAxiomFoundation/axiom-rules-engine.git /opt/axiom-rules-engine",
-        f"cd /opt/axiom-rules-engine && git checkout {AXIOM_RULES_SHA}",
+        f"cd /opt/axiom-rules-engine && git checkout {AXIOM_RULES_ENGINE_SHA}",
         "git clone https://github.com/TheAxiomFoundation/rulespec-us.git /opt/rulespec-us",
-        f"cd /opt/rulespec-us && git checkout {RULES_US_SHA}",
+        f"cd /opt/rulespec-us && git checkout {RULESPEC_US_SHA}",
         "git clone https://github.com/TheAxiomFoundation/rulespec-us-co.git /opt/rulespec-us-co",
-        f"cd /opt/rulespec-us-co && git checkout {RULES_US_CO_SHA}",
+        f"cd /opt/rulespec-us-co && git checkout {RULESPEC_US_CO_SHA}",
         ". $HOME/.cargo/env && cd /opt/axiom-rules-engine && cargo build --release",
         "mkdir -p /opt/artifacts",
         # Compile each program to a JSON artifact. Path uses /opt/<repo>/<rulespec_path>.
