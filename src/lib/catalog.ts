@@ -34,6 +34,34 @@ export const CATALOG: EncodedProgram[] = [
     ],
     primary_output: "us:statutes/7/2017/a#snap_regular_month_allotment",
   },
+  {
+    slug: "ca-snap",
+    jurisdiction: "us-ca",
+    display_name: "California SNAP — FY 2026 benefit calculation",
+    scope: "Monthly benefit and eligibility for California SNAP households as of FY 2026.",
+    rulespec_path: "rules-us-ca/programs/snap/fy-2026.yaml",
+    outputs: [
+      { legal_id: "us-ca:programs/snap/fy-2026#snap_benefit", label: "California SNAP benefit", kind: "scalar", short: "Final monthly SNAP benefit in dollars." },
+      { legal_id: "us-ca:programs/snap/fy-2026#snap_eligible", label: "Eligible for SNAP this month", kind: "judgment", short: "Composite eligibility judgment." },
+      { legal_id: "us-ca:programs/snap/fy-2026#snap_gross_monthly_income", label: "Gross monthly SNAP income", kind: "scalar", short: "Monthly earned plus unearned income." },
+      { legal_id: "us-ca:programs/snap/fy-2026#snap_total_allowable_shelter_expenses", label: "Allowable shelter expenses", kind: "scalar", short: "Shelter expenses used by the SNAP calculation." },
+    ],
+    primary_output: "us-ca:programs/snap/fy-2026#snap_benefit",
+  },
+  {
+    slug: "ny-snap",
+    jurisdiction: "us-ny",
+    display_name: "New York SNAP — FY 2026 benefit calculation",
+    scope: "Monthly benefit and eligibility for New York SNAP households as of FY 2026.",
+    rulespec_path: "rules-us-ny/programs/snap/fy-2026.yaml",
+    outputs: [
+      { legal_id: "us-ny:programs/snap/fy-2026#snap_benefit", label: "New York SNAP benefit", kind: "scalar", short: "Final monthly SNAP benefit in dollars." },
+      { legal_id: "us-ny:programs/snap/fy-2026#snap_eligible", label: "Eligible for SNAP this month", kind: "judgment", short: "Composite eligibility judgment." },
+      { legal_id: "us-ny:programs/snap/fy-2026#snap_gross_monthly_income", label: "Gross monthly SNAP income", kind: "scalar", short: "Monthly earned plus unearned income." },
+      { legal_id: "us-ny:programs/snap/fy-2026#snap_total_allowable_shelter_expenses", label: "Allowable shelter expenses", kind: "scalar", short: "Shelter expenses used by the SNAP calculation." },
+    ],
+    primary_output: "us-ny:programs/snap/fy-2026#snap_benefit",
+  },
 ];
 
 export function programsForJurisdiction(jurisdiction?: string): EncodedProgram[] {

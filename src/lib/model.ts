@@ -2,8 +2,8 @@
  * Single source of truth for which OpenAI model the chat layer uses.
  *
  * Defaults to gpt-5.4-mini — recent (March 2026), cheap, and strong on the
- * tool-sequencing patterns this app needs (compute_co_snap → rank_next_question
- * in parallel; correct primary-output field selection).
+ * tool-sequencing patterns this app needs (compute_*_snap, Colorado ranking,
+ * and correct primary-output field selection).
  *
  * Override per environment with the FINBOT_MODEL env var. Same model is used
  * for the FinBot chat and BOTH sides of the Side-by-side comparison so the

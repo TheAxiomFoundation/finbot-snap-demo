@@ -231,7 +231,7 @@ export function Chat() {
               }
             }
           }}
-          placeholder="Ask about SNAP eligibility or amount in Colorado…"
+          placeholder="Ask about SNAP eligibility or amount in CO, CA, or NY..."
           autoComplete="off"
           rows={1}
           style={{
@@ -306,4 +306,3 @@ function RawBubble({ text }: { text: string }) {
     </div>
   );
 }
-

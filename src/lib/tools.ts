@@ -10,6 +10,11 @@ import { CATALOG, programsForJurisdiction } from "./catalog";
 import { fetchCitation } from "./citations";
 import { compute, lookupValue, type CoSnapFacts } from "./programs/co-snap";
 import { CO_SNAP_BASE } from "./programs/co-snap-base";
+import {
+  computeDashboardSnap,
+  isDashboardSnapLegalId,
+  lookupDashboardSnapValue,
+} from "./programs/dashboard-snap";
 import { rankNextQuestions } from "./ranking";
 
 const CoSnapFactsSchema = z.object({
@@ -37,7 +42,7 @@ const CoSnapFactsSchema = z.object({
 export const tools = {
   list_encoded_outputs: tool({
     description:
-      "List benefit and tax programs that axiom-rules-engine has actually encoded, with optional name-substring search across the 168 derived outputs in CO SNAP. Call this BEFORE answering any program question. Pass `search` (e.g. 'income limit', 'utility allowance', 'standard deduction') to find the legal_id of a specific encoded value you can then read with lookup_value.",
+      "List benefit and tax programs that axiom-rules-engine has actually encoded, including Colorado, California, and New York SNAP. Call this BEFORE answering any program question. Pass `search` (e.g. 'benefit', 'eligibility', 'income limit', 'standard deduction') to find a legal_id you can then read with lookup_value when available.",
     parameters: z.object({
       jurisdiction: z
         .string()
@@ -50,13 +55,23 @@ export const tools = {
     }),
     execute: async ({ jurisdiction, search }) => {
       const programs = programsForJurisdiction(jurisdiction);
-      const all = CO_SNAP_BASE.all_outputs as ReadonlyArray<{
+      const coOutputs = CO_SNAP_BASE.all_outputs as ReadonlyArray<{
         name: string;
         id: string;
         entity: string;
         semantics: string;
         unit?: string | null;
       }>;
+      const catalogOutputs = CATALOG.flatMap((program) =>
+        program.outputs.map((output) => ({
+          name: output.legal_id.split("#").pop() ?? output.label,
+          id: output.legal_id,
+          entity: "Household",
+          semantics: output.kind === "judgment" ? "judgment" : "scalar",
+          unit: output.kind === "scalar" ? "USD" : null,
+        }))
+      );
+      const all = dedupeOutputs([...coOutputs, ...catalogOutputs]);
       // Normalize: lowercase, replace non-alphanumeric runs with a single
       // space, so "income limit", "income_limit", and "INCOME-LIMIT" all
       // match `snap_gross_income_limit_130_percent_fpl_48_states_dc`.
@@ -85,6 +100,7 @@ export const tools = {
         })),
         catalog_size: CATALOG.length,
         encoded_outputs_total: all.length,
+        co_compiled_outputs_total: coOutputs.length,
         ...(matches !== null && {
           search_matches: matches.slice(0, 24).map((o) => ({
             legal_id: o.id,
@@ -128,9 +144,57 @@ export const tools = {
     },
   }),
 
+  compute_ca_snap: tool({
+    description:
+      `Run the California SNAP FY-2026 composed RuleSpec against a household and return its monthly benefit and eligibility breakdown.
+
+      HEADLINE FIELD. The user-facing dollar amount is \`outputs.snap_benefit\`. The result also aliases this to \`outputs.snap_regular_month_allotment\` so shared UI cards can render it, but your text should call it the SNAP benefit.
+
+      ELIGIBILITY FIELDS. If \`outputs.snap_eligible\` is "not_holds", inspect \`snap_resource_eligible\` and \`snap_income_eligible\` to identify the failing test when present.
+
+      FACT INFERENCES the user expects you to make:
+      - "X hrs/week at $Y/hr" → monthly_earnings_per_adult ≈ X × Y × 4.33. Show the math when you state the assumption.
+      - "Single mom of two kids" / "family of four" → household_size = total people in the SNAP household.
+      - Default oldest_member_age = 30 and primary_member_is_us_citizen = true when the user does not say otherwise. State both as inferred assumptions.
+      - Leave assets, unearned income, shelter cost, and utility facts undefined unless the user gives them.`,
+    parameters: CoSnapFactsSchema,
+    execute: async (facts) => {
+      try {
+        return await computeDashboardSnap("ca", facts as CoSnapFacts);
+      } catch (err) {
+        console.error("[finbot] compute_ca_snap failed:", err, "facts:", facts);
+        throw err;
+      }
+    },
+  }),
+
+  compute_ny_snap: tool({
+    description:
+      `Run the New York SNAP FY-2026 composed RuleSpec against a household and return its monthly benefit and eligibility breakdown.
+
+      HEADLINE FIELD. The user-facing dollar amount is \`outputs.snap_benefit\`. The result also aliases this to \`outputs.snap_regular_month_allotment\` so shared UI cards can render it, but your text should call it the SNAP benefit.
+
+      ELIGIBILITY FIELDS. If \`outputs.snap_eligible\` is "not_holds", inspect \`snap_resource_eligible\` and \`snap_income_eligible\` to identify the failing test when present.
+
+      FACT INFERENCES the user expects you to make:
+      - "X hrs/week at $Y/hr" → monthly_earnings_per_adult ≈ X × Y × 4.33. Show the math when you state the assumption.
+      - "Single mom of two kids" / "family of four" → household_size = total people in the SNAP household.
+      - Default oldest_member_age = 30 and primary_member_is_us_citizen = true when the user does not say otherwise. State both as inferred assumptions.
+      - Leave assets, unearned income, shelter cost, and utility facts undefined unless the user gives them.`,
+    parameters: CoSnapFactsSchema,
+    execute: async (facts) => {
+      try {
+        return await computeDashboardSnap("ny", facts as CoSnapFacts);
+      } catch (err) {
+        console.error("[finbot] compute_ny_snap failed:", err, "facts:", facts);
+        throw err;
+      }
+    },
+  }),
+
   rank_next_question: tool({
     description:
-      "Rank the next-best question to ask the user, by how much it would change the SNAP allotment. Returns each candidate's variance in dollars. Use this when the user has given partial facts and you want to ask only the highest-impact follow-up.",
+      "Colorado SNAP only: rank the next-best question to ask the user, by how much it would change the SNAP allotment. Returns each candidate's variance in dollars. Use this with compute_co_snap when the user has given partial Colorado facts and you want to ask only the highest-impact follow-up.",
     parameters: CoSnapFactsSchema,
     execute: async (facts) => {
       try {
@@ -145,13 +209,16 @@ export const tools = {
 
   lookup_value: tool({
     description:
-      "Read any of the 168 encoded outputs by its legal_id (e.g. 'us:policies/usda/snap/fy-2026-cola/income-eligibility-standards#snap_gross_income_limit_130_percent_fpl_48_states_dc'). Use this to answer questions about thresholds, limits, deduction amounts, or other parameters that compute_co_snap doesn't surface. First call list_encoded_outputs with a `search` term to find the right legal_id. The household facts are still applied — for size-dependent values like income limits, pass at least household_size.",
+      "Read an encoded output by its legal_id (e.g. 'us:policies/usda/snap/fy-2026-cola/income-eligibility-standards#snap_gross_income_limit_130_percent_fpl_48_states_dc'). Use this to answer questions about thresholds, limits, deduction amounts, or other parameters that compute_* doesn't surface. First call list_encoded_outputs with a `search` term to find the right legal_id. The household facts are still applied — for size-dependent values like income limits, pass at least household_size.",
     parameters: z.object({
       legal_id: z.string().describe("Full legal_id with the '#name' suffix, exactly as returned by list_encoded_outputs."),
       facts: CoSnapFactsSchema.optional().describe("Household facts to apply. household_size matters for table-indexed values like income limits."),
     }),
     execute: async ({ legal_id, facts }) => {
       try {
+        if (isDashboardSnapLegalId(legal_id)) {
+          return await lookupDashboardSnapValue(legal_id, (facts ?? {}) as CoSnapFacts);
+        }
         return await lookupValue(legal_id, (facts ?? {}) as CoSnapFacts);
       } catch (err) {
         console.error("[finbot] lookup_value failed:", err, "legal_id:", legal_id);
@@ -178,3 +245,14 @@ export const tools = {
     },
   }),
 };
+
+function dedupeOutputs<T extends { id: string }>(outputs: T[]): T[] {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  for (const output of outputs) {
+    if (seen.has(output.id)) continue;
+    seen.add(output.id);
+    unique.push(output);
+  }
+  return unique;
+}

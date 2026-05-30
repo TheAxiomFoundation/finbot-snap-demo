@@ -26,7 +26,7 @@ export function ToolCallCard({ invocation }: Props) {
           <pre className="mono" style={{ fontSize: 11, marginTop: 6, whiteSpace: "pre-wrap" }}>{JSON.stringify(invocation.args, null, 2)}</pre>
         </details>
       )}
-      {invocation.toolName === "compute_co_snap" && status === "result" && result && (
+      {isSnapComputeTool(invocation.toolName) && status === "result" && result && (
         <CoSnapResultSummary result={result} />
       )}
       {invocation.toolName === "rank_next_question" && status === "result" && result && (
@@ -56,8 +56,14 @@ function judgmentBadge(v: "holds" | "not_holds" | undefined) {
   return <span className="badge badge-range">unknown</span>;
 }
 
+function isSnapComputeTool(toolName: string) {
+  return toolName === "compute_co_snap" || toolName === "compute_ca_snap" || toolName === "compute_ny_snap";
+}
+
 function CoSnapResultSummary({ result }: { result: any }) {
   const o = result.outputs ?? {};
+  const benefit = o.snap_benefit ?? o.snap_regular_month_allotment;
+  const benefitLabel = result.program ? `${result.program} benefit` : "regular monthly allotment";
   const rows: Array<[string, string, string]> = [
     ["Gross income", fmt(o.gross_income), "gross_income"],
     ["Net income", fmt(o.snap_net_income), "snap_net_income"],
@@ -71,8 +77,8 @@ function CoSnapResultSummary({ result }: { result: any }) {
   return (
     <div>
       <div style={{ display: "flex", gap: 12, alignItems: "baseline", marginBottom: 4, flexWrap: "wrap" }}>
-        <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{fmt(o.snap_regular_month_allotment)}</span>
-        <span style={{ fontSize: 12, color: "#6b7280" }}>regular monthly allotment</span>
+        <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{fmt(benefit)}</span>
+        <span style={{ fontSize: 12, color: "#6b7280" }}>{benefitLabel}</span>
         {judgmentBadge(o.snap_eligible)}
       </div>
       <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
