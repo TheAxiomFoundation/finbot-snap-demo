@@ -2,13 +2,19 @@
 import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef, useState } from "react";
 
-import { STARTERS } from "@/lib/starters";
+import type { Country } from "@/lib/catalog";
+import { startersForCountry } from "@/lib/starters";
 
 import { AssistantTurn } from "./AssistantTurn";
 import { MarkdownText } from "./MarkdownText";
 import { RunningPill } from "./RunningPill";
 
-export function Chat() {
+interface ChatProps {
+  country?: Country;
+}
+
+export function Chat({ country = "us" }: ChatProps) {
+  const STARTERS = startersForCountry(country);
   const {
     messages,
     input,
@@ -22,16 +28,27 @@ export function Chat() {
   } = useChat({
     api: "/api/chat",
     maxSteps: 6,
+    body: { country },
     onError(err) {
       console.error("[finbot] chat error:", err);
     },
   });
+
   const [compareMode, setCompareMode] = useState(false);
   /** Raw-LLM responses keyed by the id of the user message they answer.
    *  null = pending (request in flight); string = completed text; absent = no
    *  request was made (compare mode was off when the user submitted). */
   const [rawResponses, setRawResponses] = useState<Record<string, string | null>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Clearing the conversation on a country toggle keeps tool surfaces and
+  // prompts coherent — the UK side has never seen the US tool names and
+  // vice versa, so leaving stale turns around invites incoherent follow-ups.
+  useEffect(() => {
+    setMessages([]);
+    setRawResponses({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [country]);
 
   // Resize the textarea whenever `input` changes — including programmatic
   // updates from the starter buttons.

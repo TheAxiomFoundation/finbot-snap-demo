@@ -2,8 +2,11 @@
  * Encoded-program catalog. The expansion seam: drop a new entry here and the
  * `list_encoded_outputs` tool exposes it to the LLM automatically.
  */
+export type Country = "us" | "uk";
+
 export interface EncodedProgram {
   slug: string;
+  country: Country;
   jurisdiction: string;
   display_name: string;
   scope: string;
@@ -20,6 +23,7 @@ export interface EncodedProgram {
 export const CATALOG: EncodedProgram[] = [
   {
     slug: "co-snap",
+    country: "us",
     jurisdiction: "us-co",
     display_name: "Colorado SNAP — FY 2026 benefit calculation",
     scope: "Monthly benefit and eligibility for Colorado SNAP households as of FY 2026.",
@@ -36,6 +40,7 @@ export const CATALOG: EncodedProgram[] = [
   },
   {
     slug: "ca-snap",
+    country: "us",
     jurisdiction: "us-ca",
     display_name: "California SNAP — FY 2026 benefit calculation",
     scope: "Monthly benefit and eligibility for California SNAP households as of FY 2026.",
@@ -50,6 +55,7 @@ export const CATALOG: EncodedProgram[] = [
   },
   {
     slug: "ny-snap",
+    country: "us",
     jurisdiction: "us-ny",
     display_name: "New York SNAP — FY 2026 benefit calculation",
     scope: "Monthly benefit and eligibility for New York SNAP households as of FY 2026.",
@@ -62,7 +68,26 @@ export const CATALOG: EncodedProgram[] = [
     ],
     primary_output: "us-ny:programs/snap/fy-2026#snap_benefit",
   },
+  {
+    slug: "uk-personal-allowance",
+    country: "uk",
+    jurisdiction: "uk",
+    display_name: "UK personal allowance — Income Tax Act 2007 s.35",
+    scope: "Personal allowance for UK income tax, including the £100,000 adjusted-net-income taper. Tax year 2025-26.",
+    rulespec_path: "rulespec-uk/statutes/ukpga/2007/3/35.yaml",
+    outputs: [
+      { legal_id: "uk:statutes/ukpga/2007/3/35#personal_allowance", label: "Personal allowance", kind: "scalar", short: "Allowance after the £100k taper, in £." },
+      { legal_id: "uk:statutes/ukpga/2007/3/35#individual_entitled_to_personal_allowance", label: "Entitled to personal allowance", kind: "judgment", short: "Whether the individual meets s.35(1) and s.56 requirements." },
+      { legal_id: "uk:statutes/ukpga/2007/3/35#personal_allowance_base_amount", label: "Personal allowance base amount", kind: "scalar", short: "Statutory base allowance before taper (£12,570)." },
+      { legal_id: "uk:statutes/ukpga/2007/3/35#adjusted_net_income_reduction_threshold", label: "Taper threshold", kind: "scalar", short: "Adjusted-net-income threshold above which the allowance tapers (£100,000)." },
+    ],
+    primary_output: "uk:statutes/ukpga/2007/3/35#personal_allowance",
+  },
 ];
+
+export function programsForCountry(country: Country): EncodedProgram[] {
+  return CATALOG.filter((p) => p.country === country);
+}
 
 export function programsForJurisdiction(jurisdiction?: string): EncodedProgram[] {
   if (!jurisdiction) return CATALOG;

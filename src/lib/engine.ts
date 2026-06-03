@@ -50,7 +50,7 @@ export interface RelationRecord {
 
 export interface QueryRequest {
   entity_id: string;
-  period: { period_kind: "month" | "year"; start: string; end: string };
+  period: { period_kind: "month" | "year" | "tax_year" | "benefit_week" | "custom"; start: string; end: string };
   outputs: string[]; // legal IDs
 }
 
@@ -109,6 +109,15 @@ export function recordsForEntity(
     interval,
     value: fact(value),
   }));
+}
+
+/** Build a half-open UK tax-year interval from a year that the tax year starts.
+ *  UK tax years run 6 April YYYY → 6 April YYYY+1. Pass the calendar year the
+ *  tax year *starts* (e.g. 2025 for the 2025–26 tax year). */
+export function taxYearInterval(startYear: number): { interval: Interval; period: { period_kind: "tax_year"; start: string; end: string } } {
+  const start = `${startYear.toString().padStart(4, "0")}-04-06`;
+  const end = `${(startYear + 1).toString().padStart(4, "0")}-04-06`;
+  return { interval: { start, end }, period: { period_kind: "tax_year", start, end } };
 }
 
 /** Build a half-open monthly interval for "YYYY-MM". */

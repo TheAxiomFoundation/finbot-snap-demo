@@ -1,8 +1,9 @@
 import { streamText, type CoreMessage } from "ai";
 
+import type { Country } from "@/lib/catalog";
 import { finbotModel } from "@/lib/model";
-import { SYSTEM_PROMPT } from "@/lib/prompts";
-import { tools } from "@/lib/tools";
+import { systemPromptForCountry } from "@/lib/prompts";
+import { toolsForCountry } from "@/lib/tools";
 
 export const runtime = "nodejs"; // we need child_process to spawn axiom-rules-engine
 export const maxDuration = 60;
@@ -14,13 +15,15 @@ export async function POST(req: Request) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-  const { messages } = (await req.json()) as { messages: CoreMessage[] };
+  const body = (await req.json()) as { messages: CoreMessage[]; country?: Country };
+  const country: Country = body.country === "uk" ? "uk" : "us";
+  const { messages } = body;
 
   const result = streamText({
     model: finbotModel(),
-    system: SYSTEM_PROMPT,
+    system: systemPromptForCountry(country),
     messages,
-    tools,
+    tools: toolsForCountry(country),
     maxSteps: 6,
     temperature: 0.2,
     onError({ error }) {

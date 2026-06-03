@@ -6,7 +6,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 
-import { CATALOG, programsForJurisdiction } from "./catalog";
+import { CATALOG, type Country, programsForCountry } from "./catalog";
 import { fetchCitation } from "./citations";
 import { compute, lookupValue, type CoSnapFacts } from "./programs/co-snap";
 import { CO_SNAP_BASE } from "./programs/co-snap-base";
@@ -16,6 +16,11 @@ import {
   lookupDashboardSnapValue,
 } from "./programs/dashboard-snap";
 import { rankNextQuestions } from "./ranking";
+import {
+  computeUkPersonalAllowance,
+  type UkPersonalAllowanceFacts,
+} from "./programs/uk-personal-allowance";
+import { UK_PERSONAL_ALLOWANCE_BASE } from "./programs/uk-personal-allowance-base";
 
 const CoSnapFactsSchema = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/).optional()
@@ -39,10 +44,21 @@ const CoSnapFactsSchema = z.object({
   primary_member_is_us_citizen: z.boolean().optional(),
 });
 
-export const tools = {
+const UkPersonalAllowanceFactsSchema = z.object({
+  tax_year_start: z.number().int().min(2000).max(2050).optional()
+    .describe("Calendar year the UK tax year starts (e.g. 2025 for tax year 2025-26). Defaults to 2025."),
+  adjusted_net_income: z.number().min(0).optional()
+    .describe("Adjusted net income for the tax year, in GBP. Drives the £100k allowance taper."),
+  individual_makes_claim: z.boolean().optional()
+    .describe("Whether the individual has claimed the allowance under s.35(1). Defaults true."),
+  meets_section_56_requirements: z.boolean().optional()
+    .describe("Whether the individual meets s.56 (UK residence / qualifying status). Defaults true."),
+});
+
+const usTools = {
   list_encoded_outputs: tool({
     description:
-      "List benefit and tax programs that axiom-rules-engine has actually encoded, including Colorado, California, and New York SNAP. Call this BEFORE answering any program question. Pass `search` (e.g. 'benefit', 'eligibility', 'income limit', 'standard deduction') to find a legal_id you can then read with lookup_value when available.",
+      "List benefit and tax programs that axiom-rules-engine has actually encoded for the United States: Colorado, California, and New York SNAP. Call this BEFORE answering any program question. Pass `search` to find a legal_id you can then read with lookup_value when available.",
     parameters: z.object({
       jurisdiction: z
         .string()
@@ -54,7 +70,7 @@ export const tools = {
         .describe("Optional case-insensitive substring search across encoded output names."),
     }),
     execute: async ({ jurisdiction, search }) => {
-      const programs = programsForJurisdiction(jurisdiction);
+      const programs = programsForCountry("us").filter((p) => !jurisdiction || p.jurisdiction === jurisdiction);
       const coOutputs = CO_SNAP_BASE.all_outputs as ReadonlyArray<{
         name: string;
         id: string;
@@ -62,7 +78,7 @@ export const tools = {
         semantics: string;
         unit?: string | null;
       }>;
-      const catalogOutputs = CATALOG.flatMap((program) =>
+      const catalogOutputs = CATALOG.filter((p) => p.country === "us").flatMap((program) =>
         program.outputs.map((output) => ({
           name: output.legal_id.split("#").pop() ?? output.label,
           id: output.legal_id,
@@ -245,6 +261,112 @@ export const tools = {
     },
   }),
 };
+
+const ukTools = {
+  list_encoded_outputs: tool({
+    description:
+      "List benefit and tax programs that axiom-rules-engine has actually encoded for the United Kingdom. Currently: UK personal allowance under Income Tax Act 2007 s.35 (with the £100k taper). Call this BEFORE answering any program question.",
+    parameters: z.object({
+      search: z
+        .string()
+        .optional()
+        .describe("Optional case-insensitive substring search across encoded output names."),
+    }),
+    execute: async ({ search }) => {
+      const programs = programsForCountry("uk");
+      const ukOutputs = UK_PERSONAL_ALLOWANCE_BASE.all_outputs as ReadonlyArray<{
+        name: string;
+        id: string;
+        entity: string;
+        semantics: string;
+        unit?: string | null;
+      }>;
+      const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const matches = search
+        ? (() => {
+            const needle = normalize(search);
+            const tokens = needle.split(" ").filter(Boolean);
+            return ukOutputs.filter((o) => {
+              const hay = " " + normalize(o.name) + " ";
+              return tokens.every((t) => hay.includes(t));
+            });
+          })()
+        : null;
+      return {
+        programs: programs.map((p) => ({
+          slug: p.slug,
+          jurisdiction: p.jurisdiction,
+          display_name: p.display_name,
+          scope: p.scope,
+          rulespec_path: p.rulespec_path,
+          outputs: p.outputs,
+          primary_output: p.primary_output,
+        })),
+        catalog_size: programs.length,
+        encoded_outputs_total: ukOutputs.length,
+        ...(matches !== null && {
+          search_matches: matches.slice(0, 24).map((o) => ({
+            legal_id: o.id,
+            name: o.name,
+            entity: o.entity,
+            semantics: o.semantics,
+            unit: o.unit ?? null,
+          })),
+          truncated: matches.length > 24,
+        }),
+      };
+    },
+  }),
+
+  compute_uk_personal_allowance: tool({
+    description:
+      `Compute the UK personal income tax allowance under Income Tax Act 2007 s.35, including the £100,000 adjusted-net-income taper.
+
+      HEADLINE FIELD. The user-facing pound amount is \`personal_allowance\` (returned in £).
+
+      MECHANICS THE TAPER ENCODES:
+      - Base allowance: £12,570 for an individual who claims and meets s.56 requirements.
+      - For adjusted net income above £100,000, the allowance is reduced by £1 for every £2 over (s.35(2)). Result is rounded up to the nearest £1 (s.35(3)).
+      - At adjusted net income ≥ £125,140, the allowance fully tapers to £0.
+
+      FACT INFERENCES the user expects you to make:
+      - Default tax_year_start = 2025 (i.e. tax year 2025-26).
+      - Default individual_makes_claim = true and meets_section_56_requirements = true. State both as inferred assumptions.
+      - "Earning £X" → adjusted_net_income = X unless the user mentions pension contributions or charitable giving that would adjust it. Show the inference.`,
+    parameters: UkPersonalAllowanceFactsSchema,
+    execute: async (facts) => {
+      try {
+        return await computeUkPersonalAllowance(facts as UkPersonalAllowanceFacts);
+      } catch (err) {
+        console.error("[finbot] compute_uk_personal_allowance failed:", err, "facts:", facts);
+        throw err;
+      }
+    },
+  }),
+
+  fetch_citation: tool({
+    description:
+      "Pull the legal text behind a UK legal ID, e.g. 'uk:statutes/ukpga/2007/3/35'. Use this when the user asks for the source of a number or rule. Strip any '#rule_name' suffix.",
+    parameters: z.object({
+      legal_id: z.string().describe("Legal ID returned by list_encoded_outputs. Strip any '#rule_name' suffix."),
+    }),
+    execute: async ({ legal_id }) => {
+      try {
+        return await fetchCitation(legal_id);
+      } catch (err) {
+        console.error("[finbot] fetch_citation failed:", err);
+        throw err;
+      }
+    },
+  }),
+};
+
+export function toolsForCountry(country: Country) {
+  return country === "uk" ? ukTools : usTools;
+}
+
+/** Back-compat default — old callers get the US tool surface. */
+export const tools = usTools;
 
 function dedupeOutputs<T extends { id: string }>(outputs: T[]): T[] {
   const seen = new Set<string>();

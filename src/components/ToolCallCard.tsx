@@ -41,13 +41,46 @@ export function ToolCallCard({ invocation }: Props) {
       {invocation.toolName === "fetch_citation" && status === "result" && result && (
         <CitationSummary result={result} />
       )}
+      {invocation.toolName === "compute_uk_personal_allowance" && status === "result" && result && (
+        <UkPersonalAllowanceResultSummary result={result} />
+      )}
     </div>
   );
 }
 
-function fmt(n: number) {
+function fmt(n: number, currency: "USD" | "GBP" = "USD") {
   if (typeof n !== "number" || !Number.isFinite(n)) return "—";
-  return `$${Math.round(n).toLocaleString()}`;
+  const symbol = currency === "GBP" ? "£" : "$";
+  return `${symbol}${Math.round(n).toLocaleString()}`;
+}
+
+function UkPersonalAllowanceResultSummary({ result }: { result: any }) {
+  const allowance = result.personal_allowance;
+  const inputs = result.inputs_used ?? {};
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 12, alignItems: "baseline", marginBottom: 6, flexWrap: "wrap" }}>
+        <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{fmt(allowance, "GBP")}</span>
+        <span style={{ fontSize: 12, color: "#6b7280" }}>personal allowance · tax year {result.tax_year}</span>
+      </div>
+      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
+        Income Tax Act 2007 s.35 — base £12,570 less ½ of adjusted net income above £100,000, rounded up to £1.
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, fontSize: 12 }}>
+        <Row label="Adjusted net income" value={fmt(inputs.adjusted_net_income ?? 0, "GBP")} description="Total income net of pension and gift-aid grossed deductions." />
+        <Row label="Tax year" value={result.tax_year ?? "—"} description="UK tax year (6 April → 5 April)." />
+      </div>
+      <div style={{ marginTop: 8, fontSize: 11, color: "#6b7280" }}>
+        Sources:{" "}
+        {result.citations?.map((c: any, i: number) => (
+          <span key={c.id}>
+            {i > 0 ? ", " : ""}
+            <a className="cite" href={c.url} target="_blank" rel="noreferrer">{c.id}</a>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function judgmentBadge(v: "holds" | "not_holds" | undefined) {
