@@ -13,9 +13,9 @@ export const STARTERS_US: readonly string[] = [
 ];
 
 export const STARTERS_UK: readonly string[] = [
-  "I'm a single 23-year-old — what's my UC standard allowance?",
-  "What's the max UC for a couple aged 30 with two children?",
-  "I earn £120,000 — what's my personal allowance?",
+  "I earn £140,000 but salary-sacrifice £18,000 into my pension. What's my personal allowance?",
+  "I'm 24, single, with one young child and a part-time job. What's my max UC monthly?",
+  "We're a couple, both 32, three kids — one with a higher-rate disability — and pay childcare for two of them. What's our max UC?",
 ];
 
 /** Back-compat — old callers get the US starters. */
