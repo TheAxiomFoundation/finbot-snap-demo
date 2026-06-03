@@ -69,6 +69,23 @@ export const CATALOG: EncodedProgram[] = [
     primary_output: "us-ny:programs/snap/fy-2026#snap_benefit",
   },
   {
+    slug: "uk-universal-credit-elements",
+    country: "uk",
+    jurisdiction: "uk",
+    display_name: "UK Universal Credit elements — UC Regs 2013 reg 36",
+    scope: "The six element amounts that go into the Universal Credit maximum award: standard allowance, child element, disabled-child supplement, LCWRA element, carer element, and childcare costs cap. Sums them into max_uc_monthly_amount. Does NOT yet apply the work allowance, income taper, or benefit cap.",
+    rulespec_path: "rulespec-uk/regulations/uksi/2013/376/36.yaml",
+    outputs: [
+      { legal_id: "uk:regulations/uksi/2013/376/36#standard_allowance_amount", label: "Standard allowance (monthly)", kind: "scalar", short: "Family-scope amount, picked by single/joint × under-25/25+." },
+      { legal_id: "uk:regulations/uksi/2013/376/36#child_element_amount", label: "Child element (per child, monthly)", kind: "scalar", short: "Different rate for first vs subsequent child." },
+      { legal_id: "uk:regulations/uksi/2013/376/36#disabled_child_additional_amount", label: "Disabled-child additional amount (per child, monthly)", kind: "scalar", short: "Lower or higher rate depending on disability." },
+      { legal_id: "uk:regulations/uksi/2013/376/36#lcwra_element_amount", label: "LCWRA element (monthly)", kind: "scalar", short: "Limited Capability for Work and Work-Related Activity." },
+      { legal_id: "uk:regulations/uksi/2013/376/36#carer_element", label: "Carer element (monthly)", kind: "scalar", short: "Family-scope amount when a claimant qualifies as a carer." },
+      { legal_id: "uk:regulations/uksi/2013/376/36#childcare_costs_element_maximum_amount", label: "Childcare costs element max (monthly)", kind: "scalar", short: "Cap depending on number of children." },
+    ],
+    primary_output: "uk:regulations/uksi/2013/376/36#standard_allowance_amount",
+  },
+  {
     slug: "uk-personal-allowance",
     country: "uk",
     jurisdiction: "uk",

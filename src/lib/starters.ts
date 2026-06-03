@@ -13,9 +13,9 @@ export const STARTERS_US: readonly string[] = [
 ];
 
 export const STARTERS_UK: readonly string[] = [
-  "What's the UK personal allowance for someone earning £50,000?",
+  "I'm a single 23-year-old — what's my UC standard allowance?",
+  "What's the max UC for a couple aged 30 with two children?",
   "I earn £120,000 — what's my personal allowance?",
-  "At what income does the personal allowance fully taper to £0?",
 ];
 
 /** Back-compat — old callers get the US starters. */

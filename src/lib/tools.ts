@@ -21,6 +21,11 @@ import {
   type UkPersonalAllowanceFacts,
 } from "./programs/uk-personal-allowance";
 import { UK_PERSONAL_ALLOWANCE_BASE } from "./programs/uk-personal-allowance-base";
+import {
+  computeUkUniversalCreditElements,
+  type UkUcFacts,
+} from "./programs/uk-uc";
+import { UK_UC_BASE } from "./programs/uk-uc-base";
 
 const CoSnapFactsSchema = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/).optional()
@@ -42,6 +47,29 @@ const CoSnapFactsSchema = z.object({
   any_member_elderly_or_disabled: z.boolean().optional()
     .describe("Whether any household member is age 60+ or receiving disability benefits."),
   primary_member_is_us_citizen: z.boolean().optional(),
+});
+
+const UkUcFactsSchema = z.object({
+  tax_year_start: z.number().int().min(2000).max(2050).optional()
+    .describe("Calendar year the UK tax year starts (e.g. 2025 for 2025-26). Default 2025."),
+  is_joint_claim: z.boolean().optional()
+    .describe("True if a couple is claiming jointly; false for a single claim. Default false."),
+  eldest_adult_age: z.number().int().min(0).max(120).optional()
+    .describe("Age of the eldest adult in the claim. Drives the under-25 / 25+ standard-allowance band. Default 30."),
+  number_of_children: z.number().int().min(0).max(20).optional()
+    .describe("Children or qualifying young persons the claimant is responsible for. Default 0."),
+  number_of_disabled_children_lower_rate: z.number().int().min(0).max(20).optional()
+    .describe("Children eligible for the disabled-child lower-rate supplement. Default 0."),
+  number_of_disabled_children_higher_rate: z.number().int().min(0).max(20).optional()
+    .describe("Children eligible for the disabled-child higher-rate supplement. Default 0."),
+  has_lcwra: z.boolean().optional()
+    .describe("True if a claimant has Limited Capability for Work and Work-Related Activity. Default false."),
+  is_pre_commencement_lcwra: z.boolean().optional()
+    .describe("True if the LCWRA claimant has a protected pre-commencement award (higher amount). Default false."),
+  has_carer: z.boolean().optional()
+    .describe("True if a claimant has regular and substantial caring responsibilities. Default false."),
+  number_of_children_in_childcare: z.number().int().min(0).max(20).optional()
+    .describe("Children in registered childcare. Drives the childcare costs maximum. Default 0."),
 });
 
 const UkPersonalAllowanceFactsSchema = z.object({
@@ -265,7 +293,7 @@ const usTools = {
 const ukTools = {
   list_encoded_outputs: tool({
     description:
-      "List benefit and tax programs that axiom-rules-engine has actually encoded for the United Kingdom. Currently: UK personal allowance under Income Tax Act 2007 s.35 (with the £100k taper). Call this BEFORE answering any program question.",
+      "List benefit and tax programs that axiom-rules-engine has actually encoded for the United Kingdom: UK personal allowance under Income Tax Act 2007 s.35 (with the £100k taper) and Universal Credit element amounts under UC Regs 2013 reg 36. Call this BEFORE answering any program question. Pass `search` to find a legal_id you can then read with compute_uk_universal_credit_elements or compute_uk_personal_allowance.",
     parameters: z.object({
       search: z
         .string()
@@ -274,7 +302,10 @@ const ukTools = {
     }),
     execute: async ({ search }) => {
       const programs = programsForCountry("uk");
-      const ukOutputs = UK_PERSONAL_ALLOWANCE_BASE.all_outputs as ReadonlyArray<{
+      const ukOutputs = [
+        ...UK_PERSONAL_ALLOWANCE_BASE.all_outputs,
+        ...UK_UC_BASE.all_outputs,
+      ] as ReadonlyArray<{
         name: string;
         id: string;
         entity: string;
@@ -315,6 +346,36 @@ const ukTools = {
           truncated: matches.length > 24,
         }),
       };
+    },
+  }),
+
+  compute_uk_universal_credit_elements: tool({
+    description:
+      `Compute the six Universal Credit element amounts and their sum (max_uc_monthly_amount) for a UK household, per UC Regs 2013 reg 36.
+
+      HEADLINE FIELD. The user-facing pound amount is \`max_uc_monthly_amount\` (sum of standard allowance + child elements + disabled supplements + LCWRA + carer + childcare max).
+
+      MECHANICS THIS ENCODES (and what it does NOT):
+      - Standard allowance: single under-25 £338.58, single 25+ £424.90, joint both under-25 £528.34, joint either 25+ £666.97.
+      - Child element: first child £339.00, each subsequent £291.33.
+      - Disabled child additional: lower-rate £156.11 / higher-rate £487.58 per child.
+      - LCWRA element £416.19 (or pre-commencement protected £487.58 if is_pre_commencement_lcwra).
+      - Carer element £198.31.
+      - Childcare costs maximum: £950.92 for 1 child, £1,630.15 for 2+.
+      - NOT YET ENCODED in a runnable composition: the work allowance, the 55% income taper, the benefit cap, and the conversion of max_uc_monthly_amount to an actual award after deductions. Be explicit that this is the MAX before deductions, not the final award.
+
+      FACT INFERENCES the user expects you to make:
+      - "Couple aged 30 with 2 kids" → is_joint_claim=true, eldest_adult_age=30, number_of_children=2. Show the inference.
+      - "Single 23-year-old" → is_joint_claim=false, eldest_adult_age=23. Show the inference.
+      - Don't pad facts: leave LCWRA, carer, disabled-child counts at default 0 unless the user volunteered them.`,
+    parameters: UkUcFactsSchema,
+    execute: async (facts) => {
+      try {
+        return await computeUkUniversalCreditElements(facts as UkUcFacts);
+      } catch (err) {
+        console.error("[finbot] compute_uk_universal_credit_elements failed:", err, "facts:", facts);
+        throw err;
+      }
     },
   }),
 
