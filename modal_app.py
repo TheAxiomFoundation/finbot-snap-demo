@@ -28,7 +28,7 @@ ENGINE_VERSION = "v4-uk"
 # errors at request time. To upgrade: pull the repos locally, regenerate the
 # base files, verify `bun run engine:test` (and scripts/test-uk.ts) still
 # pass, then update these SHAs and bump ENGINE_VERSION.
-AXIOM_RULES_ENGINE_SHA = "9106f44e34ec3eae92a1adf2246560c5eac00094"
+AXIOM_RULES_ENGINE_SHA = "431039f02d3fff60cd0c3c074f0ab4318042f002"
 RULESPEC_US_SHA = "2f3a30991e1f8279c2fa664e51f068a63d905591"
 RULESPEC_US_CO_SHA = "ba00673d73c19f262d542cfa597b0b365a1313b7"
 RULESPEC_UK_SHA = "684c9e7547397c2ef9c798cd62f9e8225fd7cb7c"
