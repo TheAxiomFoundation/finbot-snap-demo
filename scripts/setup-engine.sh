@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-shot: clone axiom repos, build the Rust binary, and compile the CO SNAP artifact.
+# One-shot: clone axiom repos, build the Rust binary, and compile/copy artifacts.
 # Idempotent — safe to re-run.
 set -euo pipefail
 
@@ -20,6 +20,11 @@ clone_or_pull() {
 clone_or_pull axiom-rules-engine
 clone_or_pull rulespec-us
 clone_or_pull rulespec-us-co
+clone_or_pull rulespec-uk
+clone_or_pull axiom-programs
+
+git -C engine/axiom-programs fetch origin codex/uk-uc-compose-housing-schedules-20260604
+git -C engine/axiom-programs checkout 762a1666c77f6643590ce2bc97e3c8263dd22879
 
 if ! command -v cargo >/dev/null; then
   echo "cargo not found — install Rust first: https://rustup.rs"
