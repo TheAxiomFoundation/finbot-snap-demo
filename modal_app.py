@@ -19,25 +19,38 @@ import modal
 app = modal.App("axiom-engine")
 
 # Bump when source repos change to bust the layer cache and re-build.
-ENGINE_VERSION = "v3-pinned-shas"
+ENGINE_VERSION = "v4-uk"
 
-# Pinned commit SHAs for the upstream repos. The compiled artifact's input
-# slots have to match what src/lib/programs/co-snap-base.ts (auto-generated
-# from the local artifact) declares — drifting from these SHAs without
-# regenerating the local schema will cause "unknown input slot" errors at
-# request time. To upgrade: pull the repos locally, run
-# `bash scripts/build-artifacts.sh && python3 scripts/regenerate-co-snap-base.py`,
-# verify `bun run engine:test` still passes, then update these SHAs and bump
-# ENGINE_VERSION.
+# Pinned commit SHAs for the upstream repos. The compiled artifacts' input
+# slots have to match what src/lib/programs/*-base.ts (auto-generated or
+# handcrafted from the local artifacts) declares — drifting from these SHAs
+# without regenerating the local schemas will cause "unknown input slot"
+# errors at request time. To upgrade: pull the repos locally, regenerate the
+# base files, verify `bun run engine:test` (and scripts/test-uk.ts) still
+# pass, then update these SHAs and bump ENGINE_VERSION.
 AXIOM_RULES_ENGINE_SHA = "9106f44e34ec3eae92a1adf2246560c5eac00094"
 RULESPEC_US_SHA = "2f3a30991e1f8279c2fa664e51f068a63d905591"
 RULESPEC_US_CO_SHA = "ba00673d73c19f262d542cfa597b0b365a1313b7"
+RULESPEC_UK_SHA = "684c9e7547397c2ef9c798cd62f9e8225fd7cb7c"
+AXIOM_PROGRAMS_SHA = "5155dd10ff7fbc0eceb74192429ffcb6870f95d3"
 
-# RuleSpec content baked into the image. Each entry: (slug, rulespec repo path).
-# Add a new line + a matching artifact below to expose another program.
-PROGRAMS = [
+# Programs compiled from RuleSpec YAML at image build time.
+# Entry: (slug, rulespec-relative path under /opt).
+COMPILED_PROGRAMS = [
     ("co-snap", "rulespec-us-co/policies/cdhs/snap/fy-2026-benefit-calculation.yaml"),
+    ("uk-personal-allowance", "rulespec-uk/statutes/ukpga/2007/3/35.yaml"),
 ]
+
+# Programs whose compiled artifact is prebuilt in axiom-programs (see
+# axiom-programs#12 — the UC composition needs axiom-compose to translate
+# its program-schema YAML, so we copy the prebuilt JSON directly).
+# Entry: (slug, source-relative path under /opt).
+PREBUILT_ARTIFACTS = [
+    ("uk-uc", "axiom-programs/artifacts/uk/universal-credit/fy-2026-27.compiled.json"),
+]
+
+# Combined surface for the HTTP layer.
+ALL_PROGRAM_SLUGS = [slug for slug, _ in COMPILED_PROGRAMS] + [slug for slug, _ in PREBUILT_ARTIFACTS]
 
 image = (
     modal.Image.debian_slim(python_version="3.13")
@@ -57,14 +70,27 @@ image = (
         f"cd /opt/rulespec-us && git checkout {RULESPEC_US_SHA}",
         "git clone https://github.com/TheAxiomFoundation/rulespec-us-co.git /opt/rulespec-us-co",
         f"cd /opt/rulespec-us-co && git checkout {RULESPEC_US_CO_SHA}",
+        "git clone https://github.com/TheAxiomFoundation/rulespec-uk.git /opt/rulespec-uk",
+        f"cd /opt/rulespec-uk && git checkout {RULESPEC_UK_SHA}",
+        "git clone https://github.com/TheAxiomFoundation/axiom-programs.git /opt/axiom-programs",
+        f"cd /opt/axiom-programs && git checkout {AXIOM_PROGRAMS_SHA}",
         ". $HOME/.cargo/env && cd /opt/axiom-rules-engine && cargo build --release",
         "mkdir -p /opt/artifacts",
         # Compile each program to a JSON artifact. Path uses /opt/<repo>/<rulespec_path>.
+        # AXIOM_RULE_REPO_ROOTS=/opt lets the engine resolve cross-repo imports
+        # (e.g. uk:statutes/ukpga/2007/3/35#personal_allowance from s.23).
         *[
+            f"AXIOM_RULE_REPO_ROOTS=/opt "
             f"/opt/axiom-rules-engine/target/release/axiom-rules-engine compile "
             f"--program /opt/{path} "
             f"--output /opt/artifacts/{slug}.compiled.json"
-            for slug, path in PROGRAMS
+            for slug, path in COMPILED_PROGRAMS
+        ],
+        # Copy prebuilt artifacts (program-schema compositions that aren't
+        # accepted by the engine's compile path until axiom-compose ships).
+        *[
+            f"cp /opt/{path} /opt/artifacts/{slug}.compiled.json"
+            for slug, path in PREBUILT_ARTIFACTS
         ],
     )
     .pip_install("fastapi>=0.109", "uvicorn>=0.27", "pydantic>=2.0")
@@ -92,7 +118,7 @@ def web():
     from fastapi.middleware.cors import CORSMiddleware
 
     BIN = "/opt/axiom-rules-engine/target/release/axiom-rules-engine"
-    ARTIFACTS = {slug: f"/opt/artifacts/{slug}.compiled.json" for slug, _ in PROGRAMS}
+    ARTIFACTS = {slug: f"/opt/artifacts/{slug}.compiled.json" for slug in ALL_PROGRAM_SLUGS}
 
     api = FastAPI(title="Axiom Engine", version="0.1.0")
 
