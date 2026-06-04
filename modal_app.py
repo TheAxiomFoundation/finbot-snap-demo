@@ -19,7 +19,7 @@ import modal
 app = modal.App("axiom-engine")
 
 # Bump when source repos change to bust the layer cache and re-build.
-ENGINE_VERSION = "v4-uk"
+ENGINE_VERSION = "v5-uk-uc-housing"
 
 # Pinned commit SHAs for the upstream repos. The compiled artifacts' input
 # slots have to match what src/lib/programs/*-base.ts (auto-generated or
@@ -32,7 +32,7 @@ AXIOM_RULES_ENGINE_SHA = "431039f02d3fff60cd0c3c074f0ab4318042f002"
 RULESPEC_US_SHA = "2f3a30991e1f8279c2fa664e51f068a63d905591"
 RULESPEC_US_CO_SHA = "ba00673d73c19f262d542cfa597b0b365a1313b7"
 RULESPEC_UK_SHA = "684c9e7547397c2ef9c798cd62f9e8225fd7cb7c"
-AXIOM_PROGRAMS_SHA = "5155dd10ff7fbc0eceb74192429ffcb6870f95d3"
+AXIOM_PROGRAMS_SHA = "762a1666c77f6643590ce2bc97e3c8263dd22879"
 
 # Programs compiled from RuleSpec YAML at image build time.
 # Entry: (slug, rulespec-relative path under /opt).
