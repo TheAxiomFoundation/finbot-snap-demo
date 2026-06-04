@@ -1,17 +1,11 @@
 /**
- * UK Universal Credit elements (UC Regs 2013 reg 36) — typed user-facing fact
- * contract bound to the compiled axiom-rules-engine artifact.
+ * UK Universal Credit — typed user-facing fact contract bound to the
+ * composed FY 2026-27 artifact (axiom-programs/uk/universal-credit).
  *
- * Returns the six element amounts that go into the UC maximum award:
- * standard allowance, child element (per child), disabled child supplement,
- * LCWRA element, carer element, childcare costs max. Sums them into a
- * single max_uc_monthly_amount so the model has one headline number.
- *
- * Out of scope for this tool (engine doesn't have it self-contained yet):
- * the work allowance, the income taper, the benefit cap, and the actual
- * award after deductions. WRA 2012 s.8 ("award = max − deductions")
- * exists in rulespec-uk but references slot names that aren't yet wired
- * to reg 36's exported outputs.
+ * The composition wires WRA 2012 s.8 (award = maximum − deductions) to UC
+ * Regs 2013 regs 22, 24, 26, 27, 29, 34, and 36, so this tool returns the
+ * actual award after the work allowance and the 55% earned-income taper —
+ * not just the sum of element amounts.
  */
 import {
   type ExecutionRequest,
@@ -24,242 +18,325 @@ import {
 } from "../engine";
 import { UK_UC_BASE } from "./uk-uc-base";
 
-const ARTIFACT_SLUG = "uk-uc-reg36";
+const ARTIFACT_SLUG = "uk-uc";
 const FAMILY_ID = "f1";
-const INPUT_PREFIX = "uk:regulations/uksi/2013/376/36#input.";
+const PRIMARY_ADULT_ID = "p_primary";
+const SECOND_ADULT_ID = "p_second";
+const INPUT_PREFIX = "axiom:uc-fy-2026-27#input.";
+
+const INTERVAL_START_FALLBACK = 2025;
 
 export interface UkUcFacts {
   /** Calendar year the UK tax year starts. Default 2025. */
   tax_year_start?: number;
-  /** True for a joint claim by a couple; false for a single claim. Default false. */
+
+  // Adult composition
+  /** True for a couple claiming jointly; false for a single claim. Default false. */
   is_joint_claim?: boolean;
-  /** Eldest adult age in the family. Drives the standard allowance under-25 / 25+ band. */
+  /** Eldest adult age. Drives the under-25 / 25+ standard allowance band. Default 30. */
   eldest_adult_age?: number;
-  /** Total number of children or qualifying young persons for whom the claimant is responsible. Default 0. */
+
+  // Children
+  /** Children or qualifying young persons the claimant is responsible for. Default 0. */
   number_of_children?: number;
   /** Children eligible for the disabled-child lower-rate supplement. Default 0. */
   number_of_disabled_children_lower_rate?: number;
   /** Children eligible for the disabled-child higher-rate supplement. Default 0. */
   number_of_disabled_children_higher_rate?: number;
-  /** True if a claimant has LCWRA (Limited Capability for Work and Work-Related Activity). Default false. */
+
+  // LCWRA / carer
+  /** A claimant has LCWRA (Limited Capability for Work and Work-Related Activity). Default false. */
   has_lcwra?: boolean;
-  /** True if the LCWRA claimant has a protected pre-commencement award (the higher amount). Default false. */
+  /** Pre-commencement (protected) LCWRA award. Drives the higher amount. Default false. */
   is_pre_commencement_lcwra?: boolean;
-  /** True if a claimant has regular and substantial caring responsibilities. Default false. */
+  /** A claimant qualifies for the carer element. Default false. */
   has_carer?: boolean;
-  /** Number of children in registered childcare (drives the childcare costs cap). Default 0. */
+
+  // Childcare
+  /** Children in registered childcare. Drives the childcare costs cap. Default 0. */
   number_of_children_in_childcare?: number;
+  /** Actual childcare costs paid in the assessment period, in £. Default 0 (no childcare element). */
+  childcare_costs_paid_monthly?: number;
+
+  // Income — drives the work allowance + 55% taper in reg 22.
+  /** Monthly earned income — single-claim case, in £. Default 0. */
+  monthly_earned_income?: number;
+  /** Monthly unearned income — single-claim case, in £. Default 0. */
+  monthly_unearned_income?: number;
+  /** Joint monthly earned income, in £. Used when is_joint_claim is true. Default 0. */
+  joint_monthly_earned_income?: number;
+  /** Joint monthly unearned income, in £. Used when is_joint_claim is true. Default 0. */
+  joint_monthly_unearned_income?: number;
 }
 
-interface PersonSpec {
+interface ChildSpec {
   id: string;
-  role: "first_child" | "subsequent_child" | "disabled_lower" | "disabled_higher" | "lcwra" | "carer";
-  inputs: Record<string, boolean | number | string>;
+  is_first: boolean;
+  disabled_lower: boolean;
+  disabled_higher: boolean;
 }
 
-function buildPersons(facts: UkUcFacts): PersonSpec[] {
-  const persons: PersonSpec[] = [];
-  const nChildren = Math.max(0, facts.number_of_children ?? 0);
-  const nDisLow = Math.max(0, facts.number_of_disabled_children_lower_rate ?? 0);
-  const nDisHigh = Math.max(0, facts.number_of_disabled_children_higher_rate ?? 0);
-  for (let i = 0; i < nChildren; i++) {
-    const isFirst = i === 0;
-    const disLowApplies = i < nDisLow;
-    const disHighApplies = i < nDisHigh;
-    persons.push({
-      id: `child_${i + 1}`,
-      role: isFirst ? "first_child" : "subsequent_child",
-      inputs: {
-        child_is_first_child_or_qualifying_young_person: isFirst,
-        child_is_second_or_subsequent_child_or_qualifying_young_person: !isFirst,
-        disabled_child_lower_rate_applies: disLowApplies,
-        disabled_child_higher_rate_applies: disHighApplies,
-        claimant_has_limited_capability_for_work_and_work_related_activity: false,
-        claimant_is_pre_commencement_lcwra_claimant: false,
-        claimant_is_severe_conditions_criteria_claimant: false,
-        claimant_is_terminally_ill: false,
-        carer_element_applies: false,
-      },
-    });
-  }
-  if (facts.has_lcwra) {
-    persons.push({
-      id: "lcwra_claimant",
-      role: "lcwra",
-      inputs: {
-        child_is_first_child_or_qualifying_young_person: false,
-        child_is_second_or_subsequent_child_or_qualifying_young_person: false,
-        disabled_child_lower_rate_applies: false,
-        disabled_child_higher_rate_applies: false,
-        claimant_has_limited_capability_for_work_and_work_related_activity: true,
-        claimant_is_pre_commencement_lcwra_claimant: !!facts.is_pre_commencement_lcwra,
-        claimant_is_severe_conditions_criteria_claimant: false,
-        claimant_is_terminally_ill: false,
-        carer_element_applies: false,
-      },
-    });
-  }
-  if (facts.has_carer) {
-    persons.push({
-      id: "carer_claimant",
-      role: "carer",
-      inputs: {
-        child_is_first_child_or_qualifying_young_person: false,
-        child_is_second_or_subsequent_child_or_qualifying_young_person: false,
-        disabled_child_lower_rate_applies: false,
-        disabled_child_higher_rate_applies: false,
-        claimant_has_limited_capability_for_work_and_work_related_activity: false,
-        claimant_is_pre_commencement_lcwra_claimant: false,
-        claimant_is_severe_conditions_criteria_claimant: false,
-        claimant_is_terminally_ill: false,
-        carer_element_applies: true,
-      },
-    });
-  }
-  return persons;
+function adultPersonIds(is_joint: boolean): string[] {
+  return is_joint ? [PRIMARY_ADULT_ID, SECOND_ADULT_ID] : [PRIMARY_ADULT_ID];
 }
 
-function buildRequest(facts: UkUcFacts, persons: PersonSpec[]): ExecutionRequest {
-  const taxYearStart = facts.tax_year_start ?? 2025;
+function childSpecs(facts: UkUcFacts): ChildSpec[] {
+  const n = Math.max(0, facts.number_of_children ?? 0);
+  const lower = Math.max(0, facts.number_of_disabled_children_lower_rate ?? 0);
+  const higher = Math.max(0, facts.number_of_disabled_children_higher_rate ?? 0);
+  return Array.from({ length: n }, (_, i) => ({
+    id: `c${i + 1}`,
+    is_first: i === 0,
+    disabled_lower: i < lower,
+    disabled_higher: i < higher,
+  }));
+}
+
+function buildRequest(facts: UkUcFacts): { req: ExecutionRequest; children: ChildSpec[]; adultIds: string[] } {
+  const taxYearStart = facts.tax_year_start ?? INTERVAL_START_FALLBACK;
   const { interval, period } = taxYearInterval(taxYearStart);
 
-  const familyInputsRaw: Record<string, boolean | number | string> = {
-    award_is_for_joint_claimants: !!facts.is_joint_claim,
-    single_claimant_is_aged_25_or_over: !facts.is_joint_claim && (facts.eldest_adult_age ?? 30) >= 25,
-    either_joint_claimant_is_aged_25_or_over: !!facts.is_joint_claim && (facts.eldest_adult_age ?? 30) >= 25,
+  const isJoint = !!facts.is_joint_claim;
+  const eldestAge = facts.eldest_adult_age ?? 30;
+  const age25plus = eldestAge >= 25;
+  const adultIds = adultPersonIds(isJoint);
+  const children = childSpecs(facts);
+  const hasChildren = children.length > 0;
+
+  // Family-scope overrides (apply to the Family entity row).
+  const familyOverrides: Record<string, boolean | number | string> = {
+    award_is_for_joint_claimants: isJoint,
+    claim_is_for_joint_claimants: isJoint,
+    claimant_is_member_of_couple: isJoint,
+    claimant_makes_claim_as_single_person: !isJoint,
+    single_claimant_is_aged_25_or_over: !isJoint && age25plus,
+    either_joint_claimant_is_aged_25_or_over: isJoint && age25plus,
+    single_claimant_responsible_for_child_or_qualifying_young_person: !isJoint && hasChildren,
+    joint_claimants_responsible_for_child_or_qualifying_young_person: isJoint && hasChildren,
+    claimant_earned_income_in_assessment_period: facts.monthly_earned_income ?? 0,
+    claimant_unearned_income_in_assessment_period: facts.monthly_unearned_income ?? 0,
+    joint_claimants_combined_earned_income_in_assessment_period: facts.joint_monthly_earned_income ?? 0,
+    joint_claimants_combined_unearned_income_in_assessment_period: facts.joint_monthly_unearned_income ?? 0,
     childcare_costs_element_child_count: Math.max(0, facts.number_of_children_in_childcare ?? 0),
+    charges_paid_for_relevant_childcare_attributable_to_assessment_period:
+      facts.childcare_costs_paid_monthly ?? 0,
+    single_claimant_has_limited_capability_for_work_and_work_related_activity:
+      !isJoint && !!facts.has_lcwra,
+    one_or_both_joint_claimants_have_limited_capability_for_work:
+      isJoint && !!facts.has_lcwra,
+    first_joint_claimant_has_limited_capability_for_work_and_work_related_activity:
+      isJoint && !!facts.has_lcwra,
   };
 
-  const familyInputs: InputRecord[] = UK_UC_BASE.family_inputs.map((slot) => ({
-    name: INPUT_PREFIX + slot.name,
-    entity: "Family",
-    entity_id: FAMILY_ID,
-    interval,
-    value: fact(
-      familyInputsRaw[slot.name] ?? slot.default,
-      slot.dtype as "bool" | "integer" | "decimal" | "date" | "text"
-    ),
-  }));
+  // Primary-adult-scope overrides.
+  const primaryAdultOverrides: Record<string, boolean | number | string> = {
+    claim_is_for_joint_claimants: isJoint,
+    claimant_responsible_for_child_or_qualifying_young_person: hasChildren,
+    claimant_has_limited_capability_for_work_and_work_related_activity: !!facts.has_lcwra,
+    claimant_is_pre_commencement_lcwra_claimant: !!facts.is_pre_commencement_lcwra,
+    carer_element_applies: !!facts.has_carer,
+    claimant_is_the_only_relevant_carer_or_is_elected_or_determined_for_carer_element: !!facts.has_carer,
+  };
 
-  const personInputs: InputRecord[] = persons.flatMap((p) =>
-    UK_UC_BASE.person_inputs.map((slot) => ({
-      name: INPUT_PREFIX + slot.name,
-      entity: "Person" as const,
-      entity_id: p.id,
+  // Second-adult overrides for joint claims (kept empty by default — second
+  // adult is a "placeholder" so the relations resolve, no second-claimant
+  // facts surface).
+  const secondAdultOverrides: Record<string, boolean | number | string> = {
+    claim_is_for_joint_claimants: isJoint,
+  };
+
+  function emitSlots(entityKind: "Family" | "Person", entityId: string, overrides: Record<string, boolean | number | string>): InputRecord[] {
+    const out: InputRecord[] = [];
+    for (const name of UK_UC_BASE.bool_inputs) {
+      out.push({
+        name: INPUT_PREFIX + name,
+        entity: entityKind,
+        entity_id: entityId,
+        interval,
+        value: fact(overrides[name] ?? false, "bool"),
+      });
+    }
+    for (const name of UK_UC_BASE.integer_inputs) {
+      out.push({
+        name: INPUT_PREFIX + name,
+        entity: entityKind,
+        entity_id: entityId,
+        interval,
+        value: fact((overrides[name] as number) ?? 0, "integer"),
+      });
+    }
+    for (const name of UK_UC_BASE.decimal_inputs) {
+      out.push({
+        name: INPUT_PREFIX + name,
+        entity: entityKind,
+        entity_id: entityId,
+        interval,
+        value: fact((overrides[name] as number) ?? 0, "decimal"),
+      });
+    }
+    return out;
+  }
+
+  function childOverrides(c: ChildSpec): Record<string, boolean | number | string> {
+    return {
+      child_is_first_child_or_qualifying_young_person: c.is_first,
+      child_is_second_or_subsequent_child_or_qualifying_young_person: !c.is_first,
+      disabled_child_lower_rate_applies: c.disabled_lower,
+      disabled_child_higher_rate_applies: c.disabled_higher,
+      // Reg 24 keys responsible_child_element_included_amount on this flag
+      // being true on the child Person row.
+      claimant_responsible_for_child_or_qualifying_young_person: true,
+    };
+  }
+
+  const inputs: InputRecord[] = [
+    ...emitSlots("Family", FAMILY_ID, familyOverrides),
+    ...emitSlots("Person", PRIMARY_ADULT_ID, primaryAdultOverrides),
+    ...(isJoint ? emitSlots("Person", SECOND_ADULT_ID, secondAdultOverrides) : []),
+    ...children.flatMap((c) => emitSlots("Person", c.id, childOverrides(c))),
+  ];
+
+  const relations = [
+    ...adultIds.map((id) => ({
+      name: "adult_of_benefit_unit",
+      tuple: [id, FAMILY_ID] as [string, string],
       interval,
-      value: fact(
-        p.inputs[slot.name] ?? slot.default,
-        slot.dtype as "bool" | "integer" | "decimal" | "date" | "text"
-      ),
-    }))
-  );
+    })),
+    ...children.map((c) => ({
+      name: "child_of_benefit_unit",
+      tuple: [c.id, FAMILY_ID] as [string, string],
+      interval,
+    })),
+  ];
 
-  const familyOutputs = Object.values(UK_UC_BASE.family_outputs);
-  const personOutputs = Object.values(UK_UC_BASE.person_outputs);
-
-  return {
-    // The fast-path bulk evaluator wants every declared input set on every
-    // entity in the dataset; explain mode evaluates per-entity which lets us
-    // scope Family-only and Person-only inputs to their own entity rows.
+  // The compose artifact's evaluation pulls aggregations across the
+  // adult/child relations, so explain mode is the right path (fast mode
+  // would require every input on every entity to be uniform — which is
+  // what we already do, but explain is more forgiving for cross-entity
+  // sums).
+  const req: ExecutionRequest = {
     mode: "explain",
-    dataset: { inputs: [...familyInputs, ...personInputs], relations: [] },
+    dataset: { inputs, relations },
     queries: [
-      { entity_id: FAMILY_ID, period, outputs: familyOutputs },
-      ...persons.map((p) => ({ entity_id: p.id, period, outputs: personOutputs })),
+      {
+        entity_id: FAMILY_ID,
+        period,
+        outputs: Object.values(UK_UC_BASE.outputs),
+      },
     ],
   };
+  return { req, children, adultIds };
 }
 
 export interface UkUcResult {
-  /** Sum of every element returned by the engine (standard allowance + child + disabled supplements + LCWRA + carer + childcare max). */
-  max_uc_monthly_amount: number;
+  /** Headline: actual UC monthly award after work allowance + 55% taper. */
+  universal_credit_award_amount: number;
   outputs: {
+    universal_credit_award_amount: number;
+    universal_credit_maximum_amount: number;
+    universal_credit_amounts_to_be_deducted: number;
     standard_allowance_amount: number;
-    total_child_element_amount: number;
-    total_disabled_child_additional_amount: number;
-    lcwra_element_amount: number;
-    carer_element: number;
-    childcare_costs_element_maximum_amount: number;
+    earned_income_deduction_from_maximum_amount: number;
+    applicable_work_allowance_amount: number;
+    earned_income_amount_subject_to_taper: number;
+    childcare_costs_element_amount: number;
   };
-  per_child: Array<{ id: string; child_element_amount: number; disabled_child_additional_amount: number }>;
   inputs_used: UkUcFacts;
   tax_year: string;
   citations: Array<{ id: string; url: string }>;
   raw: ExecutionResponse;
 }
 
-export async function computeUkUniversalCreditElements(facts: UkUcFacts): Promise<UkUcResult> {
-  const persons = buildPersons(facts);
-  const req = buildRequest(facts, persons);
+/** The composed artifact's section-10 bridge sums `responsible_child_element_included_amount`
+ *  and `disabled_child_additional_amount` across `child_of_benefit_unit`, but reads them as
+ *  `kind: input` rather than as derived rules — so we need a pre-pass to grab the per-child
+ *  amounts and feed them back as inputs on each child Person. */
+async function precomputeChildAmounts(facts: UkUcFacts): Promise<Map<string, { child: number; disabled: number }>> {
+  const children = childSpecs(facts);
+  if (children.length === 0) return new Map();
+  const { req } = buildRequest(facts);
+  // Replace the queries with per-child Person queries against the reg 24/36 derived rules.
+  const { period } = taxYearInterval(facts.tax_year_start ?? INTERVAL_START_FALLBACK);
+  req.queries = children.map((c) => ({
+    entity_id: c.id,
+    period,
+    outputs: [
+      "uk:regulations/uksi/2013/376/24#responsible_child_element_included_amount",
+      "uk:regulations/uksi/2013/376/36#disabled_child_additional_amount",
+    ],
+  }));
   const res = await runCompiled(ARTIFACT_SLUG, req);
+  const map = new Map<string, { child: number; disabled: number }>();
+  res.results.forEach((row, i) => {
+    const id = children[i].id;
+    const child = readOutput(row.outputs["uk:regulations/uksi/2013/376/24#responsible_child_element_included_amount"])?.numeric ?? 0;
+    const disabled = readOutput(row.outputs["uk:regulations/uksi/2013/376/36#disabled_child_additional_amount"])?.numeric ?? 0;
+    map.set(id, { child, disabled });
+  });
+  return map;
+}
 
-  // Result rows are keyed by entity_id in order of the queries we sent.
-  const familyResult = res.results[0];
-  const personResults = res.results.slice(1);
+export async function computeUkUniversalCredit(facts: UkUcFacts): Promise<UkUcResult> {
+  // Pass 1: get per-child responsible_child_element_included_amount (reg 24)
+  // and disabled_child_additional_amount (reg 36) so we can feed them as inputs
+  // to the s.10 bridge in pass 2.
+  const childAmounts = await precomputeChildAmounts(facts);
 
-  const num = (id: string, row: typeof familyResult): number => {
-    const out = row?.outputs[id];
+  // Pass 2: build the full request, overriding per-child input slots with
+  // the values pass 1 gave us, then query for the final award.
+  const { req, children } = buildRequest(facts);
+  for (const inp of req.dataset.inputs) {
+    if (inp.entity !== "Person") continue;
+    const m = childAmounts.get(inp.entity_id);
+    if (!m) continue;
+    if (inp.name === INPUT_PREFIX + "responsible_child_element_included_amount") {
+      inp.value = fact(m.child, "decimal");
+    } else if (inp.name === INPUT_PREFIX + "disabled_child_additional_amount") {
+      inp.value = fact(m.disabled, "decimal");
+    }
+  }
+  // Silence the unused-var warning while keeping the shape parallel.
+  void children;
+  const res = await runCompiled(ARTIFACT_SLUG, req);
+  const row = res.results[0];
+
+  const num = (legalId: string): number => {
+    const out = row?.outputs[legalId];
     if (!out) return 0;
     return readOutput(out).numeric ?? 0;
   };
 
-  const standard_allowance_amount = num(UK_UC_BASE.family_outputs.standard_allowance_amount, familyResult);
-  const childcare_costs_element_maximum_amount = num(UK_UC_BASE.family_outputs.childcare_costs_element_maximum_amount, familyResult);
+  const m = UK_UC_BASE.outputs;
+  const outputs = {
+    universal_credit_award_amount: num(m.universal_credit_award_amount),
+    universal_credit_maximum_amount: num(m.universal_credit_maximum_amount),
+    universal_credit_amounts_to_be_deducted: num(m.universal_credit_amounts_to_be_deducted),
+    standard_allowance_amount: num(m.standard_allowance_amount),
+    earned_income_deduction_from_maximum_amount: num(m.earned_income_deduction_from_maximum_amount),
+    applicable_work_allowance_amount: num(m.applicable_work_allowance_amount),
+    earned_income_amount_subject_to_taper: num(m.earned_income_amount_subject_to_taper),
+    childcare_costs_element_amount: num(m.childcare_costs_element_amount),
+  };
 
-  let total_child_element_amount = 0;
-  let total_disabled_child_additional_amount = 0;
-  let lcwra_element_amount = 0;
-  let carer_element = 0;
-  const per_child: UkUcResult["per_child"] = [];
-
-  personResults.forEach((row, i) => {
-    const spec = persons[i];
-    const child = num(UK_UC_BASE.person_outputs.child_element_amount, row);
-    const disabled = num(UK_UC_BASE.person_outputs.disabled_child_additional_amount, row);
-    const lcwra = num(UK_UC_BASE.person_outputs.lcwra_element_amount, row);
-    const carer = num(UK_UC_BASE.person_outputs.carer_element, row);
-    if (spec.role === "first_child" || spec.role === "subsequent_child") {
-      total_child_element_amount += child;
-      total_disabled_child_additional_amount += disabled;
-      per_child.push({ id: spec.id, child_element_amount: child, disabled_child_additional_amount: disabled });
-    }
-    if (spec.role === "lcwra") lcwra_element_amount = lcwra;
-    if (spec.role === "carer") carer_element = carer;
-  });
-
-  const max_uc_monthly_amount =
-    standard_allowance_amount +
-    total_child_element_amount +
-    total_disabled_child_additional_amount +
-    lcwra_element_amount +
-    carer_element +
-    childcare_costs_element_maximum_amount;
-
-  const startYear = facts.tax_year_start ?? 2025;
+  const startYear = facts.tax_year_start ?? INTERVAL_START_FALLBACK;
   return {
-    max_uc_monthly_amount,
-    outputs: {
-      standard_allowance_amount,
-      total_child_element_amount,
-      total_disabled_child_additional_amount,
-      lcwra_element_amount,
-      carer_element,
-      childcare_costs_element_maximum_amount,
-    },
-    per_child,
+    universal_credit_award_amount: outputs.universal_credit_award_amount,
+    outputs,
     inputs_used: { ...facts },
     tax_year: `${startYear}-${(startYear + 1).toString().slice(2)}`,
     citations: [
-      {
-        id: "uk:regulations/uksi/2013/376/36",
-        url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/36",
-      },
+      { id: "uk:statutes/ukpga/2012/5/8", url: "https://app.axiom-foundation.org/uk/statute/ukpga/2012/5/8" },
+      { id: "uk:regulations/uksi/2013/376/22", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/22" },
+      { id: "uk:regulations/uksi/2013/376/36", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/36" },
     ],
     raw: res,
   };
 }
 
 export function isUkUcLegalId(legalId: string): boolean {
-  return legalId.startsWith("uk:regulations/uksi/2013/376/36#")
-    || legalId.startsWith("uk:statutes/ukpga/2012/5/");
+  return (
+    legalId.startsWith("uk:statutes/ukpga/2012/5/") ||
+    legalId.startsWith("uk:regulations/uksi/2013/376/") ||
+    legalId.startsWith("axiom-programs:uk/universal-credit/")
+  );
 }

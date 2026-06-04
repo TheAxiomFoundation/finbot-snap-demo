@@ -22,7 +22,7 @@ import {
 } from "./programs/uk-personal-allowance";
 import { UK_PERSONAL_ALLOWANCE_BASE } from "./programs/uk-personal-allowance-base";
 import {
-  computeUkUniversalCreditElements,
+  computeUkUniversalCredit,
   type UkUcFacts,
 } from "./programs/uk-uc";
 import { UK_UC_BASE } from "./programs/uk-uc-base";
@@ -70,6 +70,16 @@ const UkUcFactsSchema = z.object({
     .describe("True if a claimant has regular and substantial caring responsibilities. Default false."),
   number_of_children_in_childcare: z.number().int().min(0).max(20).optional()
     .describe("Children in registered childcare. Drives the childcare costs maximum. Default 0."),
+  childcare_costs_paid_monthly: z.number().min(0).optional()
+    .describe("Actual childcare costs paid in the assessment period, in £. Default 0."),
+  monthly_earned_income: z.number().min(0).optional()
+    .describe("Single-claim monthly earned income (post-tax/NI), in £. Drives reg 22 work allowance + 55% taper. Default 0."),
+  monthly_unearned_income: z.number().min(0).optional()
+    .describe("Single-claim monthly unearned income, in £. Deducted £-for-£ from the maximum. Default 0."),
+  joint_monthly_earned_income: z.number().min(0).optional()
+    .describe("Joint-claim combined monthly earned income, in £. Default 0."),
+  joint_monthly_unearned_income: z.number().min(0).optional()
+    .describe("Joint-claim combined monthly unearned income, in £. Default 0."),
 });
 
 const UkPersonalAllowanceFactsSchema = z.object({
@@ -349,31 +359,33 @@ const ukTools = {
     },
   }),
 
-  compute_uk_universal_credit_elements: tool({
+  compute_uk_universal_credit: tool({
     description:
-      `Compute the six Universal Credit element amounts and their sum (max_uc_monthly_amount) for a UK household, per UC Regs 2013 reg 36.
+      `Compute the UK Universal Credit monthly award for a household, end-to-end through WRA 2012 s.8 + UC Regs 2013 regs 22, 24, 26, 27, 29, 34, and 36 — composed in axiom-programs/uk/universal-credit/fy-2026-27.
 
-      HEADLINE FIELD. The user-facing pound amount is \`max_uc_monthly_amount\` (sum of standard allowance + child elements + disabled supplements + LCWRA + carer + childcare max).
+      HEADLINE FIELD. The user-facing pound amount is \`universal_credit_award_amount\` (final monthly award after work allowance and 55% earned-income taper). The result also breaks down \`universal_credit_maximum_amount\` (sum of elements), \`universal_credit_amounts_to_be_deducted\` (taper + unearned income), \`standard_allowance_amount\`, \`earned_income_deduction_from_maximum_amount\`, and \`applicable_work_allowance_amount\`.
 
-      MECHANICS THIS ENCODES (and what it does NOT):
-      - Standard allowance: single under-25 £338.58, single 25+ £424.90, joint both under-25 £528.34, joint either 25+ £666.97.
-      - Child element: first child £339.00, each subsequent £291.33.
-      - Disabled child additional: lower-rate £156.11 / higher-rate £487.58 per child.
-      - LCWRA element £416.19 (or pre-commencement protected £487.58 if is_pre_commencement_lcwra).
-      - Carer element £198.31.
-      - Childcare costs maximum: £950.92 for 1 child, £1,630.15 for 2+.
-      - NOT YET ENCODED in a runnable composition: the work allowance, the 55% income taper, the benefit cap, and the conversion of max_uc_monthly_amount to an actual award after deductions. Be explicit that this is the MAX before deductions, not the final award.
+      MECHANICS THIS ENCODES:
+      - Standard allowance (reg 36 amounts): single under-25 £338.58, single 25+ £424.90, joint both under-25 £528.34, joint either 25+ £666.97.
+      - Child element: first £351.88, each subsequent £303.94. Disabled additions: lower £164.79, higher £514.71.
+      - LCWRA element £217.26 ordinary / £429.80 pre-commencement-protected; carer element £209.34.
+      - Childcare costs cap: 1 child £1,071.09, 2+ £1,836.16 — actual costs taken into account up to that cap.
+      - Reg 22 deductions: 55% taper of earned income above the applicable work allowance (£404 if award contains housing costs, £710 if not, when responsible for a child OR has LCW); plus £-for-£ deduction of unearned income.
+
+      WHAT THIS DOES NOT YET DO:
+      - The benefit cap (reg 80A) is encoded as a standalone artifact but is not yet wired into this composition.
 
       FACT INFERENCES the user expects you to make:
       - "Couple aged 30 with 2 kids" → is_joint_claim=true, eldest_adult_age=30, number_of_children=2. Show the inference.
       - "Single 23-year-old" → is_joint_claim=false, eldest_adult_age=23. Show the inference.
-      - Don't pad facts: leave LCWRA, carer, disabled-child counts at default 0 unless the user volunteered them.`,
+      - "Earning £1,500/month" with a single claim → monthly_earned_income=1500. For couples it's joint_monthly_earned_income.
+      - Don't pad facts: leave LCWRA, carer, disabled-child counts, income, and childcare at default 0/false unless the user volunteered them.`,
     parameters: UkUcFactsSchema,
     execute: async (facts) => {
       try {
-        return await computeUkUniversalCreditElements(facts as UkUcFacts);
+        return await computeUkUniversalCredit(facts as UkUcFacts);
       } catch (err) {
-        console.error("[finbot] compute_uk_universal_credit_elements failed:", err, "facts:", facts);
+        console.error("[finbot] compute_uk_universal_credit failed:", err, "facts:", facts);
         throw err;
       }
     },

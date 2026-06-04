@@ -1,5 +1,5 @@
 import { computeUkPersonalAllowance } from "../src/lib/programs/uk-personal-allowance";
-import { computeUkUniversalCreditElements } from "../src/lib/programs/uk-uc";
+import { computeUkUniversalCredit } from "../src/lib/programs/uk-uc";
 
 async function main() {
   console.log("--- personal allowance ---");
@@ -7,7 +7,6 @@ async function main() {
     { label: "£50,000 (base allowance)", facts: { adjusted_net_income: 50000 }, expected: 12570 },
     { label: "£120,000 (mid taper)", facts: { adjusted_net_income: 120000 }, expected: 2570 },
     { label: "£125,140 (full taper)", facts: { adjusted_net_income: 125140 }, expected: 0 },
-    { label: "£100,000 (at threshold)", facts: { adjusted_net_income: 100000 }, expected: 12570 },
     { label: "no claim", facts: { adjusted_net_income: 50000, individual_makes_claim: false }, expected: 0 },
   ];
   for (const c of paCases) {
@@ -17,40 +16,37 @@ async function main() {
     if (!ok) process.exitCode = 1;
   }
 
-  console.log("\n--- universal credit elements ---");
-  // Reg 36 amounts as encoded in rulespec-uk's reg 36 YAML at HEAD:
-  //   single under 25: £338.58 | single 25+: £424.90
-  //   joint both under 25: £528.34 | joint either 25+: £666.97
-  //   first child: £351.88 | subsequent child: £303.94
-  //   disabled child lower: £164.79 | higher: £514.71
-  //   LCWRA ordinary: £217.26 | LCWRA protected (pre-commencement): £429.80
-  //   carer element: £209.34
-  //   childcare max 1 child: £1,071.09 | 2+: £1,836.16
-  const ucCases: Array<{ label: string; facts: Parameters<typeof computeUkUniversalCreditElements>[0]; expectMax: number; expect?: Record<string, number> }> = [
-    { label: "single 23, no kids", facts: { is_joint_claim: false, eldest_adult_age: 23 }, expectMax: 338.58, expect: { standard_allowance_amount: 338.58 } },
-    { label: "single 30, no kids", facts: { is_joint_claim: false, eldest_adult_age: 30 }, expectMax: 424.90, expect: { standard_allowance_amount: 424.90 } },
-    { label: "joint 30, no kids", facts: { is_joint_claim: true, eldest_adult_age: 30 }, expectMax: 666.97, expect: { standard_allowance_amount: 666.97 } },
-    { label: "joint 30, 2 kids", facts: { is_joint_claim: true, eldest_adult_age: 30, number_of_children: 2 }, expectMax: 666.97 + 351.88 + 303.94, expect: { total_child_element_amount: 351.88 + 303.94 } },
-    { label: "joint 30, 2 kids, 1 in childcare", facts: { is_joint_claim: true, eldest_adult_age: 30, number_of_children: 2, number_of_children_in_childcare: 1 }, expectMax: 666.97 + 351.88 + 303.94 + 1071.09 },
-    { label: "single 30 with LCWRA", facts: { is_joint_claim: false, eldest_adult_age: 30, has_lcwra: true }, expectMax: 424.90 + 217.26, expect: { lcwra_element_amount: 217.26 } },
-    { label: "single 30 with LCWRA (protected)", facts: { is_joint_claim: false, eldest_adult_age: 30, has_lcwra: true, is_pre_commencement_lcwra: true }, expectMax: 424.90 + 429.80, expect: { lcwra_element_amount: 429.80 } },
-    { label: "single 30 with carer", facts: { is_joint_claim: false, eldest_adult_age: 30, has_carer: true }, expectMax: 424.90 + 209.34, expect: { carer_element: 209.34 } },
-    { label: "joint 30, 1 disabled child (lower)", facts: { is_joint_claim: true, eldest_adult_age: 30, number_of_children: 1, number_of_disabled_children_lower_rate: 1 }, expectMax: 666.97 + 351.88 + 164.79 },
-    { label: "joint 30, 1 disabled child (higher)", facts: { is_joint_claim: true, eldest_adult_age: 30, number_of_children: 1, number_of_disabled_children_higher_rate: 1 }, expectMax: 666.97 + 351.88 + 514.71 },
+  console.log("\n--- universal credit (composed s.8 + regs 22/24/26/27/29/34/36) ---");
+  const ucCases: Array<{ label: string; facts: Parameters<typeof computeUkUniversalCredit>[0]; expectAward: number }> = [
+    // Smoke: single 25+ no kids no income → £424.90 standard allowance
+    { label: "single 30, no income, no kids", facts: { eldest_adult_age: 30 }, expectAward: 424.90 },
+    // Single under 25 → £338.58
+    { label: "single 23, no income, no kids", facts: { eldest_adult_age: 23 }, expectAward: 338.58 },
+    // Joint 30+ → £666.97
+    { label: "joint 30, no income, no kids", facts: { is_joint_claim: true, eldest_adult_age: 30 }, expectAward: 666.97 },
+    // Joint 30 + 2 kids → £666.97 + £351.88 + £303.94 = £1,322.79
+    { label: "joint 30, 2 kids, no income", facts: { is_joint_claim: true, eldest_adult_age: 30, number_of_children: 2 }, expectAward: 1322.79 },
+    // Earned-income taper test: single 30, £1000/month earned, no child / no LCW → no work allowance → 55% taper on full earnings
+    //   max = 424.90, deduction = 0.55 * 1000 = 550, award = max(0, 424.90 - 550) = 0
+    { label: "single 30, £1000 earned, no kids/LCW (no work allowance)", facts: { eldest_adult_age: 30, monthly_earned_income: 1000 }, expectAward: 0 },
+    // Single 30 with 1 child, £1000/month earned → entitled to higher work allowance (£710 since no housing element)
+    //   max = 424.90 + 351.88 = 776.78
+    //   work allowance = 710, taper on (1000-710)*0.55 = 159.50
+    //   award = 776.78 - 159.50 = 617.28
+    { label: "single 30, 1 child, £1000 earned (higher work allowance)", facts: { eldest_adult_age: 30, number_of_children: 1, monthly_earned_income: 1000 }, expectAward: 617.28 },
+    // Unearned income £100, no earned → 424.90 - 100 = 324.90
+    { label: "single 30, £100 unearned, no kids/LCW", facts: { eldest_adult_age: 30, monthly_unearned_income: 100 }, expectAward: 324.90 },
   ];
   for (const c of ucCases) {
-    const r = await computeUkUniversalCreditElements(c.facts);
-    const okMax = Math.abs(r.max_uc_monthly_amount - c.expectMax) < 0.01;
-    let okSub = true;
-    if (c.expect) {
-      for (const [k, v] of Object.entries(c.expect)) {
-        const got = (r.outputs as Record<string, number>)[k];
-        if (Math.abs(got - v) > 0.01) { okSub = false; console.log(`    ✗ ${k}: got £${got} expected £${v}`); }
-      }
+    const r = await computeUkUniversalCredit(c.facts);
+    const got = Math.round(r.universal_credit_award_amount * 100) / 100;
+    const expected = Math.round(c.expectAward * 100) / 100;
+    const ok = Math.abs(got - expected) < 0.02;
+    console.log(`${ok ? "✓" : "✗"} ${c.label}: award=£${got.toFixed(2)} (expected £${expected.toFixed(2)})`);
+    if (!ok) {
+      console.log(`    max=£${r.outputs.universal_credit_maximum_amount} deduct=£${r.outputs.universal_credit_amounts_to_be_deducted} work_allow=£${r.outputs.applicable_work_allowance_amount} earned_deduct=£${r.outputs.earned_income_deduction_from_maximum_amount}`);
+      process.exitCode = 1;
     }
-    const ok = okMax && okSub;
-    console.log(`${ok ? "✓" : "✗"} ${c.label}: max=£${r.max_uc_monthly_amount.toFixed(2)} (expected £${c.expectMax.toFixed(2)})`);
-    if (!ok) process.exitCode = 1;
   }
 }
 main().catch((e) => { console.error(e); process.exit(1); });

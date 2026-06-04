@@ -14,8 +14,8 @@ export const STARTERS_US: readonly string[] = [
 
 export const STARTERS_UK: readonly string[] = [
   "I earn £140,000 but salary-sacrifice £18,000 into my pension. What's my personal allowance?",
-  "I'm 24, single, with one young child and a part-time job. What's my max UC monthly?",
-  "We're a couple, both 32, three kids — one with a higher-rate disability — and pay childcare for two of them. What's our max UC?",
+  "I'm 28, single, with one child and earn £1,200/month. What's my UC monthly award?",
+  "We're a couple, both 32, three kids — one with a higher-rate disability — earning £2,500/month combined. What's our UC monthly award?",
 ];
 
 /** Back-compat — old callers get the US starters. */

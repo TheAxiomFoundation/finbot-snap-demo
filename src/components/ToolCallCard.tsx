@@ -44,7 +44,7 @@ export function ToolCallCard({ invocation }: Props) {
       {invocation.toolName === "compute_uk_personal_allowance" && status === "result" && result && (
         <UkPersonalAllowanceResultSummary result={result} />
       )}
-      {invocation.toolName === "compute_uk_universal_credit_elements" && status === "result" && result && (
+      {invocation.toolName === "compute_uk_universal_credit" && status === "result" && result && (
         <UkUcResultSummary result={result} />
       )}
     </div>
@@ -52,25 +52,26 @@ export function ToolCallCard({ invocation }: Props) {
 }
 
 function UkUcResultSummary({ result }: { result: any }) {
-  const max = result.max_uc_monthly_amount;
+  const award = result.universal_credit_award_amount;
   const o = result.outputs ?? {};
   const inputs = result.inputs_used ?? {};
   const rows: Array<[string, number, string]> = [
+    ["Maximum amount", o.universal_credit_maximum_amount, "Sum of standard allowance, child, LCWRA, carer, housing, and childcare elements."],
     ["Standard allowance", o.standard_allowance_amount, "Single / joint × under-25 / 25+ from reg 36."],
-    ["Child elements (total)", o.total_child_element_amount, "First child + each subsequent."],
-    ["Disabled-child supplements", o.total_disabled_child_additional_amount, "Lower or higher rate per child."],
-    ["LCWRA element", o.lcwra_element_amount, "Limited capability for work and WRA."],
-    ["Carer element", o.carer_element, "Regular substantial caring responsibilities."],
-    ["Childcare costs max", o.childcare_costs_element_maximum_amount, "Cap based on number of children in childcare."],
+    ["Childcare element", o.childcare_costs_element_amount, "Reg 34: % of actual childcare costs taken into account, up to the reg 36 cap."],
+    ["Applicable work allowance", o.applicable_work_allowance_amount, "Reg 22: £404 (with housing element) / £710 (without) when responsible for child or LCW."],
+    ["Earned income above WA", o.earned_income_amount_subject_to_taper, "Earned income minus the applicable work allowance."],
+    ["Earned-income deduction", o.earned_income_deduction_from_maximum_amount, "Reg 22: 55% of earned income above the work allowance."],
+    ["Total deductions", o.universal_credit_amounts_to_be_deducted, "Earned-income taper + unearned income."],
   ];
   return (
     <div>
       <div style={{ display: "flex", gap: 12, alignItems: "baseline", marginBottom: 4, flexWrap: "wrap" }}>
-        <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{fmt(max, "GBP")}</span>
-        <span style={{ fontSize: 12, color: "#6b7280" }}>max UC monthly amount · tax year {result.tax_year}</span>
+        <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{fmt(award, "GBP")}</span>
+        <span style={{ fontSize: 12, color: "#6b7280" }}>monthly UC award · tax year {result.tax_year}</span>
       </div>
       <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
-        UC Regs 2013 reg 36 — sum of all applicable element amounts. Excludes work allowance, income taper, and benefit cap (not yet encoded).
+        WRA 2012 s.8 composed with UC Regs 22, 24, 26, 27, 29, 34, 36 — final award after work allowance and 55% earned-income taper. Benefit cap (reg 80A) not yet wired in.
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, fontSize: 12 }}>
         {rows.map(([label, value, desc]) => (
@@ -81,6 +82,7 @@ function UkUcResultSummary({ result }: { result: any }) {
         Claim: <strong>{inputs.is_joint_claim ? "joint" : "single"}</strong>
         {inputs.eldest_adult_age ? ` · eldest adult ${inputs.eldest_adult_age}` : ""}
         {inputs.number_of_children ? ` · ${inputs.number_of_children} children` : ""}
+        {(inputs.monthly_earned_income || inputs.joint_monthly_earned_income) ? ` · £${inputs.monthly_earned_income ?? inputs.joint_monthly_earned_income}/mo earned` : ""}
         {" · "}Sources:{" "}
         {result.citations?.map((c: any, i: number) => (
           <span key={c.id}>

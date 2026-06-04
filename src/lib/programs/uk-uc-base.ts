@@ -1,63 +1,131 @@
-// UK Universal Credit Regulations 2013, regulation 36 — the table of element
-// amounts for the UC monthly award. Handwritten (13 inputs, 6 outputs) from
-// engine/artifacts/uk-uc-reg36.compiled.json.
+// UK Universal Credit FY 2026-27 — composed program artifact.
 //
-// To rebuild the artifact:
-//   AXIOM_RULES_ENGINE_BINARY=engine/axiom-rules/target/release/axiom-rules-engine \
-//   AXIOM_RULE_REPO_ROOTS=engine \
-//   engine/axiom-rules/target/release/axiom-rules-engine compile \
-//     --program engine/rulespec-uk/regulations/uksi/2013/376/36.yaml \
-//     --output engine/artifacts/uk-uc-reg36.compiled.json
+// Source: axiom-programs/uk/universal-credit/fy-2026-27.yaml (with the
+// prebuilt artifact merged in axiom-programs#12 at
+// artifacts/uk/universal-credit/fy-2026-27.compiled.json).
 //
-// Note: WRA 2012 s.8 (award = max − deductions) is encoded but uses element
-// slot names that don't match reg 36's exported names. A composing YAML
-// upstream would unlock a real "calculate my UC award" computation; until
-// then we sum the elements in TS.
+// The composition wires WRA 2012 s.8 (`award = max − deductions`) to UC Regs
+// 2013 regs 22 (work allowance + 55% taper), 24 (child element bridging), 26,
+// 27, 29, 34, and 36 (element amounts). Final headline output:
+// `universal_credit_award_amount`.
+//
+// To refresh:
+//   cp engine/axiom-programs/artifacts/uk/universal-credit/fy-2026-27.compiled.json \
+//      engine/artifacts/uk-uc.compiled.json
+//
+// 70 input slots; the engine wants every input present on every entity it
+// queries, so the adapter sets them on both Family and Person rows.
 
 export const UK_UC_BASE = {
-  schema: "uk-uc-elements.reg36",
-  family_inputs: [
-    { name: "award_is_for_joint_claimants", dtype: "bool", default: false },
-    { name: "single_claimant_is_aged_25_or_over", dtype: "bool", default: false },
-    { name: "either_joint_claimant_is_aged_25_or_over", dtype: "bool", default: false },
-    { name: "childcare_costs_element_child_count", dtype: "integer", default: 0 },
+  schema: "uk-uc.fy-2026-27",
+  bool_inputs: [
+    "award_is_for_joint_claimants",
+    "award_contains_housing_costs_element",
+    "both_joint_claimants_qualify_for_carer_element",
+    "carer_element_applies",
+    "child_is_first_child_or_qualifying_young_person",
+    "child_is_second_or_subsequent_child_or_qualifying_young_person",
+    "child_or_qualifying_young_person_entitled_to_adult_disability_payment",
+    "child_or_qualifying_young_person_entitled_to_care_component_of_child_disability_payment_at_highest_rate",
+    "child_or_qualifying_young_person_entitled_to_care_component_of_disability_living_allowance_at_highest_rate",
+    "child_or_qualifying_young_person_entitled_to_care_component_of_scottish_adult_disability_living_allowance_at_highest_rate",
+    "child_or_qualifying_young_person_entitled_to_child_disability_payment",
+    "child_or_qualifying_young_person_entitled_to_daily_living_component_of_adult_disability_payment_at_enhanced_rate",
+    "child_or_qualifying_young_person_entitled_to_daily_living_component_of_personal_independence_payment_at_enhanced_rate",
+    "child_or_qualifying_young_person_entitled_to_disability_living_allowance",
+    "child_or_qualifying_young_person_entitled_to_personal_independence_payment",
+    "child_or_qualifying_young_person_entitled_to_scottish_adult_disability_living_allowance",
+    "child_or_qualifying_young_person_is_blind",
+    "claim_is_for_joint_claimants",
+    "claimant_and_other_person_jointly_elect_claimant_has_carer_element_and_other_person_has_no_scottish_carer_benefit_entitlement",
+    "claimant_has_limited_capability_for_work_and_work_related_activity",
+    "claimant_has_regular_and_substantial_caring_responsibilities_for_severely_disabled_person",
+    "claimant_has_shared_ownership_tenancy_in_england_or_wales",
+    "claimant_has_shared_ownership_tenancy_in_scotland",
+    "claimant_is_liable_for_rent_payments",
+    "claimant_is_liable_for_service_charge_payments",
+    "claimant_is_member_of_couple",
+    "claimant_is_pre_commencement_lcwra_claimant",
+    "claimant_is_severe_conditions_criteria_claimant",
+    "claimant_is_terminally_ill",
+    "claimant_is_the_only_relevant_carer_or_is_elected_or_determined_for_carer_element",
+    "claimant_makes_claim_as_single_person",
+    "claimant_meets_all_conditions_specified_in_regulation_25",
+    "claimant_responsible_for_child_or_qualifying_young_person",
+    "contributions_and_benefits_act_section_70_does_not_displace_carer_element",
+    "disabled_child_higher_rate_applies",
+    "disabled_child_lower_rate_applies",
+    "either_joint_claimant_is_aged_25_or_over",
+    "first_joint_claimant_has_limited_capability_for_work_and_work_related_activity",
+    "joint_claimants_are_caring_for_the_same_severely_disabled_person",
+    "joint_claimants_responsible_for_child_or_qualifying_young_person",
+    "lcwra_element_included_in_respect_of_other_joint_claimant",
+    "one_or_both_joint_claimants_have_limited_capability_for_work",
+    "scottish_carer_benefit_coordination_applies_for_same_day_and_same_severely_disabled_person",
+    "second_joint_claimant_has_limited_capability_for_work_and_work_related_activity",
+    "secretary_of_state_after_consulting_scottish_ministers_is_satisfied_claimant_has_carer_element_and_other_person_has_no_scottish_carer_benefit_entitlement",
+    "secretary_of_state_work_transition_childcare_payment_meets_non_other_relevant_support_conditions",
+    "single_claimant_has_limited_capability_for_work",
+    "single_claimant_has_limited_capability_for_work_and_work_related_activity",
+    "single_claimant_is_aged_25_or_over",
+    "single_claimant_responsible_for_child_or_qualifying_young_person",
   ] as const,
-  person_inputs: [
-    { name: "child_is_first_child_or_qualifying_young_person", dtype: "bool", default: false },
-    { name: "child_is_second_or_subsequent_child_or_qualifying_young_person", dtype: "bool", default: false },
-    { name: "disabled_child_lower_rate_applies", dtype: "bool", default: false },
-    { name: "disabled_child_higher_rate_applies", dtype: "bool", default: false },
-    { name: "claimant_has_limited_capability_for_work_and_work_related_activity", dtype: "bool", default: false },
-    { name: "claimant_is_pre_commencement_lcwra_claimant", dtype: "bool", default: false },
-    { name: "claimant_is_severe_conditions_criteria_claimant", dtype: "bool", default: false },
-    { name: "claimant_is_terminally_ill", dtype: "bool", default: false },
-    { name: "carer_element_applies", dtype: "bool", default: false },
+  integer_inputs: ["childcare_costs_element_child_count"] as const,
+  decimal_inputs: [
+    "amount_calculated_under_schedule_4",
+    "amount_calculated_under_schedule_5",
+    "amount_considered_excessive_having_regard_to_paid_work_extent",
+    "amount_from_funds_provided_by_secretary_of_state_or_scottish_or_welsh_ministers_for_work_related_activity_or_training",
+    "amount_met_or_reimbursed_by_employer_or_some_other_person",
+    "carer_element_amount",
+    "charges_paid_for_relevant_childcare_attributable_to_assessment_period",
+    "claimant_earned_income_in_assessment_period",
+    "claimant_unearned_income_in_assessment_period",
+    "disabled_child_additional_amount",
+    "housing_cost_element_under_shared_ownership",
+    "joint_claimants_combined_earned_income_in_assessment_period",
+    "joint_claimants_combined_unearned_income_in_assessment_period",
+    "lcwra_element_amount_given_in_regulation_36_for_first_joint_claimant",
+    "lcwra_element_amount_given_in_regulation_36_for_second_joint_claimant",
+    "lcwra_element_amount_given_in_regulation_36_for_single_claimant",
+    "maximum_amount_specified_in_table_in_regulation_36",
+    "responsible_child_element_included_amount",
+    "secretary_of_state_work_transition_childcare_payment_amount",
   ] as const,
-  family_outputs: {
-    standard_allowance_amount:
-      "uk:regulations/uksi/2013/376/36#standard_allowance_amount",
-    childcare_costs_element_maximum_amount:
-      "uk:regulations/uksi/2013/376/36#childcare_costs_element_maximum_amount",
+  // Headline + breakout outputs the chat surfaces. Only includes outputs
+  // that carry legal IDs in the compiled artifact — the s.9/s.10/s.11/s.12
+  // bridges are internal aggregations without IDs and can't be queried.
+  outputs: {
+    universal_credit_award_amount: "uk:statutes/ukpga/2012/5/8#universal_credit_award_amount",
+    universal_credit_maximum_amount: "uk:statutes/ukpga/2012/5/8#universal_credit_maximum_amount",
+    universal_credit_amounts_to_be_deducted: "uk:statutes/ukpga/2012/5/8#universal_credit_amounts_to_be_deducted",
+    standard_allowance_amount: "uk:regulations/uksi/2013/376/36#standard_allowance_amount",
+    earned_income_deduction_from_maximum_amount: "uk:regulations/uksi/2013/376/22#earned_income_deduction_from_maximum_amount",
+    applicable_work_allowance_amount: "uk:regulations/uksi/2013/376/22#applicable_work_allowance_amount",
+    earned_income_amount_subject_to_taper: "uk:regulations/uksi/2013/376/22#earned_income_amount_subject_to_taper",
+    childcare_costs_element_amount: "uk:regulations/uksi/2013/376/34#childcare_costs_element_amount",
   } as Record<string, string>,
-  person_outputs: {
-    child_element_amount:
-      "uk:regulations/uksi/2013/376/36#child_element_amount",
-    disabled_child_additional_amount:
-      "uk:regulations/uksi/2013/376/36#disabled_child_additional_amount",
-    lcwra_element_amount:
-      "uk:regulations/uksi/2013/376/36#lcwra_element_amount",
-    carer_element:
-      "uk:regulations/uksi/2013/376/36#carer_element",
-  } as Record<string, string>,
+  // Full output catalogue for list_encoded_outputs / lookup_value.
   all_outputs: [
-    { name: "standard_allowance_amount", id: "uk:regulations/uksi/2013/376/36#standard_allowance_amount", entity: "Family", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "Universal Credit Regulations 2013 reg 36 (Standard allowance)" },
-    { name: "child_element_amount", id: "uk:regulations/uksi/2013/376/36#child_element_amount", entity: "Person", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "Universal Credit Regulations 2013 reg 36 (Child element)" },
-    { name: "disabled_child_additional_amount", id: "uk:regulations/uksi/2013/376/36#disabled_child_additional_amount", entity: "Person", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "Universal Credit Regulations 2013 reg 36 (Disabled child)" },
-    { name: "lcwra_element_amount", id: "uk:regulations/uksi/2013/376/36#lcwra_element_amount", entity: "Person", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "Universal Credit Regulations 2013 reg 36 (LCWRA element)" },
-    { name: "carer_element", id: "uk:regulations/uksi/2013/376/36#carer_element", entity: "Person", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "Universal Credit Regulations 2013 reg 36 (Carer element)" },
-    { name: "childcare_costs_element_maximum_amount", id: "uk:regulations/uksi/2013/376/36#childcare_costs_element_maximum_amount", entity: "Family", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "Universal Credit Regulations 2013 reg 36 (Childcare costs)" },
+    { name: "universal_credit_award_amount", id: "uk:statutes/ukpga/2012/5/8#universal_credit_award_amount", entity: "Family", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "Welfare Reform Act 2012 s.8 (final award after deductions)" },
+    { name: "universal_credit_maximum_amount", id: "uk:statutes/ukpga/2012/5/8#universal_credit_maximum_amount", entity: "Family", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "Welfare Reform Act 2012 s.8 (sum of elements)" },
+    { name: "universal_credit_amounts_to_be_deducted", id: "uk:statutes/ukpga/2012/5/8#universal_credit_amounts_to_be_deducted", entity: "Family", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "Welfare Reform Act 2012 s.8 (deductions sum)" },
+    { name: "standard_allowance_amount", id: "uk:regulations/uksi/2013/376/36#standard_allowance_amount", entity: "Family", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "UC Regs 2013 reg 36" },
+    { name: "earned_income_deduction_from_maximum_amount", id: "uk:regulations/uksi/2013/376/22#earned_income_deduction_from_maximum_amount", entity: "Family", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "UC Regs 2013 reg 22 (55% taper after work allowance)" },
+    { name: "applicable_work_allowance_amount", id: "uk:regulations/uksi/2013/376/22#applicable_work_allowance_amount", entity: "Family", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "UC Regs 2013 reg 22 (work allowance, lower/higher)" },
+    { name: "child_element_amount", id: "uk:regulations/uksi/2013/376/36#child_element_amount", entity: "Person", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "UC Regs 2013 reg 36 (per-child)" },
+    { name: "disabled_child_additional_amount", id: "uk:regulations/uksi/2013/376/36#disabled_child_additional_amount", entity: "Person", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "UC Regs 2013 reg 36 (per-child)" },
+    { name: "lcwra_element_amount", id: "uk:regulations/uksi/2013/376/36#lcwra_element_amount", entity: "Person", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "UC Regs 2013 reg 36" },
+    { name: "carer_element", id: "uk:regulations/uksi/2013/376/36#carer_element", entity: "Person", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "UC Regs 2013 reg 36" },
+    { name: "childcare_costs_element_maximum_amount", id: "uk:regulations/uksi/2013/376/36#childcare_costs_element_maximum_amount", entity: "Family", semantics: "scalar", dtype: "decimal", unit: "GBP", source: "UC Regs 2013 reg 36" },
+  ] as const,
+  relations: [
+    { name: "adult_of_benefit_unit", arity: 2 },
+    { name: "child_of_benefit_unit", arity: 2 },
   ] as const,
   corpus_paths: {
+    "uk:statutes/ukpga/2012/5/8": "uk/statute/ukpga/2012/5/8",
+    "uk:regulations/uksi/2013/376/22": "uk/regulation/uksi/2013/376/22",
     "uk:regulations/uksi/2013/376/36": "uk/regulation/uksi/2013/376/36",
   },
 } as const;
