@@ -1,5 +1,6 @@
 import { computeUkPersonalAllowance } from "../src/lib/programs/uk-personal-allowance";
 import { computeUkUniversalCredit } from "../src/lib/programs/uk-uc";
+import { toolsForCountry } from "../src/lib/tools";
 
 async function main() {
   console.log("--- personal allowance ---");
@@ -112,5 +113,24 @@ async function main() {
       if (!edgeOk) process.exitCode = 1;
     }
   }
+
+  console.log("\n--- universal credit tool schema ---");
+  const ucTool = (toolsForCountry("uk") as any).compute_uk_universal_credit;
+  const parsedHousingFacts = ucTool.parameters.parse({
+    is_joint_claim: true,
+    eldest_adult_age: 32,
+    number_of_children: 3,
+    number_of_disabled_children_higher_rate: 1,
+    joint_monthly_earned_income: 2500,
+    monthly_rent: 500,
+  });
+  const toolResult = await ucTool.execute?.(parsedHousingFacts, { toolCallId: "test", messages: [] });
+  const toolAward = Math.round((toolResult?.universal_credit_award_amount ?? 0) * 100) / 100;
+  const expectedToolAward = 1501.29;
+  const toolOk = Math.abs(toolAward - expectedToolAward) < 0.02;
+  console.log(
+    `${toolOk ? "✓" : "✗"} tool accepts monthly_rent and applies housing: award=£${toolAward.toFixed(2)} (expected £${expectedToolAward.toFixed(2)})`
+  );
+  if (!toolOk) process.exitCode = 1;
 }
 main().catch((e) => { console.error(e); process.exit(1); });
