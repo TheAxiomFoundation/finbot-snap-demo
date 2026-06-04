@@ -315,7 +315,7 @@ const usTools = {
 const ukTools = {
   list_encoded_outputs: tool({
     description:
-      "List benefit and tax programs that axiom-rules-engine has actually encoded for the United Kingdom: UK personal allowance under Income Tax Act 2007 s.35 (with the £100k taper) and Universal Credit element amounts under UC Regs 2013 reg 36. Call this BEFORE answering any program question. Pass `search` to find a legal_id you can then read with compute_uk_universal_credit_elements or compute_uk_personal_allowance.",
+      "List benefit and tax programs that axiom-rules-engine has actually encoded for the United Kingdom: UK personal allowance under Income Tax Act 2007 s.35 (with the £100k taper) and the composed Universal Credit monthly award. Call this BEFORE answering any program question. Pass `search` to find a legal_id you can then read with compute_uk_universal_credit or compute_uk_personal_allowance.",
     parameters: z.object({
       search: z
         .string()

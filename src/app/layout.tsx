@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "FinBot — Axiom-grounded benefits assistant",
   description:
-    "OpenAI on top of the Axiom rules engine. Real SNAP allotments for Colorado, California, and New York, with citations.",
+    "OpenAI on top of the Axiom rules engine, with real tax and benefits calculations and citations.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

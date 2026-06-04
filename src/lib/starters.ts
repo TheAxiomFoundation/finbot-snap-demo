@@ -4,8 +4,8 @@ import type { Country } from "./catalog";
  *  comparison. One source of truth so the two surfaces stay in sync.
  *
  *  US ordered by complexity, left → right (lookup, eligibility, full calc).
- *  UK is currently a single program (personal allowance); the three starters
- *  probe different mechanics: base allowance, the £100k taper, and full taper. */
+ *  UK ordered by complexity: personal-allowance taper, single-parent UC,
+ *  and a larger joint UC household with disability status. */
 export const STARTERS_US: readonly string[] = [
   "What's the maximum SNAP allotment for a household of 4 in Colorado?",
   "I'm single in California earning $1,400/month before taxes. Would I qualify for SNAP?",

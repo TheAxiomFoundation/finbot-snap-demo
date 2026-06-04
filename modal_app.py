@@ -1,7 +1,7 @@
 """Modal deployment for the FinBot axiom-rules-engine engine.
 
-Hosts the Rust ``axiom-rules-engine`` binary as an HTTP service, with the compiled
-CO SNAP artifact baked into the image. The Vercel-hosted Next.js app calls
+Hosts the Rust ``axiom-rules-engine`` binary as an HTTP service, with compiled
+US and UK artifacts baked into the image. The Vercel-hosted Next.js app calls
 this service from its tool layer (see src/lib/engine.ts).
 
 Deploy with:

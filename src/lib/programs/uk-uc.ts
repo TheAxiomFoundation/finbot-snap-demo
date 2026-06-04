@@ -16,6 +16,7 @@ import {
   taxYearInterval,
   runCompiled,
 } from "../engine";
+import { legalIdToUrl } from "../legal-links";
 import { UK_UC_BASE } from "./uk-uc-base";
 
 const ARTIFACT_SLUG = "uk-uc";
@@ -452,17 +453,19 @@ export async function computeUkUniversalCredit(facts: UkUcFacts): Promise<UkUcRe
     outputs,
     inputs_used: { ...facts },
     tax_year: `${startYear}-${(startYear + 1).toString().slice(2)}`,
-    citations: [
-      { id: "uk:statutes/ukpga/2012/5/8", url: "https://app.axiom-foundation.org/uk/statute/ukpga/2012/5/8" },
-      { id: "uk:regulations/uksi/2013/376/22", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/22" },
-      { id: "uk:regulations/uksi/2013/376/26", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/26" },
-      { id: "uk:regulations/uksi/2013/376/schedule/4/paragraph/22", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/schedule/4/paragraph/22" },
-      { id: "uk:regulations/uksi/2013/376/schedule/5/paragraph/9", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/schedule/5/paragraph/9" },
-      { id: "uk:regulations/uksi/2013/376/36", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/36" },
-    ],
+    citations: UC_CITATION_IDS.map((id) => ({ id, url: legalIdToUrl(id) })),
     raw: res,
   };
 }
+
+const UC_CITATION_IDS = [
+  "uk:statutes/ukpga/2012/5/8",
+  "uk:regulations/uksi/2013/376/22",
+  "uk:regulations/uksi/2013/376/26",
+  "uk:regulations/uksi/2013/376/schedule/4/paragraph/22",
+  "uk:regulations/uksi/2013/376/schedule/5/paragraph/9",
+  "uk:regulations/uksi/2013/376/36",
+];
 
 export function isUkUcLegalId(legalId: string): boolean {
   return (

@@ -1,6 +1,7 @@
 "use client";
 import type { ToolInvocation } from "ai";
 
+import { legalIdToUrl } from "@/lib/legal-links";
 import { SURFACE_OUTPUT_DESCRIPTIONS } from "@/lib/programs/co-snap-meta";
 
 interface Props {
@@ -238,7 +239,7 @@ function LookupSummary({ result }: { result: any }) {
         <span className="badge badge-source" style={{ fontSize: 10 }}>{result.entity}</span>
       </div>
       <div style={{ marginTop: 6, fontSize: 11, color: "#6b7280" }}>
-        <a className="cite" href={`https://app.axiom-foundation.org/${(result.legal_id ?? "").split(":")[0]}/${(result.legal_id ?? "").split(":")[1]?.replace("statutes", "statute").replace("regulations", "regulation").replace("policies", "policy").split("#")[0]}`} target="_blank" rel="noreferrer">
+        <a className="cite" href={legalIdToUrl(result.legal_id ?? "")} target="_blank" rel="noreferrer">
           {result.legal_id}
         </a>
       </div>

@@ -14,6 +14,7 @@ import {
   runCompiled,
   taxYearInterval,
 } from "../engine";
+import { legalIdToUrl } from "../legal-links";
 import { UK_PERSONAL_ALLOWANCE_BASE } from "./uk-personal-allowance-base";
 
 const ARTIFACT_SLUG = "uk-personal-allowance";
@@ -105,7 +106,7 @@ export async function computeUkPersonalAllowance(
     citations: [
       {
         id: "uk:statutes/ukpga/2007/3/35",
-        url: "https://app.axiom-foundation.org/uk/statute/ukpga/2007/3/35",
+        url: legalIdToUrl("uk:statutes/ukpga/2007/3/35"),
       },
     ],
     raw: res,
