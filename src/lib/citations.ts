@@ -13,7 +13,7 @@
  *      jurisdictions where it happens to line up.
  */
 import { CO_SNAP_BASE } from "./programs/co-snap-base";
-import { legalIdToUrl } from "./programs/co-snap";
+import { legalIdToUrl } from "./legal-links";
 
 const CORPUS_API_BASE =
   process.env.AXIOM_CORPUS_API ?? "https://axiom-foundation.org/api/axiom";
@@ -69,19 +69,25 @@ async function tryFetch(citationPath: string): Promise<{
     if (!r.ok) return null;
     const json = (await r.json()) as {
       rule?: { heading?: string; body?: string; source_url?: string };
+      data?: { heading?: string; body?: string; source_url?: string };
       heading?: string;
       body?: string;
       source_url?: string;
     };
-    const doc = json.rule ?? json;
+    const doc = json.rule ?? json.data ?? json;
+    const body = typeof doc?.body === "string" ? doc.body : null;
     return {
       heading: typeof doc?.heading === "string" ? doc.heading : null,
-      body_excerpt: typeof doc?.body === "string" ? doc.body.slice(0, 1200) : null,
+      body_excerpt: body && !isPlaceholderBody(body) ? body.slice(0, 1200) : null,
       source_url: typeof doc?.source_url === "string" ? doc.source_url : null,
     };
   } catch {
     return null;
   }
+}
+
+function isPlaceholderBody(body: string): boolean {
+  return body.includes(".") && body.replace(/[\s.]+/g, "").length === 0;
 }
 
 async function doFetch(base: string): Promise<Citation> {

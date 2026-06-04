@@ -21,6 +21,7 @@ import {
   readOutput,
   runCompiled,
 } from "../engine";
+import { legalIdToUrl } from "../legal-links";
 
 const ARTIFACT_SLUG = "co-snap";
 
@@ -316,15 +317,4 @@ function citationsFor(outputs: Record<string, unknown>): Array<{ id: string; url
   return cites;
 }
 
-export function legalIdToUrl(id: string): string {
-  const [jurisdiction, restPath] = id.split(":");
-  if (!jurisdiction || !restPath) return "https://app.axiom-foundation.org/";
-  const remap: Record<string, string> = {
-    statutes: "statute",
-    regulations: "regulation",
-    policies: "policy",
-  };
-  const segments = restPath.split("/");
-  if (segments[0] && remap[segments[0]]) segments[0] = remap[segments[0]];
-  return `https://app.axiom-foundation.org/${jurisdiction}/${segments.join("/")}`;
-}
+export { legalIdToUrl };

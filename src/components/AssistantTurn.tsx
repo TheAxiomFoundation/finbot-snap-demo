@@ -89,7 +89,7 @@ interface CitationLike {
   url: string;
 }
 
-/** Pull citation links out of every tool result on this turn. compute_*_snap
+/** Pull citation links out of every tool result on this turn. compute_* tools
  *  returns `citations: [{id, url}]`; lookup_value returns `{legal_id, url}`;
  *  fetch_citation returns `{legal_id, url}`. We dedupe by legal_id and render
  *  a small footer below the bubble.
@@ -108,7 +108,7 @@ function Sources({ invocations, indented }: { invocations: ToolInvocation[]; ind
   for (const inv of invocations) {
     const r = "result" in inv ? (inv.result as Record<string, unknown> | undefined) : undefined;
     if (!r || typeof r !== "object") continue;
-    if (isSnapComputeTool(inv.toolName) && Array.isArray(r.citations)) {
+    if (isComputeTool(inv.toolName) && Array.isArray(r.citations)) {
       for (const c of r.citations as Array<{ id?: string; url?: string }>) {
         if (c?.id && c.url && !seen.has(c.id)) {
           seen.add(c.id);
@@ -173,6 +173,12 @@ function Sources({ invocations, indented }: { invocations: ToolInvocation[]; ind
   );
 }
 
-function isSnapComputeTool(toolName: string) {
-  return toolName === "compute_co_snap" || toolName === "compute_ca_snap" || toolName === "compute_ny_snap";
+function isComputeTool(toolName: string) {
+  return (
+    toolName === "compute_co_snap" ||
+    toolName === "compute_ca_snap" ||
+    toolName === "compute_ny_snap" ||
+    toolName === "compute_uk_personal_allowance" ||
+    toolName === "compute_uk_universal_credit"
+  );
 }

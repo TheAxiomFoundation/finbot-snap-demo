@@ -6,22 +6,24 @@
  */
 import { generateText, type CoreMessage } from "ai";
 
+import type { Country } from "@/lib/catalog";
+import { countryFromRequestBody, rawSystemPromptForCountry } from "@/lib/country-copy";
 import { finbotModel } from "@/lib/model";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const RAW_SYSTEM = `You are a benefits assistant. Answer the user's question as helpfully as you can. Use plain language and round dollars.`;
-
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
     return Response.json({ error: "OPENAI_API_KEY not set on the server." }, { status: 500 });
   }
-  const { messages } = (await req.json()) as { messages: CoreMessage[] };
+  const body = (await req.json()) as { messages: CoreMessage[]; country?: Country };
+  const country = countryFromRequestBody(body);
+  const { messages } = body;
   try {
     const r = await generateText({
       model: finbotModel(),
-      system: RAW_SYSTEM,
+      system: rawSystemPromptForCountry(country),
       messages,
       temperature: 0.2,
     });

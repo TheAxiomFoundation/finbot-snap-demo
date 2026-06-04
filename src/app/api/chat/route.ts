@@ -1,6 +1,7 @@
 import { streamText, type CoreMessage } from "ai";
 
 import type { Country } from "@/lib/catalog";
+import { countryFromRequestBody } from "@/lib/country-copy";
 import { finbotModel } from "@/lib/model";
 import { systemPromptForCountry } from "@/lib/prompts";
 import { toolsForCountry } from "@/lib/tools";
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
     );
   }
   const body = (await req.json()) as { messages: CoreMessage[]; country?: Country };
-  const country: Country = body.country === "uk" ? "uk" : "us";
+  const country = countryFromRequestBody(body);
   const { messages } = body;
 
   const result = streamText({

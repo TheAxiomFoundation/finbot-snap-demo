@@ -1,15 +1,18 @@
 {
-  "name": "finbot-snap-demo",
+  "name": "finbot-demo",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "engine:setup": "bash scripts/setup-engine.sh",
     "engine:build": "bash scripts/build-artifacts.sh",
     "engine:test": "tsx scripts/test-engine.ts",
+    "engine:test:uk": "tsx scripts/test-uk.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:country-copy": "tsx scripts/test-country-copy.ts",
+    "test:legal-links": "tsx scripts/test-legal-links.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -3,6 +3,7 @@ import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef, useState } from "react";
 
 import type { Country } from "@/lib/catalog";
+import { inputPlaceholderForCountry } from "@/lib/country-copy";
 import { startersForCountry } from "@/lib/starters";
 
 import { AssistantTurn } from "./AssistantTurn";
@@ -15,6 +16,7 @@ interface ChatProps {
 
 export function Chat({ country = "us" }: ChatProps) {
   const STARTERS = startersForCountry(country);
+  const inputPlaceholder = inputPlaceholderForCountry(country);
   const {
     messages,
     input,
@@ -68,7 +70,7 @@ export function Chat({ country = "us" }: ChatProps) {
       const r = await fetch("/api/raw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: messagesForRaw }),
+        body: JSON.stringify({ messages: messagesForRaw, country }),
       });
       const json = (await r.json()) as { text?: string; error?: string };
       setRawResponses((m) => ({ ...m, [userMsgId]: json.text ?? `error: ${json.error ?? "no text"}` }));
@@ -248,7 +250,7 @@ export function Chat({ country = "us" }: ChatProps) {
               }
             }
           }}
-          placeholder="Ask about SNAP eligibility or amount in CO, CA, or NY..."
+          placeholder={inputPlaceholder}
           autoComplete="off"
           rows={1}
           style={{
