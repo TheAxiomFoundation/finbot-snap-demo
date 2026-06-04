@@ -9,7 +9,7 @@ import { generateText, type CoreMessage } from "ai";
 import { finbotModel } from "@/lib/model";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const RAW_SYSTEM = `You are a benefits assistant. Answer the user's question as helpfully as you can. Use plain language and round dollars.`;
 
