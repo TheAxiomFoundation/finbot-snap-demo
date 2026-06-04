@@ -80,6 +80,18 @@ const UkUcFactsSchema = z.object({
     .describe("Joint-claim combined monthly earned income, in £. Default 0."),
   joint_monthly_unearned_income: z.number().min(0).optional()
     .describe("Joint-claim combined monthly unearned income, in £. Default 0."),
+  monthly_rent: z.number().min(0).optional()
+    .describe("Rent used as the Schedule 4 core rent, in £/month. If the user gives a GBP monthly housing-cost/rent amount, pass it here. Default 0."),
+  monthly_rent_cap: z.number().min(0).optional()
+    .describe("Rent cap used by Schedule 4 paragraph 22, in £/month. Defaults to monthly_rent when omitted."),
+  non_dependant_housing_cost_contribution_count: z.number().int().min(0).max(20).optional()
+    .describe("Count of non-dependants requiring the £96.55 housing-cost contribution deduction. Default 0."),
+  monthly_owner_occupier_service_charge: z.number().min(0).optional()
+    .describe("Monthly owner-occupier service charge payment for Schedule 5, in £. Default 0."),
+  weekly_owner_occupier_service_charge: z.number().min(0).optional()
+    .describe("Weekly owner-occupier service charge payment for Schedule 5, in £/week. Default 0."),
+  has_shared_ownership_tenancy: z.boolean().optional()
+    .describe("Whether to route housing through the shared-ownership tenancy rule in UC Regs 2013 reg 26. Defaults true when rent or service-charge facts are supplied."),
 });
 
 const UkPersonalAllowanceFactsSchema = z.object({
@@ -379,6 +391,7 @@ const ukTools = {
       - "Couple aged 30 with 2 kids" → is_joint_claim=true, eldest_adult_age=30, number_of_children=2. Show the inference.
       - "Single 23-year-old" → is_joint_claim=false, eldest_adult_age=23. Show the inference.
       - "Earning £1,500/month" with a single claim → monthly_earned_income=1500. For couples it's joint_monthly_earned_income.
+      - "£500/month rent", "£500 housing costs", or "£500 rent" → monthly_rent=500. Show the inference. If the user writes "$500" in a UK UC question, ask them to confirm the GBP amount instead of treating dollars as pounds.
       - Don't pad facts: leave LCWRA, carer, disabled-child counts, income, and childcare at default 0/false unless the user volunteered them.`,
     parameters: UkUcFactsSchema,
     execute: async (facts) => {
