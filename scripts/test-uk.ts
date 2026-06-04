@@ -17,7 +17,12 @@ async function main() {
   }
 
   console.log("\n--- universal credit (composed s.8 + regs 22/24/26/27/29/34/36) ---");
-  const ucCases: Array<{ label: string; facts: Parameters<typeof computeUkUniversalCredit>[0]; expectAward: number }> = [
+  const ucCases: Array<{
+    label: string;
+    facts: Parameters<typeof computeUkUniversalCredit>[0];
+    expectAward: number;
+    expect?: Partial<Awaited<ReturnType<typeof computeUkUniversalCredit>>["outputs"]>;
+  }> = [
     // Smoke: single 25+ no kids no income → £424.90 standard allowance
     { label: "single 30, no income, no kids", facts: { eldest_adult_age: 30 }, expectAward: 424.90 },
     // Single under 25 → £338.58
@@ -36,6 +41,57 @@ async function main() {
     { label: "single 30, 1 child, £1000 earned (higher work allowance)", facts: { eldest_adult_age: 30, number_of_children: 1, monthly_earned_income: 1000 }, expectAward: 617.28 },
     // Unearned income £100, no earned → 424.90 - 100 = 324.90
     { label: "single 30, £100 unearned, no kids/LCW", facts: { eldest_adult_age: 30, monthly_unearned_income: 100 }, expectAward: 324.90 },
+    // Shared-ownership housing edge: Schedule 4 caps rent at £650 and Schedule 5 adds £120/month service charges.
+    {
+      label: "shared ownership, rent capped plus monthly service charge",
+      facts: { eldest_adult_age: 30, monthly_rent: 800, monthly_rent_cap: 650, monthly_owner_occupier_service_charge: 120 },
+      expectAward: 1194.90,
+      expect: {
+        renters_housing_costs_element_calculated_under_this_part: 650,
+        owner_occupier_housing_costs_element_amount: 120,
+        housing_cost_element_under_shared_ownership: 770,
+      },
+    },
+    // Schedule 4 non-dependent contribution: £96.55 deducted from the capped rent amount.
+    {
+      label: "shared ownership, non-dependent housing contribution deducted",
+      facts: {
+        eldest_adult_age: 30,
+        monthly_rent: 800,
+        monthly_rent_cap: 650,
+        monthly_owner_occupier_service_charge: 120,
+        non_dependant_housing_cost_contribution_count: 1,
+      },
+      expectAward: 1098.35,
+      expect: {
+        renters_housing_costs_element_calculated_under_this_part: 553.45,
+        owner_occupier_housing_costs_element_amount: 120,
+        housing_cost_element_under_shared_ownership: 673.45,
+      },
+    },
+    // Schedule 5 weekly service charge conversion: £12/week * 52 / 12 = £52/month.
+    {
+      label: "shared ownership, weekly service charge converted monthly",
+      facts: { eldest_adult_age: 30, monthly_rent: 500, monthly_rent_cap: 500, weekly_owner_occupier_service_charge: 12 },
+      expectAward: 976.90,
+      expect: {
+        renters_housing_costs_element_calculated_under_this_part: 500,
+        owner_occupier_housing_costs_element_amount: 52,
+        housing_cost_element_under_shared_ownership: 552,
+      },
+    },
+    // Housing element present means reg 22 applies the lower work allowance (£427), not the higher one.
+    {
+      label: "single 30, 1 child, housing element uses lower work allowance",
+      facts: { eldest_adult_age: 30, number_of_children: 1, monthly_earned_income: 1000, monthly_rent: 500, monthly_rent_cap: 500 },
+      expectAward: 961.63,
+      expect: {
+        applicable_work_allowance_amount: 427,
+        earned_income_amount_subject_to_taper: 573,
+        earned_income_deduction_from_maximum_amount: 315.15,
+        housing_cost_element_under_shared_ownership: 500,
+      },
+    },
   ];
   for (const c of ucCases) {
     const r = await computeUkUniversalCredit(c.facts);
@@ -46,6 +102,14 @@ async function main() {
     if (!ok) {
       console.log(`    max=£${r.outputs.universal_credit_maximum_amount} deduct=£${r.outputs.universal_credit_amounts_to_be_deducted} work_allow=£${r.outputs.applicable_work_allowance_amount} earned_deduct=£${r.outputs.earned_income_deduction_from_maximum_amount}`);
       process.exitCode = 1;
+    }
+    for (const [key, value] of Object.entries(c.expect ?? {})) {
+      const actual = r.outputs[key as keyof typeof r.outputs];
+      const actualRounded = Math.round(actual * 100) / 100;
+      const expectedRounded = Math.round((value ?? 0) * 100) / 100;
+      const edgeOk = Math.abs(actualRounded - expectedRounded) < 0.02;
+      console.log(`    ${edgeOk ? "✓" : "✗"} ${key}=£${actualRounded.toFixed(2)} (expected £${expectedRounded.toFixed(2)})`);
+      if (!edgeOk) process.exitCode = 1;
     }
   }
 }

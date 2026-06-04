@@ -22,7 +22,10 @@ const ARTIFACT_SLUG = "uk-uc";
 const FAMILY_ID = "f1";
 const PRIMARY_ADULT_ID = "p_primary";
 const SECOND_ADULT_ID = "p_second";
+const SERVICE_CHARGE_PAYMENT_ID = "pay_service_1";
 const INPUT_PREFIX = "axiom:uc-fy-2026-27#input.";
+const OWNER_OCCUPIER_SERVICE_CHARGE_RELATION =
+  "uk:regulations/uksi/2013/376/schedule/5/paragraph/13#relation.owner_occupier_service_charge_payments";
 
 const INTERVAL_START_FALLBACK = 2025;
 
@@ -67,6 +70,22 @@ export interface UkUcFacts {
   joint_monthly_earned_income?: number;
   /** Joint monthly unearned income, in £. Used when is_joint_claim is true. Default 0. */
   joint_monthly_unearned_income?: number;
+
+  // Housing — shared-ownership path through UC Regs 2013 reg 26, Schedule 4,
+  // and Schedule 5. These are deliberately narrow demo facts; deeper LHA and
+  // tenure-specific determinations still belong in upstream encodings/data.
+  /** Rent used as Schedule 4 core rent, in £/month. Default 0. */
+  monthly_rent?: number;
+  /** Rent cap used by Schedule 4 paragraph 22, in £/month. Defaults to monthly_rent. */
+  monthly_rent_cap?: number;
+  /** Count of non-dependants requiring the £96.55 housing-cost contribution. Default 0. */
+  non_dependant_housing_cost_contribution_count?: number;
+  /** Monthly owner-occupier service charge payment for Schedule 5, in £. Default 0. */
+  monthly_owner_occupier_service_charge?: number;
+  /** Weekly owner-occupier service charge payment for Schedule 5, in £. Default 0. */
+  weekly_owner_occupier_service_charge?: number;
+  /** Treat the claimant as holding a shared-ownership tenancy. Defaults to true when housing facts are supplied. */
+  has_shared_ownership_tenancy?: boolean;
 }
 
 interface ChildSpec {
@@ -102,6 +121,14 @@ function buildRequest(facts: UkUcFacts): { req: ExecutionRequest; children: Chil
   const adultIds = adultPersonIds(isJoint);
   const children = childSpecs(facts);
   const hasChildren = children.length > 0;
+  const monthlyRent = Math.max(0, facts.monthly_rent ?? 0);
+  const monthlyRentCap = Math.max(0, facts.monthly_rent_cap ?? monthlyRent);
+  const monthlyServiceCharge = Math.max(0, facts.monthly_owner_occupier_service_charge ?? 0);
+  const weeklyServiceCharge = Math.max(0, facts.weekly_owner_occupier_service_charge ?? 0);
+  const hasServiceCharge = monthlyServiceCharge > 0 || weeklyServiceCharge > 0;
+  const hasRent = monthlyRent > 0 || monthlyRentCap > 0;
+  const hasHousing = hasRent || hasServiceCharge;
+  const hasSharedOwnership = facts.has_shared_ownership_tenancy ?? hasHousing;
 
   // Family-scope overrides (apply to the Family entity row).
   const familyOverrides: Record<string, boolean | number | string> = {
@@ -117,6 +144,14 @@ function buildRequest(facts: UkUcFacts): { req: ExecutionRequest; children: Chil
     claimant_unearned_income_in_assessment_period: facts.monthly_unearned_income ?? 0,
     joint_claimants_combined_earned_income_in_assessment_period: facts.joint_monthly_earned_income ?? 0,
     joint_claimants_combined_unearned_income_in_assessment_period: facts.joint_monthly_unearned_income ?? 0,
+    award_contains_housing_costs_element: hasHousing,
+    calculation_is_under_part_4_or_5_of_schedule: hasHousing,
+    housing_cost_contribution_count_required_under_paragraph_13_in_renters_case:
+      Math.max(0, facts.non_dependant_housing_cost_contribution_count ?? 0),
+    renters_core_rent: monthlyRent,
+    renters_cap_rent: monthlyRentCap,
+    amount_resulting_from_all_other_steps_in_parts_4_and_5_calculation:
+      Math.min(monthlyRent, monthlyRentCap),
     childcare_costs_element_child_count: Math.max(0, facts.number_of_children_in_childcare ?? 0),
     charges_paid_for_relevant_childcare_attributable_to_assessment_period:
       facts.childcare_costs_paid_monthly ?? 0,
@@ -136,6 +171,10 @@ function buildRequest(facts: UkUcFacts): { req: ExecutionRequest; children: Chil
     claimant_is_pre_commencement_lcwra_claimant: !!facts.is_pre_commencement_lcwra,
     carer_element_applies: !!facts.has_carer,
     claimant_is_the_only_relevant_carer_or_is_elected_or_determined_for_carer_element: !!facts.has_carer,
+    claimant_meets_all_conditions_specified_in_regulation_25: hasHousing,
+    claimant_is_liable_for_rent_payments: hasRent,
+    claimant_is_liable_for_service_charge_payments: hasServiceCharge,
+    claimant_has_shared_ownership_tenancy_in_england_or_wales: hasSharedOwnership,
   };
 
   // Second-adult overrides for joint claims (kept empty by default — second
@@ -145,7 +184,7 @@ function buildRequest(facts: UkUcFacts): { req: ExecutionRequest; children: Chil
     claim_is_for_joint_claimants: isJoint,
   };
 
-  function emitSlots(entityKind: "Family" | "Person", entityId: string, overrides: Record<string, boolean | number | string>): InputRecord[] {
+  function emitSlots(entityKind: InputRecord["entity"], entityId: string, overrides: Record<string, boolean | number | string>): InputRecord[] {
     const out: InputRecord[] = [];
     for (const name of UK_UC_BASE.bool_inputs) {
       out.push({
@@ -189,11 +228,28 @@ function buildRequest(facts: UkUcFacts): { req: ExecutionRequest; children: Chil
     };
   }
 
+  function serviceChargePaymentOverrides(): Record<string, boolean | number | string> {
+    return {
+      payment_is_relevant_service_charge_payment_taken_into_account_under_paragraph_8:
+        hasServiceCharge,
+      service_charge_payment_amount:
+        monthlyServiceCharge > 0 ? monthlyServiceCharge : weeklyServiceCharge,
+      service_charge_payment_period_is_month: monthlyServiceCharge > 0,
+      service_charge_payment_period_is_week:
+        monthlyServiceCharge === 0 && weeklyServiceCharge > 0,
+      total_service_charge_payments_liable_in_12_month_period:
+        monthlyServiceCharge > 0 ? 12 : weeklyServiceCharge > 0 ? 52 : 0,
+    };
+  }
+
   const inputs: InputRecord[] = [
     ...emitSlots("Family", FAMILY_ID, familyOverrides),
     ...emitSlots("Person", PRIMARY_ADULT_ID, primaryAdultOverrides),
     ...(isJoint ? emitSlots("Person", SECOND_ADULT_ID, secondAdultOverrides) : []),
     ...children.flatMap((c) => emitSlots("Person", c.id, childOverrides(c))),
+    ...(hasServiceCharge
+      ? emitSlots("Payment", SERVICE_CHARGE_PAYMENT_ID, serviceChargePaymentOverrides())
+      : []),
   ];
 
   const relations = [
@@ -207,6 +263,15 @@ function buildRequest(facts: UkUcFacts): { req: ExecutionRequest; children: Chil
       tuple: [c.id, FAMILY_ID] as [string, string],
       interval,
     })),
+    ...(hasServiceCharge
+      ? [
+          {
+            name: OWNER_OCCUPIER_SERVICE_CHARGE_RELATION,
+            tuple: [SERVICE_CHARGE_PAYMENT_ID, FAMILY_ID] as [string, string],
+            interval,
+          },
+        ]
+      : []),
   ];
 
   // The compose artifact's evaluation pulls aggregations across the
@@ -240,6 +305,9 @@ export interface UkUcResult {
     applicable_work_allowance_amount: number;
     earned_income_amount_subject_to_taper: number;
     childcare_costs_element_amount: number;
+    renters_housing_costs_element_calculated_under_this_part: number;
+    owner_occupier_housing_costs_element_amount: number;
+    housing_cost_element_under_shared_ownership: number;
   };
   inputs_used: UkUcFacts;
   tax_year: string;
@@ -276,23 +344,80 @@ async function precomputeChildAmounts(facts: UkUcFacts): Promise<Map<string, { c
   return map;
 }
 
+async function precomputeHousingCosts(facts: UkUcFacts): Promise<{
+  renters: number;
+  ownerOccupier: number;
+  sharedOwnership: number;
+}> {
+  const hasRent = Math.max(0, facts.monthly_rent ?? 0) > 0 || Math.max(0, facts.monthly_rent_cap ?? 0) > 0;
+  const hasServiceCharge =
+    Math.max(0, facts.monthly_owner_occupier_service_charge ?? 0) > 0 ||
+    Math.max(0, facts.weekly_owner_occupier_service_charge ?? 0) > 0;
+  if (!hasRent && !hasServiceCharge) {
+    return { renters: 0, ownerOccupier: 0, sharedOwnership: 0 };
+  }
+
+  const { req } = buildRequest(facts);
+  const { period } = taxYearInterval(facts.tax_year_start ?? INTERVAL_START_FALLBACK);
+  const rentersId =
+    "uk:regulations/uksi/2013/376/schedule/4/paragraph/22#renters_housing_costs_element_calculated_under_this_part";
+  const ownerId =
+    "uk:regulations/uksi/2013/376/schedule/5/paragraph/9#owner_occupier_housing_costs_element_amount";
+  const sharedId =
+    "uk:regulations/uksi/2013/376/26#housing_cost_element_under_shared_ownership";
+
+  req.queries = [
+    {
+      entity_id: FAMILY_ID,
+      period,
+      outputs: [rentersId, ownerId],
+    },
+    {
+      entity_id: PRIMARY_ADULT_ID,
+      period,
+      outputs: [sharedId],
+    },
+  ];
+
+  const res = await runCompiled(ARTIFACT_SLUG, req);
+  const familyRow = res.results[0];
+  const personRow = res.results[1];
+  const renters = readOutput(familyRow.outputs[rentersId])?.numeric ?? 0;
+  const ownerOccupier = readOutput(familyRow.outputs[ownerId])?.numeric ?? 0;
+  const reg26SharedOwnership = readOutput(personRow.outputs[sharedId])?.numeric ?? 0;
+  const sharedOwnershipRequested = facts.has_shared_ownership_tenancy ?? (hasRent || hasServiceCharge);
+  return {
+    renters,
+    ownerOccupier,
+    sharedOwnership:
+      reg26SharedOwnership > 0 || !sharedOwnershipRequested
+        ? reg26SharedOwnership
+        : renters + ownerOccupier,
+  };
+}
+
 export async function computeUkUniversalCredit(facts: UkUcFacts): Promise<UkUcResult> {
   // Pass 1: get per-child responsible_child_element_included_amount (reg 24)
   // and disabled_child_additional_amount (reg 36) so we can feed them as inputs
   // to the s.10 bridge in pass 2.
   const childAmounts = await precomputeChildAmounts(facts);
+  const housingCosts = await precomputeHousingCosts(facts);
 
-  // Pass 2: build the full request, overriding per-child input slots with
-  // the values pass 1 gave us, then query for the final award.
+  // Pass 2: build the full request, overriding bridge input slots with
+  // derived values from pass 1, then query for the final award.
   const { req, children } = buildRequest(facts);
   for (const inp of req.dataset.inputs) {
     if (inp.entity !== "Person") continue;
     const m = childAmounts.get(inp.entity_id);
-    if (!m) continue;
-    if (inp.name === INPUT_PREFIX + "responsible_child_element_included_amount") {
+    if (m && inp.name === INPUT_PREFIX + "responsible_child_element_included_amount") {
       inp.value = fact(m.child, "decimal");
-    } else if (inp.name === INPUT_PREFIX + "disabled_child_additional_amount") {
+    } else if (m && inp.name === INPUT_PREFIX + "disabled_child_additional_amount") {
       inp.value = fact(m.disabled, "decimal");
+    } else if (
+      inp.entity_id === PRIMARY_ADULT_ID &&
+      inp.name === INPUT_PREFIX + "housing_cost_element_under_shared_ownership"
+    ) {
+      inp.value = fact(housingCosts.sharedOwnership, "decimal");
     }
   }
   // Silence the unused-var warning while keeping the shape parallel.
@@ -316,6 +441,9 @@ export async function computeUkUniversalCredit(facts: UkUcFacts): Promise<UkUcRe
     applicable_work_allowance_amount: num(m.applicable_work_allowance_amount),
     earned_income_amount_subject_to_taper: num(m.earned_income_amount_subject_to_taper),
     childcare_costs_element_amount: num(m.childcare_costs_element_amount),
+    renters_housing_costs_element_calculated_under_this_part: housingCosts.renters,
+    owner_occupier_housing_costs_element_amount: housingCosts.ownerOccupier,
+    housing_cost_element_under_shared_ownership: housingCosts.sharedOwnership,
   };
 
   const startYear = facts.tax_year_start ?? INTERVAL_START_FALLBACK;
@@ -327,6 +455,9 @@ export async function computeUkUniversalCredit(facts: UkUcFacts): Promise<UkUcRe
     citations: [
       { id: "uk:statutes/ukpga/2012/5/8", url: "https://app.axiom-foundation.org/uk/statute/ukpga/2012/5/8" },
       { id: "uk:regulations/uksi/2013/376/22", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/22" },
+      { id: "uk:regulations/uksi/2013/376/26", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/26" },
+      { id: "uk:regulations/uksi/2013/376/schedule/4/paragraph/22", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/schedule/4/paragraph/22" },
+      { id: "uk:regulations/uksi/2013/376/schedule/5/paragraph/9", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/schedule/5/paragraph/9" },
       { id: "uk:regulations/uksi/2013/376/36", url: "https://app.axiom-foundation.org/uk/regulation/uksi/2013/376/36" },
     ],
     raw: res,
