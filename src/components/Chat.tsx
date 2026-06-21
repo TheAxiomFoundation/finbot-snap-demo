@@ -122,7 +122,7 @@ export function Chat({ country = "us" }: ChatProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+      <div className="starter-grid">
         {STARTERS.map((s, i) => (
           <button
             key={i}
@@ -169,7 +169,7 @@ export function Chat({ country = "us" }: ChatProps) {
             if (rawForTurn === undefined) return <div key={m.id}>{axiomTurn}</div>;
 
             return (
-              <div key={m.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <div key={m.id} className="compare-grid">
                 <Column title="OpenAI alone" tone="neutral">
                   {rawForTurn === null ? <RunningPill label="running" /> : <RawBubble text={rawForTurn} />}
                 </Column>
@@ -198,7 +198,7 @@ export function Chat({ country = "us" }: ChatProps) {
               const lastUserId = messages[messages.length - 1].id;
               const rawForUser = rawResponses[lastUserId];
               return (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <div className="compare-grid">
                   <Column title="OpenAI alone" tone="neutral">
                     {typeof rawForUser === "string"
                       ? <RawBubble text={rawForUser} />

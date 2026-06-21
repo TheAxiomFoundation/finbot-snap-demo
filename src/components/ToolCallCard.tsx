@@ -74,7 +74,7 @@ function UkUcResultSummary({ result }: { result: any }) {
       <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
         WRA 2012 s.8 composed with UC Regs 22, 24, 26, 27, 29, 34, 36 — final award after work allowance and 55% earned-income taper. Benefit cap (reg 80A) not yet wired in.
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, fontSize: 12 }}>
+      <div className="result-grid" style={{ fontSize: 12 }}>
         {rows.map(([label, value, desc]) => (
           <Row key={label} label={label} value={fmt(value ?? 0, "GBP")} description={desc} />
         ))}
@@ -114,7 +114,7 @@ function UkPersonalAllowanceResultSummary({ result }: { result: any }) {
       <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
         Income Tax Act 2007 s.35 — base £12,570 less ½ of adjusted net income above £100,000, rounded up to £1.
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, fontSize: 12 }}>
+      <div className="result-grid" style={{ fontSize: 12 }}>
         <Row label="Adjusted net income" value={fmt(inputs.adjusted_net_income ?? 0, "GBP")} description="Total income net of pension and gift-aid grossed deductions." />
         <Row label="Tax year" value={result.tax_year ?? "—"} description="UK tax year (6 April → 5 April)." />
       </div>
@@ -165,7 +165,7 @@ function CoSnapResultSummary({ result }: { result: any }) {
       <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
         {SURFACE_OUTPUT_DESCRIPTIONS.snap_regular_month_allotment}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, fontSize: 12 }}>
+      <div className="result-grid" style={{ fontSize: 12 }}>
         {rows.map(([label, value, key]) => (
           <Row key={key} label={label} value={value} description={SURFACE_OUTPUT_DESCRIPTIONS[key]} />
         ))}
