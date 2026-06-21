@@ -20,6 +20,20 @@ html, body {
   color: var(--ink);
 }
 
+/* Guard against accidental horizontal scroll from any wide child
+   (long unbroken tokens, code blocks, etc.) on narrow viewports. */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Long legal IDs / URLs in citations and tool cards can be unbreakable
+   tokens; allow them to wrap rather than force a wide layout. */
+.mono, a.cite, pre {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 body {
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
@@ -328,4 +342,79 @@ a.cite:hover { color: #0b1220; }
 .page-intro p strong {
   color: var(--ink-soft);
   font-weight: 500;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Responsive grids. These mirror the previous inline styles 1:1 at
+   desktop widths and only collapse at phone/tablet breakpoints, so
+   the desktop layout is unchanged.
+   ───────────────────────────────────────────────────────────────── */
+.starter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Mobile / responsive overrides. Phones (≤640px) and small tablets
+   (≤860px) only — desktop is untouched. Stacks side-by-side panels,
+   tightens chrome, and prevents horizontal overflow.
+   ───────────────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Keep the page body strictly inside the viewport. The headline and
+     intro copy wrap instead of forcing a wider-than-screen layout. */
+  main {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    max-width: 100% !important;
+  }
+  .page-intro {
+    width: 100%;
+    max-width: 100%;
+  }
+  .page-intro h1,
+  .page-intro p {
+    width: 100%;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .topbar-inner {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  .starter-grid {
+    grid-template-columns: 1fr;
+  }
+  .result-grid {
+    grid-template-columns: 1fr;
+  }
+  .bubble {
+    max-width: 100%;
+  }
+  .brand-axiom {
+    height: 26px;
+  }
+  .brand-product {
+    font-size: 17px;
+  }
+  .page-intro h1 {
+    font-size: clamp(26px, 7vw, 34px);
+  }
 }
