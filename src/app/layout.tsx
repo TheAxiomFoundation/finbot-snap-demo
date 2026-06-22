@@ -3,7 +3,7 @@ import { Geist, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 
-const GA_ID = "G-5PB7KEWV38";
+const GA_ID = "G-2YHG89FY0N";
 const TOOL_NAME = "finbot-snap-demo";
 
 const geist = Geist({
