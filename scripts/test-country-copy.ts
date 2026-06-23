@@ -34,7 +34,9 @@ assert.match(ukRawPrompt, /SNAP\/Food Stamps/);
 assert.match(ukRawPrompt, /Benefits\.gov/);
 assert.match(usMetadata.description, /SNAP/);
 assert.doesNotMatch(usMetadata.description, /Universal Credit/);
-assert.match(ukMetadata.title, /FinBot UK/);
+assert.match(ukMetadata.title, /Axiom-grounded tax and benefits/);
+assert.doesNotMatch(ukMetadata.title, /FinBot/);
+assert.doesNotMatch(usMetadata.title, /FinBot/);
 assert.match(ukMetadata.description, /Universal Credit/);
 assert.doesNotMatch(ukMetadata.description, /SNAP|Colorado|California|New York/);
 

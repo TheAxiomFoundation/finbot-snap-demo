@@ -206,9 +206,8 @@ a.cite:hover { color: #0b1220; }
 
 /* ─────────────────────────────────────────────────────────────────
    Top app bar — Axiom Foundation house style. Sticky, hairline-
-   bottom, paper background. Axiom logo on the left followed by
-   "FinBot" as a sub-mark (parent · product pattern). The logo links
-   to axiom-foundation.org; "FinBot" is plain text.
+   bottom, paper background. Axiom Foundation logo on the left,
+   linking to axiom-foundation.org.
    ───────────────────────────────────────────────────────────────── */
 .topbar {
   position: sticky;
@@ -259,13 +258,7 @@ a.cite:hover { color: #0b1220; }
 }
 .brand-link:hover { opacity: 0.75; }
 
-/* The Axiom Foundation lockup is two lines (AXIOM + FOUNDATION). FinBot
-   baseline-aligns with the AXIOM line specifically (not the visual
-   center of the 2-line block) so the eye reads "AXIOM | FinBot" as
-   parallel parent · product, with FOUNDATION as the institutional
-   tagline tucked beneath AXIOM. The divider gets dropped — generous
-   gap and baseline alignment carry the relationship cleaner than a
-   rigid vertical rule that has to span an awkward two-line height. */
+/* Wraps the Axiom Foundation logo link in the top bar. */
 .brand-group {
   display: inline-flex;
   align-items: flex-start;
@@ -276,32 +269,6 @@ a.cite:hover { color: #0b1220; }
   display: inline-block;
   height: 32px;
   width: auto;
-}
-
-/* Hairline divider sized to match the AXIOM line (not the full 2-line
-   lockup) so it visually pairs Axiom · FinBot and leaves FOUNDATION as
-   the institutional tagline beneath. Top offset drops the rule onto the
-   AXIOM cap-line. */
-.brand-divider {
-  display: inline-block;
-  width: 1px;
-  height: 18px;
-  background: var(--hairline);
-  margin-top: 3px;
-}
-
-.brand-product {
-  font-family: var(--font-sans), system-ui, sans-serif;
-  font-weight: 300;
-  font-size: 20px;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  line-height: 1;
-  /* Drop FinBot's baseline onto the AXIOM line of the lockup. With a
-     32px logo, AXIOM's baseline lands ~21px below the top; FinBot's
-     ascent (Geist 300, 20px) is ~15.5px, so a ~5-6px top margin
-     brings the baselines together. */
-  margin-top: 5px;
 }
 
 /* Page intro — light-weight Geist headline in the Axiom register,

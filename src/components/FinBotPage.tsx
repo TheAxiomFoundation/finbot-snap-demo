@@ -42,8 +42,6 @@ export function FinBotPage({ initialCountry }: FinBotPageProps) {
                 className="brand-axiom"
               />
             </a>
-            <span className="brand-divider" aria-hidden="true" />
-            <span className="brand-product">FinBot</span>
           </span>
           <div className="country-toggle" role="tablist" aria-label="Country">
             <button
