@@ -2,283 +2,333 @@
 import type { ToolInvocation } from "ai";
 
 import { legalIdToUrl } from "@/lib/legal-links";
-import { SURFACE_OUTPUT_DESCRIPTIONS } from "@/lib/programs/co-snap-meta";
+import { formatValue } from "@/lib/money";
 
 interface Props {
   invocation: ToolInvocation;
 }
 
+/** One-line summary of what distinguishes this call from siblings of the
+ *  same tool — program, output, search term, member count. Facts get their
+ *  own chip row inside the card body. */
+function argSummary(inv: ToolInvocation): string | null {
+  const args = (inv.args ?? {}) as Record<string, unknown>;
+  const parts: string[] = [];
+  if (typeof args.program === "string") parts.push(args.program);
+  if (typeof args.output === "string") parts.push(args.output);
+  if (typeof args.legal_id === "string") parts.push(args.legal_id);
+  if (typeof args.search === "string" && args.search) parts.push(`“${args.search}”`);
+  if (typeof args.inputs_search === "string" && args.inputs_search) parts.push(`inputs “${args.inputs_search}”`);
+  if (Array.isArray(args.members) && args.members.length)
+    parts.push(`${args.members.length} member${args.members.length === 1 ? "" : "s"}`);
+  return parts.length ? parts.join(" · ") : null;
+}
+
 export function ToolCallCard({ invocation }: Props) {
   const status = invocation.state;
   const result = "result" in invocation ? invocation.result : undefined;
+  const hasError = status === "result" && result && typeof result === "object" && "error" in result;
+  const summary = argSummary(invocation);
 
   return (
-    <div className="card" style={{ padding: 12, background: "#fafaf6" }}>
-      <div className="flex items-center gap-2" style={{ marginBottom: 6 }}>
-        <span className="mono" style={{ fontSize: 11, color: "#6b7280" }}>tool</span>
+    <div className="tool-card">
+      <div className="tool-card-head">
         <span className="badge badge-source">{invocation.toolName}</span>
-        <span className="mono" style={{ fontSize: 11, marginLeft: "auto", color: status === "result" ? "#065f46" : "#92400e" }}>
-          {status}
-        </span>
+        {summary && <span className="mono tool-card-summary">{summary}</span>}
+        {status === "result" && typeof (result as any)?._ms === "number" && (
+          <span className="mono tool-card-summary" style={{ marginLeft: "auto" }}>
+            {(result as any)._ms}ms
+          </span>
+        )}
+        <span
+          className={`tool-status-dot ${status === "result" ? "done" : "running"}`}
+          title={status === "result" ? "completed" : "running"}
+          style={status === "result" && typeof (result as any)?._ms === "number" ? { marginLeft: 0 } : undefined}
+        />
       </div>
+
+      {hasError && <ErrorSummary result={result} />}
+      {!hasError && status === "result" && result != null && (
+        <>
+          {invocation.toolName === "compute" && <ComputeCard result={result} />}
+          {invocation.toolName === "list_programs" && <ProgramListCard result={result} />}
+          {invocation.toolName === "describe_program" && <DescribeCard result={result} />}
+          {invocation.toolName === "lookup_value" && <LookupCard result={result} />}
+          {invocation.toolName === "fetch_citation" && <CitationCard result={result} />}
+        </>
+      )}
+
       {invocation.args && Object.keys(invocation.args).length > 0 && (
-        <details style={{ marginBottom: 6 }}>
-          <summary className="text-xs" style={{ cursor: "pointer", color: "#6b7280" }}>arguments</summary>
-          <pre className="mono" style={{ fontSize: 11, marginTop: 6, whiteSpace: "pre-wrap" }}>{JSON.stringify(invocation.args, null, 2)}</pre>
+        <details className="tool-details" style={{ marginTop: 7 }}>
+          <summary>raw arguments</summary>
+          <pre className="mono">{JSON.stringify(invocation.args, null, 2)}</pre>
         </details>
       )}
-      {isSnapComputeTool(invocation.toolName) && status === "result" && result && (
-        <CoSnapResultSummary result={result} />
-      )}
-      {invocation.toolName === "rank_next_question" && status === "result" && result && (
-        <RankedSummary result={result} />
-      )}
-      {invocation.toolName === "list_encoded_outputs" && status === "result" && result && (
-        <CatalogSummary result={result} />
-      )}
-      {invocation.toolName === "lookup_value" && status === "result" && result && (
-        <LookupSummary result={result} />
-      )}
-      {invocation.toolName === "fetch_citation" && status === "result" && result && (
-        <CitationSummary result={result} />
-      )}
-      {invocation.toolName === "compute_uk_personal_allowance" && status === "result" && result && (
-        <UkPersonalAllowanceResultSummary result={result} />
-      )}
-      {invocation.toolName === "compute_uk_universal_credit" && status === "result" && result && (
-        <UkUcResultSummary result={result} />
-      )}
     </div>
   );
 }
 
-function UkUcResultSummary({ result }: { result: any }) {
-  const award = result.universal_credit_award_amount;
-  const o = result.outputs ?? {};
-  const inputs = result.inputs_used ?? {};
-  const rows: Array<[string, number, string]> = [
-    ["Maximum amount", o.universal_credit_maximum_amount, "Sum of standard allowance, child, LCWRA, carer, housing, and childcare elements."],
-    ["Standard allowance", o.standard_allowance_amount, "Single / joint × under-25 / 25+ from reg 36."],
-    ["Childcare element", o.childcare_costs_element_amount, "Reg 34: % of actual childcare costs taken into account, up to the reg 36 cap."],
-    ["Applicable work allowance", o.applicable_work_allowance_amount, "Reg 22: £404 (with housing element) / £710 (without) when responsible for child or LCW."],
-    ["Earned income above WA", o.earned_income_amount_subject_to_taper, "Earned income minus the applicable work allowance."],
-    ["Earned-income deduction", o.earned_income_deduction_from_maximum_amount, "Reg 22: 55% of earned income above the work allowance."],
-    ["Total deductions", o.universal_credit_amounts_to_be_deducted, "Earned-income taper + unearned income."],
-  ];
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+function ErrorSummary({ result }: { result: any }) {
   return (
-    <div>
-      <div style={{ display: "flex", gap: 12, alignItems: "baseline", marginBottom: 4, flexWrap: "wrap" }}>
-        <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{fmt(award, "GBP")}</span>
-        <span style={{ fontSize: 12, color: "#6b7280" }}>monthly UC award · tax year {result.tax_year}</span>
-      </div>
-      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
-        WRA 2012 s.8 composed with UC Regs 22, 24, 26, 27, 29, 34, 36 — final award after work allowance and 55% earned-income taper. Benefit cap (reg 80A) not yet wired in.
-      </div>
-      <div className="result-grid" style={{ fontSize: 12 }}>
-        {rows.map(([label, value, desc]) => (
-          <Row key={label} label={label} value={fmt(value ?? 0, "GBP")} description={desc} />
-        ))}
-      </div>
-      <div style={{ marginTop: 8, fontSize: 11, color: "#6b7280" }}>
-        Claim: <strong>{inputs.is_joint_claim ? "joint" : "single"}</strong>
-        {inputs.eldest_adult_age ? ` · eldest adult ${inputs.eldest_adult_age}` : ""}
-        {inputs.number_of_children ? ` · ${inputs.number_of_children} children` : ""}
-        {(inputs.monthly_earned_income || inputs.joint_monthly_earned_income) ? ` · £${inputs.monthly_earned_income ?? inputs.joint_monthly_earned_income}/mo earned` : ""}
-        {" · "}Sources:{" "}
-        {result.citations?.map((c: any, i: number) => (
-          <span key={c.id}>
-            {i > 0 ? ", " : ""}
-            <a className="cite" href={c.url} target="_blank" rel="noreferrer">{c.id}</a>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function fmt(n: number, currency: "USD" | "GBP" = "USD") {
-  if (typeof n !== "number" || !Number.isFinite(n)) return "—";
-  const symbol = currency === "GBP" ? "£" : "$";
-  return `${symbol}${Math.round(n).toLocaleString()}`;
-}
-
-function UkPersonalAllowanceResultSummary({ result }: { result: any }) {
-  const allowance = result.personal_allowance;
-  const inputs = result.inputs_used ?? {};
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 12, alignItems: "baseline", marginBottom: 6, flexWrap: "wrap" }}>
-        <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{fmt(allowance, "GBP")}</span>
-        <span style={{ fontSize: 12, color: "#6b7280" }}>personal allowance · tax year {result.tax_year}</span>
-      </div>
-      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
-        Income Tax Act 2007 s.35 — base £12,570 less ½ of adjusted net income above £100,000, rounded up to £1.
-      </div>
-      <div className="result-grid" style={{ fontSize: 12 }}>
-        <Row label="Adjusted net income" value={fmt(inputs.adjusted_net_income ?? 0, "GBP")} description="Total income net of pension and gift-aid grossed deductions." />
-        <Row label="Tax year" value={result.tax_year ?? "—"} description="UK tax year (6 April → 5 April)." />
-      </div>
-      <div style={{ marginTop: 8, fontSize: 11, color: "#6b7280" }}>
-        Sources:{" "}
-        {result.citations?.map((c: any, i: number) => (
-          <span key={c.id}>
-            {i > 0 ? ", " : ""}
-            <a className="cite" href={c.url} target="_blank" rel="noreferrer">{c.id}</a>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function judgmentBadge(v: "holds" | "not_holds" | undefined) {
-  if (v === "holds") return <span className="badge badge-exact">eligible</span>;
-  if (v === "not_holds") return <span className="badge badge-blocked">not eligible</span>;
-  return <span className="badge badge-range">unknown</span>;
-}
-
-function isSnapComputeTool(toolName: string) {
-  return toolName === "compute_co_snap" || toolName === "compute_ca_snap" || toolName === "compute_ny_snap";
-}
-
-function CoSnapResultSummary({ result }: { result: any }) {
-  const o = result.outputs ?? {};
-  const benefit = o.snap_benefit ?? o.snap_regular_month_allotment;
-  const benefitLabel = result.program ? `${result.program} benefit` : "regular monthly allotment";
-  const rows: Array<[string, string, string]> = [
-    ["Gross income", fmt(o.gross_income), "gross_income"],
-    ["Net income", fmt(o.snap_net_income), "snap_net_income"],
-    ["Max allotment (size)", fmt(o.snap_maximum_allotment), "snap_maximum_allotment"],
-    ["Standard utility allow.", fmt(o.snap_standard_utility_allowance), "snap_standard_utility_allowance"],
-    ["Std deduction", fmt(o.snap_standard_deduction), "snap_standard_deduction"],
-    ["Earned income deduction", fmt(o.snap_earned_income_deduction), "snap_earned_income_deduction"],
-    ["Excess shelter deduction", fmt(o.excess_shelter_deduction), "excess_shelter_deduction"],
-    ["Shelter costs", fmt(o.shelter_costs), "shelter_costs"],
-  ];
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 12, alignItems: "baseline", marginBottom: 4, flexWrap: "wrap" }}>
-        <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{fmt(benefit)}</span>
-        <span style={{ fontSize: 12, color: "#6b7280" }}>{benefitLabel}</span>
-        {judgmentBadge(o.snap_eligible)}
-      </div>
-      <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
-        {SURFACE_OUTPUT_DESCRIPTIONS.snap_regular_month_allotment}
-      </div>
-      <div className="result-grid" style={{ fontSize: 12 }}>
-        {rows.map(([label, value, key]) => (
-          <Row key={key} label={label} value={value} description={SURFACE_OUTPUT_DESCRIPTIONS[key]} />
-        ))}
-      </div>
-      <div style={{ marginTop: 8, fontSize: 11, color: "#6b7280" }}>
-        Sources:{" "}
-        {result.citations?.slice(0, 4).map((c: any, i: number) => (
-          <span key={c.id}>
-            {i > 0 ? ", " : ""}
-            <a className="cite" href={c.url} target="_blank" rel="noreferrer">{c.id}</a>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function RankedSummary({ result }: { result: any }) {
-  const ranked = result.ranked ?? [];
-  return (
-    <div>
-      <div className="text-xs" style={{ color: "#6b7280", marginBottom: 6 }}>
-        Ranked by how much each unknown moves the SNAP allotment.
-      </div>
-      <div className="flex flex-col gap-2">
-        {ranked.slice(0, 4).map((r: any, i: number) => (
-          <div key={r.fact_key} style={{ borderTop: i ? "1px dashed #e6e6df" : 0, paddingTop: i ? 6 : 0 }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span className="mono" style={{ fontSize: 12, fontWeight: 700, minWidth: 32 }}>{fmt(r.variance_dollars)}</span>
-              <span style={{ fontSize: 13 }}>{r.question}</span>
-            </div>
-            <div style={{ fontSize: 11, color: "#6b7280", marginLeft: 40 }}>{r.why}</div>
-          </div>
-        ))}
-        {ranked.length === 0 && <div className="text-xs" style={{ color: "#6b7280" }}>No remaining unknowns to rank.</div>}
-      </div>
-    </div>
-  );
-}
-
-function CatalogSummary({ result }: { result: any }) {
-  const programs = result.programs ?? [];
-  return (
-    <div>
-      <div className="text-xs" style={{ color: "#6b7280", marginBottom: 6 }}>
-        {programs.length} encoded program{programs.length === 1 ? "" : "s"}.
-      </div>
-      <div className="flex flex-col gap-2">
-        {programs.map((p: any) => (
-          <div key={p.slug} className="mono" style={{ fontSize: 12 }}>
-            <strong>{p.display_name}</strong> · {p.outputs.length} outputs · <span style={{ color: "#6b7280" }}>{p.rulespec_path}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function LookupSummary({ result }: { result: any }) {
-  const v = result.value;
-  let display: string;
-  if (v === null || v === undefined) display = "—";
-  else if (v === "holds") display = "✓ holds";
-  else if (v === "not_holds") display = "✗ does not hold";
-  else display = `${result.unit === "USD" ? "$" : ""}${typeof v === "number" ? Math.round(v).toLocaleString() : v}${result.unit && result.unit !== "USD" ? " " + result.unit : ""}`;
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
-        <span className="mono" style={{ fontSize: 22, fontWeight: 700 }}>{display}</span>
-        <span style={{ fontSize: 12, color: "#6b7280" }}>{result.name}</span>
-        <span className="badge badge-source" style={{ fontSize: 10 }}>{result.entity}</span>
-      </div>
-      <div style={{ marginTop: 6, fontSize: 11, color: "#6b7280" }}>
-        <a className="cite" href={legalIdToUrl(result.legal_id ?? "")} target="_blank" rel="noreferrer">
-          {result.legal_id}
-        </a>
-      </div>
-      {result.source && (
-        <div style={{ fontSize: 11, color: "#374151", marginTop: 4 }}>{result.source}</div>
-      )}
-    </div>
-  );
-}
-
-function CitationSummary({ result }: { result: any }) {
-  return (
-    <div style={{ fontSize: 12 }}>
-      <a className="cite" href={result.url} target="_blank" rel="noreferrer">{result.legal_id}</a>
-      {result.heading && <div style={{ fontWeight: 600, marginTop: 4 }}>{result.heading}</div>}
-      {result.body_excerpt && (
-        <div style={{ color: "#374151", marginTop: 4, lineHeight: 1.5 }}>{result.body_excerpt}</div>
-      )}
-      {!result.body_excerpt && (
-        <div className="text-xs" style={{ color: "#6b7280", marginTop: 4 }}>
-          {result.resolution === "not_found"
-            ? "axiom-corpus has no document at this path yet. The legal source URL above still works."
-            : "axiom-corpus returned this document but no body text. Click through to view the source."}
+    <div className="tool-note">
+      {result.error}
+      {Array.isArray(result.suggestions) && result.suggestions.length > 0 && (
+        <div className="mono" style={{ marginTop: 3, color: "#6b7280" }}>
+          try: {result.suggestions.slice(0, 4).join(", ")}
         </div>
       )}
     </div>
   );
 }
 
-function Row({ label, value, description }: { label: string; value: string; description?: string }) {
+function judgmentBadge(v: unknown) {
+  if (v === "holds") return <span className="badge badge-exact">holds</span>;
+  if (v === "not_holds") return <span className="badge badge-blocked">does not hold</span>;
+  return <span className="badge badge-range">unknown</span>;
+}
+
+function IncompleteBadge() {
   return (
-    <div style={{ padding: "4px 0" }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <span style={{ color: "#374151" }}>{label}</span>
-        <span className="mono">{value}</span>
+    <span
+      className="badge badge-incomplete"
+      title="The rulespec authors flag this output as not fully encoded yet."
+    >
+      incomplete
+    </span>
+  );
+}
+
+function displayValue(o: { value: unknown; unit?: string | null }): string {
+  if (typeof o.value === "number") return formatValue(o.value, o.unit);
+  if (o.value === "holds") return "✓ holds";
+  if (o.value === "not_holds") return "✗ does not hold";
+  if (o.value === null || o.value === undefined) return "—";
+  return String(o.value);
+}
+
+function Citations({ citations }: { citations?: Array<{ id: string; url: string }> }) {
+  if (!citations?.length) return null;
+  const shown = citations.slice(0, 3);
+  return (
+    <>
+      {" · "}
+      {shown.map((c, i) => (
+        <span key={c.id}>
+          {i > 0 ? ", " : ""}
+          <a className="cite" style={{ fontSize: 11 }} href={c.url} target="_blank" rel="noreferrer">
+            {c.id}
+          </a>
+        </span>
+      ))}
+      {citations.length > shown.length && ` +${citations.length - shown.length} sources`}
+    </>
+  );
+}
+
+function FactChips({ facts }: { facts?: Record<string, unknown> }) {
+  const entries = Object.entries(facts ?? {});
+  if (!entries.length) return null;
+  return (
+    <div className="tool-facts">
+      {entries.map(([k, v]) => (
+        <span key={k} className="tool-fact-chip">
+          {k}={String(v)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ComputeCard({ result }: { result: any }) {
+  const outputs: any[] = result.outputs ?? [];
+  const primary = outputs.find((o: any) => o.name === result.primary_output) ?? outputs[0];
+  const rest = outputs.filter((o: any) => o !== primary && o.value !== null);
+  const applied = result.applied ?? {};
+
+  return (
+    <div>
+      <div className="tool-headline">
+        <span className="value">{primary ? displayValue(primary) : "—"}</span>
+        <span className="caption">
+          {primary?.label} · {result.display_name} · {result.period}
+        </span>
+        {primary?.semantics === "judgment" && judgmentBadge(primary.value)}
+        {primary?.acknowledged_incomplete && <IncompleteBadge />}
       </div>
-      {description && (
-        <div style={{ fontSize: 10.5, color: "#6b7280", marginTop: 2, lineHeight: 1.35 }}>
-          {description}
+
+      {rest.length > 0 && (
+        <div className="tool-rows">
+          {rest.map((o: any) => (
+            <div key={o.name} className="tool-row">
+              <span className="k">
+                {o.label}
+                {o.acknowledged_incomplete && <> <IncompleteBadge /></>}
+              </span>
+              <span className="v" style={o.semantics === "judgment" ? { color: o.value === "holds" ? "#065f46" : "#991b1b" } : undefined}>
+                {displayValue(o)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result.member_checks?.length > 0 && (
+        <div className="tool-rows">
+          {result.member_checks.map((o: any) => (
+            <div key={o.name} style={{ padding: "4px 0", borderBottom: "1px dashed #eeeee8" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12 }}>
+                <span className="k" style={{ color: "#374151" }}>member check · {o.label}</span>
+                <span className="v mono" style={{ color: o.value === "holds" ? "#065f46" : "#991b1b" }}>
+                  {displayValue(o)}
+                </span>
+              </div>
+              {o.value === "not_holds" && o.requires && (
+                <div className="mono" style={{ fontSize: 10.5, color: "#92400e", marginTop: 2 }}>
+                  requires: {o.requires.map((r: any) => `${r.slot}=${r.value}`).join(" ")}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}
+      <FactChips facts={applied.facts_applied} />
+      <div className="tool-foot">
+        {result.member_count > 0 && <>{result.member_count} member{result.member_count === 1 ? "" : "s"} · </>}
+        {applied.defaulted_slots ?? 0} slots defaulted
+        <Citations citations={result.citations} />
+      </div>
+    </div>
+  );
+}
+
+function ProgramListCard({ result }: { result: any }) {
+  const programs: any[] = result.programs ?? [];
+  const matches: any[] = result.search_matches ?? [];
+  const jurisdictions = new Set(programs.map((p: any) => p.jurisdiction)).size;
+  return (
+    <div>
+      <div className="tool-headline">
+        <span className="value">{programs.length}</span>
+        <span className="caption">
+          certified program{programs.length === 1 ? "" : "s"} · {jurisdictions} jurisdiction{jurisdictions === 1 ? "" : "s"} · {result.release}
+        </span>
+      </div>
+      {matches.length > 0 && (
+        <div className="tool-rows">
+          {matches.slice(0, 8).map((m: any) => (
+            <div key={`${m.program}:${m.name}`} className="tool-row">
+              <span className="k mono">{m.name}</span>
+              <span className="v" style={{ color: "#6b7280" }}>{m.program}</span>
+            </div>
+          ))}
+          {matches.length > 8 && (
+            <div className="tool-foot">+{matches.length - 8} more matches</div>
+          )}
+        </div>
+      )}
+      <details className="tool-details" style={{ marginTop: 7 }}>
+        <summary>all programs</summary>
+        <div style={{ marginTop: 6 }}>
+          {programs.map((p: any) => (
+            <div key={p.slug} className="tool-row">
+              <span className="k">{p.display_name}</span>
+              <span className="v" style={{ color: "#6b7280" }}>{p.slug}</span>
+            </div>
+          ))}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+function DescribeCard({ result }: { result: any }) {
+  const inputs = result.inputs ?? {};
+  const slotTotal = Object.values(inputs).reduce(
+    (n: number, g: any) => n + (g.slots?.length ?? 0) + (g.omitted ?? 0),
+    0
+  );
+  return (
+    <div>
+      <div className="tool-headline">
+        <span className="caption" style={{ fontSize: 13, color: "var(--ink)" }}>
+          <strong>{result.display_name}</strong>
+        </span>
+        <span className="caption">
+          {result.primary_entity}
+          {result.member_entity ? ` + ${result.member_entity} members` : ""} · {slotTotal} input slots · {result.total_outputs} outputs
+        </span>
+        {result.acknowledged_incomplete?.length > 0 && <IncompleteBadge />}
+      </div>
+      <div className="tool-rows">
+        <div className="tool-row">
+          <span className="k">primary output</span>
+          <span className="v">{result.primary_output}</span>
+        </div>
+        {result.certified_outputs?.filter((n: string) => n !== result.primary_output).map((name: string) => (
+          <div key={name} className="tool-row">
+            <span className="k">certified</span>
+            <span className="v">{name}</span>
+          </div>
+        ))}
+      </div>
+      {Object.entries(inputs).map(([entity, group]: [string, any]) => (
+        <details key={entity} className="tool-details" style={{ marginTop: 6 }}>
+          <summary>
+            {entity} inputs ({group.slots.length}
+            {group.omitted > 0 ? ` shown, ${group.omitted} more` : ""})
+          </summary>
+          <div className="tool-facts" style={{ marginTop: 6 }}>
+            {group.slots.map((s: string) => (
+              <span key={s} className="tool-fact-chip">{s}</span>
+            ))}
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+function LookupCard({ result }: { result: any }) {
+  return (
+    <div>
+      <div className="tool-headline">
+        <span className="value">{displayValue(result)}</span>
+        <span className="caption">{result.label ?? result.name} · {result.program}</span>
+        <span className="badge badge-source" style={{ fontSize: 10 }}>{result.entity}</span>
+        {result.acknowledged_incomplete && <IncompleteBadge />}
+      </div>
+      {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}
+      <FactChips facts={result.applied?.facts_applied} />
+      <div className="tool-foot">
+        {result.source && <>{result.source}</>}
+        {result.legal_id && (
+          <>
+            {result.source ? " · " : ""}
+            <a className="cite" style={{ fontSize: 11 }} href={result.url ?? legalIdToUrl(result.legal_id)} target="_blank" rel="noreferrer">
+              {result.legal_id}
+            </a>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CitationCard({ result }: { result: any }) {
+  return (
+    <div style={{ marginTop: 6 }}>
+      <a className="cite" href={result.url} target="_blank" rel="noreferrer">{result.legal_id}</a>
+      {result.heading && <div style={{ fontWeight: 600, fontSize: 13, marginTop: 4 }}>{result.heading}</div>}
+      {result.body_excerpt ? (
+        <div style={{ color: "#374151", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>{result.body_excerpt}</div>
+      ) : (
+        <div className="tool-foot">
+          {result.resolution === "not_found"
+            ? "axiom-corpus has no document at this path yet. The legal source URL above still works."
+            : "axiom-corpus returned this document but no body text. Click through to view the source."}
         </div>
       )}
     </div>

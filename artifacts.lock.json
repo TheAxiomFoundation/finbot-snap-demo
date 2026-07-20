@@ -1,0 +1,9 @@
+{
+  "repo": "TheAxiomFoundation/rulespec-us",
+  "release_tag": "program-artifacts-733d1a17920a",
+  "corpus_sha": "733d1a17920aa4ea8c8eef57ec164e48de664fe3",
+  "engine": {
+    "repo": "TheAxiomFoundation/axiom-rules-engine",
+    "ref": "48797e101c093bb388be718c6f5d8fc9d9f94a7d"
+  }
+}

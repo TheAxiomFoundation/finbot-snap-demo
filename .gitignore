@@ -3,11 +3,11 @@ node_modules/
 .env
 .env.local
 .DS_Store
-engine/axiom-rules-engine/
-engine/rulespec-us/
-engine/rulespec-us-co/
-engine/artifacts/
+engine/
+.cache/
+eval/runs/
 *.log
 .vercel
 tsconfig.tsbuildinfo
 __pycache__/
+.env*.local

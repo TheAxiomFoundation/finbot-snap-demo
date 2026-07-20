@@ -4,10 +4,12 @@ Two services, both under PolicyEngine accounts:
 
 | Where | What | Why |
 |---|---|---|
-| **Modal** (`axiom-engine`) | The Rust `axiom-rules-engine` binary plus compiled artifacts for CO SNAP, UK personal allowance, and UK Universal Credit. | Vercel cannot run native binaries; Modal containers can. |
-| **Vercel** (`finbot-snap-demo`) | Next.js app: chat surface, side-by-side comparison, and all `/api/*` routes. | Standard Next.js deploy target with AI SDK streaming. |
+| **Modal** (`axiom-engine`) | The Rust `axiom-rules-engine` binary plus every compiled artifact from the pinned rulespec-us `program-artifacts` release. | Vercel cannot run native binaries; Modal containers can. |
+| **Vercel** (`finbot-snap-demo`) | Next.js app: chat surface, side-by-side comparison, `/programs` browser, and all `/api/*` routes. | Standard Next.js deploy target with AI SDK streaming. |
 
 The Vercel app calls the Modal endpoint through `AXIOM_ENGINE_URL`. Locally, when that env var is unset, the app spawns the binary directly.
+
+Both services read the same pin: `artifacts.lock.json`.
 
 ## 1. Deploy the engine to Modal
 
@@ -16,25 +18,24 @@ The Vercel app calls the Modal endpoint through `AXIOM_ENGINE_URL`. Locally, whe
 pip install modal
 modal token set --token-id <id> --token-secret <secret>
 
-# Deploy. First build compiles Rust (~3-4 min). Subsequent deploys reuse the
-# cached layer unless ENGINE_VERSION in modal_app.py is bumped.
+# Deploy. First build compiles Rust (~3-4 min) and downloads + sha256-verifies
+# the release artifacts. Subsequent deploys reuse the cached layer unless
+# artifacts.lock.json changes.
 modal deploy modal_app.py
 ```
 
 Modal prints a public URL like:
 
 ```text
-https://policyengine--axiom-engine-web.modal.run
+https://policyengine--axiom-engine.modal.run
 ```
 
-Copy it. Verify it works:
+Verify it works:
 
 ```bash
-curl https://policyengine--axiom-engine-web.modal.run/health
-# -> { "ok": true, "programs": { "co-snap": ..., "uk-personal-allowance": ..., "uk-uc": ... } }
+curl https://policyengine--axiom-engine.modal.run/health
+# -> { "ok": true, "release": "program-artifacts-…", "programs": { "us-co-snap": …, … } }
 ```
-
-To redeploy after rules content changes, update the pinned SHAs in `modal_app.py`, bump `ENGINE_VERSION`, regenerate matching local schemas/artifacts, run the engine tests, and then run `modal deploy modal_app.py`.
 
 ## 2. Deploy the frontend to Vercel
 
@@ -43,7 +44,6 @@ To redeploy after rules content changes, update the pinned SHAs in `modal_app.py
 npm i -g vercel
 vercel login
 vercel link --scope policyengine
-# -> creates .vercel/project.json with orgId team_xsyTmFLMLGbHH7Qxu70R5G4r
 ```
 
 Set the env vars Vercel needs:
@@ -59,17 +59,26 @@ Deploy:
 
 ```bash
 vercel deploy --prod
-# -> https://finbot-snap-demo.vercel.app  (current project/domain)
 ```
 
-## 3. Optional custom domain
+## Pin-bump runbook
 
-In the Vercel dashboard for the project, **Settings -> Domains**. PE's pattern is `<app>.policyengine.org`; for Axiom-flavoured apps, `finbot.axiom-foundation.org` may make more sense.
+When rulespec-us publishes a new `program-artifacts-<sha>` release:
 
-## Redeploy cadence
+```bash
+# 1. Edit artifacts.lock.json (release_tag, corpus_sha, engine.ref if moved)
+bun run artifacts:fetch        # download + sha256-verify
+bun run catalog:generate       # regenerate catalog.json — REVIEW the report + warnings
+bun run test:smoke             # all programs must compute with defaults
+bun run test:regression        # exact-value cases still hold (update if rules changed)
+bun run typecheck && bun run build
 
-- **Frontend changes** under `src/`, `package.json`, or `vercel.json`: `vercel deploy --prod` or merge to `main` if the Vercel project has production auto-deploy enabled.
-- **Engine changes**: update pins and `ENGINE_VERSION` in `modal_app.py`, verify local artifacts/tests, then `modal deploy modal_app.py`. The frontend only needs redeploying if the TypeScript tool/schema surface changed.
+# 2. Commit artifacts.lock.json + src/lib/generated/catalog.json
+# 3. Deploy the engine, then the frontend
+modal deploy modal_app.py
+AXIOM_ENGINE_URL=https://policyengine--axiom-engine.modal.run bun run test:smoke   # against prod engine
+vercel deploy --prod
+```
 
 ## Local dev still works
 
@@ -77,7 +86,8 @@ If `AXIOM_ENGINE_URL` is not set, the chat tools spawn the local Rust binary ins
 
 ## Troubleshooting
 
-- **`/api/chat` returns "axiom-engine ..." errors** -> the Modal service is down or unreachable. Hit `/health` directly to confirm.
-- **`/api/chat` returns "axiom-rules-engine binary not found at..."** -> `AXIOM_ENGINE_URL` is unset and the local binary is not built. Either set the env var or run `bun run engine:setup`.
-- **Vercel function timeouts** -> chat and raw comparison routes are configured for 300s in `vercel.json`, matching the route-level `maxDuration`. Check the Vercel plan limit if a deployment overrides that.
-- **Modal cold starts** -> `scaledown_window=300` in `modal_app.py` keeps the container warm for 5 minutes after the last request. First request after a cold period takes a few seconds; subsequent requests are faster.
+- **`/api/chat` returns "axiom-engine ..." errors** → the Modal service is down or unreachable. Hit `/health` directly to confirm.
+- **`/api/chat` returns "axiom-rules-engine binary not found at..."** → `AXIOM_ENGINE_URL` is unset and the local binary is not built. Either set the env var or run `bun run engine:setup`.
+- **"unknown program" from Modal** → the Modal image was built from an older pin. Redeploy `modal_app.py` after a pin bump.
+- **Vercel function timeouts** → chat and raw comparison routes are configured for 300s in `vercel.json`, matching the route-level `maxDuration`. Check the Vercel plan limit if a deployment overrides that.
+- **Modal cold starts** → `scaledown_window=300` keeps the container warm for 5 minutes after the last request.

@@ -1,0 +1,120 @@
+"use client";
+import type { ToolInvocation } from "ai";
+
+/**
+ * Live under-the-hood activity while an assistant turn is streaming: one line
+ * per tool call, phrased as a human-readable step, with completed steps
+ * checked off and the current one animated. Replaces the generic
+ * "running axiom-rules-engine" pill with the real chain of work.
+ */
+
+function stepLabel(inv: ToolInvocation): string {
+  const args = (inv.args ?? {}) as Record<string, unknown>;
+  const program = typeof args.program === "string" ? args.program : null;
+  const done = inv.state === "result";
+  switch (inv.toolName) {
+    case "list_programs":
+      if (typeof args.search === "string" && args.search)
+        return done
+          ? `searched certified outputs for “${args.search}”`
+          : `searching certified outputs for “${args.search}”`;
+      return done ? "checked the certified-program catalog" : "checking the certified-program catalog";
+    case "describe_program": {
+      const filter = typeof args.inputs_search === "string" && args.inputs_search ? args.inputs_search : null;
+      if (filter)
+        return done
+          ? `scanned ${program ?? "program"} inputs for “${filter}”`
+          : `scanning ${program ?? "program"} inputs for “${filter}”`;
+      return done
+        ? `read the ${program ?? "program"} rule schema`
+        : `reading the ${program ?? "program"} rule schema`;
+    }
+    case "compute":
+      return done
+        ? `computed ${program ?? "the program"} in the rules engine`
+        : `running ${program ?? "the program"} in the rules engine`;
+    case "lookup_value": {
+      const output = typeof args.output === "string" ? args.output : "a value";
+      return done ? `looked up ${output}` : `looking up ${output}`;
+    }
+    case "fetch_citation": {
+      const id = typeof args.legal_id === "string" ? args.legal_id : "the legal source";
+      return done ? `fetched ${id}` : `fetching ${id}`;
+    }
+    default:
+      return done ? inv.toolName : `running ${inv.toolName}`;
+  }
+}
+
+export function ActivityTrail({ invocations }: { invocations: ToolInvocation[] }) {
+  if (invocations.length === 0) return null;
+  // Between a tool result landing and the model's next move (another call or
+  // the final text) nothing is technically in flight — without a trailing
+  // line the trail reads as hung. Model-thinking time dominates those gaps.
+  const allDone = invocations.every((inv) => inv.state === "result");
+
+  // Collapse consecutive steps that render identically (the model sometimes
+  // probes the same tool repeatedly) into one line with a ×N counter.
+  const steps: Array<{ key: string; label: string; done: boolean; count: number }> = [];
+  for (const inv of invocations) {
+    const label = stepLabel(inv);
+    const done = inv.state === "result";
+    const last = steps[steps.length - 1];
+    if (last && last.label === label && last.done === done) last.count++;
+    else steps.push({ key: inv.toolCallId, label, done, count: 1 });
+  }
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        flexDirection: "column",
+        gap: 4,
+        padding: "8px 14px",
+        background: "#fafaf6",
+        border: "1px solid #e6e6df",
+        borderRadius: 12,
+        alignSelf: "flex-start",
+      }}
+    >
+      {steps.map((step) => (
+        <div
+          key={step.key}
+          className="mono"
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 7,
+            fontSize: 11.5,
+            color: step.done ? "#9ca3af" : "#374151",
+          }}
+        >
+          <span style={{ width: 10, textAlign: "center", color: step.done ? "#059669" : "#92400e" }}>
+            {step.done ? "✓" : "•"}
+          </span>
+          <span>
+            {step.label}
+            {step.count > 1 ? ` ×${step.count}` : ""}
+          </span>
+          {!step.done && (
+            <span className="thinking-dots" aria-hidden="true">
+              <span /><span /><span />
+            </span>
+          )}
+        </div>
+      ))}
+      {allDone && (
+        <div
+          className="mono"
+          style={{ display: "flex", alignItems: "baseline", gap: 7, fontSize: 11.5, color: "#374151" }}
+        >
+          <span style={{ width: 10, textAlign: "center", color: "#92400e" }}>•</span>
+          <span>reading the results</span>
+          <span className="thinking-dots" aria-hidden="true">
+            <span /><span /><span />
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,14 +1,9 @@
-/** Format a number as a whole-currency-unit string, e.g. "$2,570" or "£2,570".
- *  Handles USD and GBP; falls back to plain numeric for unknown currencies. */
-export function formatMoney(n: number, currency: "USD" | "GBP" = "USD"): string {
+/** Format a number with its unit, e.g. "$2,570" for USD; plain numeric for
+ *  unitless or unknown-unit values. */
+export function formatValue(n: number, unit?: string | null): string {
   if (!Number.isFinite(n)) return "—";
   const rounded = Math.round(n).toLocaleString();
-  const symbol = currency === "GBP" ? "£" : "$";
-  return `${symbol}${rounded}`;
-}
-
-import type { Country } from "./catalog";
-
-export function currencyForCountry(country: Country): "USD" | "GBP" {
-  return country === "uk" ? "GBP" : "USD";
+  if (unit === "USD") return `$${rounded}`;
+  if (!unit) return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(2);
+  return `${rounded} ${unit}`;
 }
