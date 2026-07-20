@@ -701,6 +701,317 @@
      "pe_variable": "eitc"
     }
    ]
+  },
+  {
+   "id": "oasdi-wage-95k",
+   "description": "OASDI employee wage tax on $95,000: 6.2% = $5,890. Annual (calendar-2026) program.",
+   "program": "us-oasdi-wage-tax",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "wages": 95000
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 40
+       },
+       "employment_income": {
+        "2026": 95000
+       }
+      }
+     },
+     "state": "TX"
+    },
+    "outputs": [
+     {
+      "variable": "employee_social_security_tax",
+      "period": 2026
+     }
+    ]
+   },
+   "pe_values": {
+    "employee_social_security_tax": 5890.0
+   },
+   "compare": [
+    {
+     "axiom_output": "oasdi_wage_tax",
+     "pe_variable": "employee_social_security_tax"
+    }
+   ]
+  },
+  {
+   "id": "al-snap-family3",
+   "description": "AL SNAP: parent + 2 kids; $1,800/mo earnings; $1,100 rent, no utilities (AL's certified path has no SUA machinery, so utilities are zeroed on both sides). Population-scale AL agreement is 96% \u2014 this pins the plain-household class that does agree.",
+   "program": "us-al-snap",
+   "tolerance": 1.5,
+   "axiom": {
+    "facts": {
+     "household_size": 3,
+     "snap_gross_monthly_earned_income": 1800,
+     "household_shelter_costs_incurred": 1100
+    },
+    "members": [
+     {
+      "facts": {
+       "member_age": 30,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 8,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 5,
+       "member_is_us_citizen": true
+      }
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       },
+       "employment_income": {
+        "2026": 21600
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 13200
+       },
+       "heating_cooling_expense": {
+        "2026": 0
+       },
+       "utility_expense": {
+        "2026": 0
+       },
+       "tanf": {
+        "2026": 0
+       }
+      }
+     },
+     "state": "AL"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 561.2
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
+  },
+  {
+   "id": "ga-snap-family3",
+   "description": "GA SNAP: same household as AL case; GA takes shelter via monthly_allowable_shelter_costs + verification flags.",
+   "program": "us-ga-snap",
+   "tolerance": 1.5,
+   "axiom": {
+    "facts": {
+     "household_size": 3,
+     "snap_gross_monthly_earned_income": 1800,
+     "monthly_allowable_shelter_costs": 1100,
+     "claimed_allowable_shelter_expense_amount": 1100,
+     "shelter_expense_verified_by_third_party": true,
+     "household_not_receiving_free_shelter_throughout_month": true
+    },
+    "members": [
+     {
+      "facts": {
+       "member_age": 30,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 8,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 5,
+       "member_is_us_citizen": true
+      }
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       },
+       "employment_income": {
+        "2026": 21600
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 13200
+       },
+       "heating_cooling_expense": {
+        "2026": 0
+       },
+       "utility_expense": {
+        "2026": 0
+       },
+       "tanf": {
+        "2026": 0
+       }
+      }
+     },
+     "state": "GA"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 561.2
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
+  },
+  {
+   "id": "sc-snap-family3",
+   "description": "SC SNAP: same household as AL case.",
+   "program": "us-sc-snap",
+   "tolerance": 1.5,
+   "axiom": {
+    "facts": {
+     "household_size": 3,
+     "snap_gross_monthly_earned_income": 1800,
+     "household_shelter_costs_incurred": 1100
+    },
+    "members": [
+     {
+      "facts": {
+       "member_age": 30,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 8,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 5,
+       "member_is_us_citizen": true
+      }
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       },
+       "employment_income": {
+        "2026": 21600
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 13200
+       },
+       "heating_cooling_expense": {
+        "2026": 0
+       },
+       "utility_expense": {
+        "2026": 0
+       },
+       "tanf": {
+        "2026": 0
+       }
+      }
+     },
+     "state": "SC"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 561.2
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
   }
  ],
  "shared_member_facts": {
@@ -725,5 +1036,23 @@
    "individual_principal_place_of_abode_with_taxpayer_fraction": 1,
    "individual_own_support_fraction_provided_by_individual": 0
   }
- }
+ },
+ "excluded": [
+  {
+   "program": "us-ny-income-tax",
+   "reason": "Pilot pipeline takes NY bracket floors/rates and the standard deduction as inputs; feeding them would test arithmetic, not encoded law."
+  },
+  {
+   "program": "us-az-tanf",
+   "reason": "Payment-standard chain takes federal poverty levels as inputs (parameter-as-input); no meaningful oracle without supplying the law values."
+  },
+  {
+   "program": "us-ar-tanf",
+   "reason": "policyengine-us has no ar_tanf variable."
+  },
+  {
+   "program": "us-ks-tanf",
+   "reason": "Requires KS county shelter-group selection (shelter_group_i..v) not yet mapped to PolicyEngine's model."
+  }
+ ]
 }

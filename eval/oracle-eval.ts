@@ -50,6 +50,21 @@ const PROMPTS: Record<string, { prompt: string; expect: Array<{ pe_variable: str
       { pe_variable: "ctc_value", label: "child tax credit" },
     ],
   },
+  "co-tanf-family3": {
+    prompt:
+      "I'm a single mom with two kids in Colorado and no income right now. How much Colorado Works cash assistance could I get per month?",
+    expect: [{ pe_variable: "co_tanf", label: "monthly TANF" }],
+  },
+  "ma-snap-parent-1kid": {
+    prompt:
+      "I live in Massachusetts with my 4-year-old, earn $1,500 a month, pay $1,400 rent plus heat separately. We're both US citizens. What SNAP would we get?",
+    expect: [{ pe_variable: "snap", label: "monthly SNAP" }],
+  },
+  "fiit-eitc-hoh-2kids": {
+    prompt:
+      "I file as head of household with two kids, 8 and 5, who live with me all year and have SSNs. I earned $18,000 in wages in 2026. How much EITC do I get?",
+    expect: [{ pe_variable: "eitc", label: "EITC" }],
+  },
 };
 
 // ---------------------------------------------------------------------------
