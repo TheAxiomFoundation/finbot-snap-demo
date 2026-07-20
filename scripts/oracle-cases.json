@@ -354,6 +354,353 @@
      "pe_variable": "ctc_value"
     }
    ]
+  },
+  {
+   "id": "co-tanf-family3",
+   "description": "CO Colorado Works (TANF): single caretaker + 2 children, zero income.",
+   "program": "us-co-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "number_of_caretakers_in_assistance_unit": 1,
+     "number_of_children_in_assistance_unit": 2
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "state": "CO"
+    },
+    "outputs": [
+     {
+      "variable": "co_tanf",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "co_tanf": 620.0
+   },
+   "compare": [
+    {
+     "axiom_output": "co_tanf",
+     "pe_variable": "co_tanf"
+    }
+   ]
+  },
+  {
+   "id": "ny-tanf-family3",
+   "description": "NY TANF: family of 3, zero income, NO verified rent. PolicyEngine's ny_tanf models the need standard without a shelter-allowance component; with verified rent our engine adds the shelter allowance ($698 for $1,000 rent) and the engines legitimately diverge, so this case pins the shelter-free scenario both model identically.",
+   "program": "us-ny-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "family_size": 3,
+     "number_of_persons_in_household": 3
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "state": "NY"
+    },
+    "outputs": [
+     {
+      "variable": "ny_tanf",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "ny_tanf": 389.0
+   },
+   "compare": [
+    {
+     "axiom_output": "ny_tanf",
+     "pe_variable": "ny_tanf"
+    }
+   ]
+  },
+  {
+   "id": "ma-snap-parent-1kid",
+   "description": "MA SNAP: parent (30) + child (4); $1,500/mo earnings; $1,400/mo rent; heating separate. Members carry citizenship; residency comes from the global overlay default. PE TANF zeroed (cross-program injection).",
+   "program": "us-ma-snap",
+   "tolerance": 1.5,
+   "axiom": {
+    "facts": {
+     "household_size": 2,
+     "snap_gross_monthly_earned_income": 1500,
+     "household_shelter_costs_incurred": 1400,
+     "household_incurs_heating_or_cooling_expenses_separately_from_rent_or_mortgage": true
+    },
+    "members": [
+     {
+      "facts": {
+       "member_age": 30,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 4,
+       "member_is_us_citizen": true
+      }
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       },
+       "employment_income": {
+        "2026": 18000
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 4
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 16800
+       },
+       "heating_cooling_expense": {
+        "2026": 2400
+       },
+       "tanf": {
+        "2026": 0
+       }
+      }
+     },
+     "state": "MA"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 471.9
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
+  },
+  {
+   "id": "tn-snap-family3",
+   "description": "TN SNAP: couple + child (10); $2,200/mo earnings; no claimed shelter costs. Members carry citizenship; residency via global overlay default. PE TANF zeroed.",
+   "program": "us-tn-snap",
+   "tolerance": 1.5,
+   "axiom": {
+    "facts": {
+     "household_size": 3,
+     "snap_gross_monthly_earned_income": 2200
+    },
+    "members": [
+     {
+      "facts": {
+       "member_age": 40,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 38,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 10,
+       "member_is_us_citizen": true
+      }
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p1": {
+       "age": {
+        "2026": 40
+       },
+       "employment_income": {
+        "2026": 26400
+       }
+      },
+      "p2": {
+       "age": {
+        "2026": 38
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 10
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 0
+       },
+       "tanf": {
+        "2026": 0
+       }
+      }
+     },
+     "state": "TN"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 319.7
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
+  },
+  {
+   "id": "fiit-eitc-hoh-2kids",
+   "description": "FIIT EITC: head of household, $18,000 wages, two qualifying children (8 and 5) with abode/TIN facts. earned income flows from employee_compensation_includible_in_gross_income; the SSN gate and full-year flags come from the fact set / overlay. 40% phase-in x $18k = $7,200, below the 2-child maximum.",
+   "program": "us-fiit",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "filing_status": 3,
+     "adjusted_gross_income": 18000,
+     "filer_adjusted_earnings": 18000,
+     "taxable_income": 0,
+     "employee_compensation_includible_in_gross_income": 18000,
+     "taxpayer_includes_required_social_security_number_on_return": true
+    },
+    "members": [
+     {
+      "facts": {
+       "age": 8,
+       "$ref": "eitc_child"
+      },
+      "relations": [
+       "qualifying_child_of_tax_unit",
+       "dependent_of_tax_unit"
+      ]
+     },
+     {
+      "facts": {
+       "age": 5,
+       "$ref": "eitc_child"
+      },
+      "relations": [
+       "qualifying_child_of_tax_unit",
+       "dependent_of_tax_unit"
+      ]
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       },
+       "employment_income": {
+        "2026": 18000
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       },
+       "is_tax_unit_dependent": {
+        "2026": true
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       },
+       "is_tax_unit_dependent": {
+        "2026": true
+       }
+      }
+     },
+     "tax_units": {
+      "tu": {
+       "filing_status": {
+        "2026": "HEAD_OF_HOUSEHOLD"
+       }
+      }
+     },
+     "state": "TX"
+    },
+    "outputs": [
+     {
+      "variable": "eitc",
+      "period": 2026
+     }
+    ]
+   },
+   "pe_values": {
+    "eitc": 7200.0
+   },
+   "compare": [
+    {
+     "axiom_output": "eitc",
+     "pe_variable": "eitc"
+    }
+   ]
   }
  ],
  "shared_member_facts": {
@@ -369,6 +716,14 @@
    "qualifying_child_tin_included_on_return": true,
    "qualifying_child_tin_issued_on_or_before_return_due_date": true,
    "qualifying_child_principal_place_of_abode_is_in_united_states": true
+  },
+  "eitc_child": {
+   "qualifying_child_principal_place_of_abode_is_in_united_states": true,
+   "qualifying_child_name_age_and_tin_included_on_return": true,
+   "individual_is_child_of_taxpayer_or_descendant_of_such_child": true,
+   "individual_is_younger_than_taxpayer": true,
+   "individual_principal_place_of_abode_with_taxpayer_fraction": 1,
+   "individual_own_support_fraction_provided_by_individual": 0
   }
  }
 }

@@ -5012,7 +5012,8 @@
      {
       "name": "household_lives_in_application_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -5173,8 +5174,8 @@
      },
      {
       "name": "household_shelter_costs_incurred",
-      "dtype": "bool",
-      "default": false
+      "dtype": "decimal",
+      "default": 0
      },
      {
       "name": "household_size",
@@ -7042,50 +7043,50 @@
     "Scalar": [
      {
       "name": "bona_fide_funeral_agreement_equity_value",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
       "name": "household_nonliquid_resources_value",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
       "name": "household_vehicles_value",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
       "name": "jointly_owned_resources_with_categorically_eligible_member_value",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
       "name": "resources_determined_inaccessible_to_household_value",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
       "name": "resources_excluded_by_federal_statute_value",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
       "name": "resources_that_are_prorated_income_value",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
       "name": "tax_preferred_education_and_retirement_account_balances",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      }
     ]
@@ -10947,7 +10948,8 @@
      {
       "name": "household_lives_in_application_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -18721,7 +18723,7 @@
       "name": "household_lives_in_application_state",
       "dtype": "bool",
       "default": true,
-      "default_source": "fixture"
+      "default_source": "overlay"
      },
      {
       "name": "household_lives_where_it_files_application_for_participation",
@@ -18755,8 +18757,8 @@
      },
      {
       "name": "household_resources_at_time_of_interview",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
@@ -39244,7 +39246,7 @@
       "name": "household_lives_in_application_state",
       "dtype": "bool",
       "default": true,
-      "default_source": "fixture"
+      "default_source": "overlay"
      },
      {
       "name": "household_lives_in_county_or_district_where_application_is_made",
@@ -39962,8 +39964,8 @@
      },
      {
       "name": "in_kind_benefit_value",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
@@ -41142,8 +41144,8 @@
      },
      {
       "name": "non_household_member_cash_payments_to_household",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
@@ -48949,8 +48951,9 @@
      },
      {
       "name": "assistance_unit_member_count",
-      "dtype": "bool",
-      "default": false
+      "dtype": "decimal",
+      "default": 1,
+      "default_source": "table_min"
      },
      {
       "name": "child_care_expenses",
@@ -51702,7 +51705,8 @@
      {
       "name": "taxable_year_is_full_12_months",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "taxable_year_months",
@@ -54307,7 +54311,8 @@
      {
       "name": "household_lives_in_application_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -54330,8 +54335,8 @@
      },
      {
       "name": "household_shelter_costs_incurred",
-      "dtype": "bool",
-      "default": false
+      "dtype": "decimal",
+      "default": 0
      },
      {
       "name": "household_size",
@@ -73538,8 +73543,8 @@
      },
      {
       "name": "capital_goods_sale_proceeds",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
@@ -85379,7 +85384,8 @@
      {
       "name": "household_lives_in_application_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -86979,8 +86985,9 @@
      },
      {
       "name": "assistance_unit_member_count",
-      "dtype": "bool",
-      "default": false
+      "dtype": "decimal",
+      "default": 1,
+      "default_source": "table_min"
      },
      {
       "name": "determination_is_at_application",
@@ -95934,7 +95941,8 @@
      {
       "name": "household_lives_in_application_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -118914,8 +118922,8 @@
      },
      {
       "name": "financial_account_remainder_after_outstanding_checks",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
@@ -120909,7 +120917,8 @@
      {
       "name": "household_lives_in_application_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -121070,8 +121079,8 @@
      },
      {
       "name": "household_shelter_costs_incurred",
-      "dtype": "bool",
-      "default": false
+      "dtype": "decimal",
+      "default": 0
      },
      {
       "name": "household_size",
@@ -136051,7 +136060,7 @@
       "name": "household_lives_in_application_state",
       "dtype": "bool",
       "default": true,
-      "default_source": "fixture"
+      "default_source": "overlay"
      },
      {
       "name": "household_member_disqualified_for_failure_to_comply_with_periodic_reporting_requirements",
@@ -163512,8 +163521,8 @@
      },
      {
       "name": "anticipated_monthly_average_recurring_medical_expenses",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
@@ -166588,7 +166597,8 @@
      {
       "name": "household_lives_in_application_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -167361,8 +167371,8 @@
      },
      {
       "name": "household_shelter_costs_incurred",
-      "dtype": "bool",
-      "default": false
+      "dtype": "decimal",
+      "default": 0
      },
      {
       "name": "household_size",
@@ -178816,8 +178826,8 @@
      },
      {
       "name": "total_non_excluded_income_before_deductions",
-      "dtype": "bool",
-      "default": false,
+      "dtype": "decimal",
+      "default": 0,
       "aux": true
      },
      {
@@ -190462,7 +190472,8 @@
      {
       "name": "household_lives_in_application_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -190846,8 +190857,8 @@
      },
      {
       "name": "household_shelter_costs_incurred",
-      "dtype": "bool",
-      "default": false
+      "dtype": "decimal",
+      "default": 0
      },
      {
       "name": "household_size",

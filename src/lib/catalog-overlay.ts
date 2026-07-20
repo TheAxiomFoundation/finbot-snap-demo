@@ -23,6 +23,15 @@ export interface ProgramOverlay {
   default_overrides?: Record<string, boolean | number | string>;
 }
 
+/** Defaults applied to ANY program that has the slot (before per-program
+ *  overrides). Only for facts that are administratively true for essentially
+ *  every user of this app — asking about a state's program presumes applying
+ *  in that state. */
+export const GLOBAL_DEFAULT_OVERRIDES: Record<string, boolean | number | string> = {
+  // 7 CFR 273.3 residency: the household applies in the state it lives in.
+  household_lives_in_application_state: true,
+};
+
 export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
   "us-fiit": {
     // Manifest order puts breakdown components after the headline figure and
@@ -35,8 +44,10 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
       // permanent-law text ($1,000/child, $75k/$110k thresholds).
       ctc_subsection_h_special_rules_apply: true,
       // A normal calendar-year return is a full 12-month taxable year; the
-      // CTC full-year requirement reads this input directly.
+      // CTC full-year requirement reads taxable_year_months and the EITC
+      // demographic test reads the boolean twin.
       taxable_year_months: 12,
+      taxable_year_is_full_12_months: true,
     },
   },
 };

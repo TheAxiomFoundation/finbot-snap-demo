@@ -30,7 +30,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 
-import { CATALOG_OVERLAY } from "../src/lib/catalog-overlay";
+import { CATALOG_OVERLAY, GLOBAL_DEFAULT_OVERRIDES } from "../src/lib/catalog-overlay";
 
 const ROOT = path.resolve(path.join(import.meta.dirname ?? __dirname, ".."));
 const ARTIFACTS_DIR = path.join(ROOT, "engine", "artifacts");
@@ -689,7 +689,21 @@ function analyzeProgram(
       if (node.kind !== "input") continue;
       const name = node.name as string;
       if (!dtypeCandidates.has(name)) dtypeCandidates.set(name, []);
-      dtypeCandidates.get(name)!.push(inferDtype(parent, node, ruleDtypes));
+      // An input that IS the rule body (no parent expression) inherits the
+      // rule's declared dtype — e.g. `snap_total_allowable_shelter_expenses`
+      // is a bare passthrough of a decimal input.
+      if (parent === null) {
+        const declared = rule.dtype;
+        dtypeCandidates.get(name)!.push(
+          declared === "integer" || declared === "decimal" || declared === "date" || declared === "text"
+            ? declared
+            : declared === "judgment"
+              ? "bool"
+              : "decimal"
+        );
+      } else {
+        dtypeCandidates.get(name)!.push(inferDtype(parent, node, ruleDtypes));
+      }
       if (!inputsByEntity.has(scope)) inputsByEntity.set(scope, new Set());
       inputsByEntity.get(scope)!.add(name);
     }
@@ -1045,8 +1059,9 @@ function analyzeProgram(
     }
 
     // Overlay defaults win over everything — curated law-variant/administrative
-    // facts, disclosed via default_source.
-    const override = overlay.default_overrides?.[name];
+    // facts, disclosed via default_source. Global entries apply to any program
+    // carrying the slot; per-program entries win over global.
+    const override = overlay.default_overrides?.[name] ?? GLOBAL_DEFAULT_OVERRIDES[name];
     if (override !== undefined) {
       slot.default = override;
       slot.default_source = "overlay";
