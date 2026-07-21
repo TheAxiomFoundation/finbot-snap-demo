@@ -115,12 +115,15 @@ const CASES: EvalCase[] = [
     id: "fiit-wages-only-honesty",
     turns: ["We're a married couple filing jointly with two young kids and $95,000 in wages. What's our 2026 federal income tax and child tax credit?"],
     expect_match: ["taxable income"],
+    // Headline-scoped: a bolded $0 tax answer fails; explaining in the
+    // assumptions that the engine's $0 is unreliable is honest and allowed.
     expect_not_match: [
-      "(income tax|federal tax)[^.]{0,40}\\$0|\\$0[^.]{0,30}(income tax|federal tax)",
+      "\\*\\*[^*]*(income tax|federal tax)[^*]*\\$\\s?0[^*]*\\*\\*|\\*\\*[^*]*\\$\\s?0[^*]*(income tax|federal tax)[^*]*\\*\\*",
       "child tax credit[^.]{0,60}\\$1,000|\\$1,000[^.]{0,60}child tax credit",
     ],
-    // describe + full-facts compute + demotion repair legitimately runs long
+    // describe + full-facts compute + demotion repair + variants runs long
     budget_ms: 60_000,
+    budget_steps: 8,
   },
   {
     id: "fiit-ctc-why-flow",
@@ -169,6 +172,111 @@ const CASES: EvalCase[] = [
     expect_match: ["incomplete|not fully encoded|cannot|can't|unable|not.{0,40}(reliable|settled)"],
     expect_not_match: ["\\*\\*[^*]*owe[^*]*\\$\\s?[1-9][\\d,]*[^*]*\\*\\*"],
     budget_ms: 45_000,
+  },
+  // ── Round 2: NL coverage for the newer oracle programs ───────────────────
+  {
+    // Annual-certified program: either the annual figure or the shown /12
+    // monthly derivation is an acceptable presentation.
+    id: "al-tanf-nl",
+    turns: ["We're a family of three in Alabama with two kids and no income at all. How much TANF cash assistance can we get?"],
+    expect_amounts: [4128, 344],
+  },
+  {
+    id: "ga-tanf-nl",
+    turns: ["Single mom with two kids in Georgia, no income. What's our TANF benefit?"],
+    expect_amounts: [3360, 280],
+  },
+  {
+    id: "ut-fep-nl",
+    turns: ["I'm in Utah with my two kids, household of three, no income. How much is the FEP cash assistance payment standard for us?"],
+    expect_amounts: [662],
+  },
+  {
+    id: "ak-atap-nl",
+    turns: ["I'm in Alaska with my two kids (ages 8 and 5), no income. What's the maximum ATAP payment for the three of us?"],
+    expect_amounts: [923],
+  },
+  {
+    id: "il-scretd-nl",
+    turns: ["I'm 70, live alone in Illinois, own my home, and my property taxes this year are $9,000. Can I defer my property taxes, and how much?"],
+    expect_amounts: [7500],
+  },
+  {
+    // Sparse upstream table (rulespec-us#949): size-1 child-only is the one
+    // evaluable row (oracle in-tanf-child-only, $248). The gross-income FPL
+    // is parameter-as-input, but at zero income the test is moot.
+    id: "in-tanf-child-only-nl",
+    turns: ["My 8-year-old grandson lives with me in Indiana and he's the only one on the TANF case (child-only case), no income counted. What's his monthly benefit?"],
+    expect_amounts: [248],
+    budget_ms: 60_000,
+  },
+  {
+    id: "ny-snap-earner-nl",
+    turns: ["I live alone in New York, earn $1,400 a month, my rent is $400, and I pay heating separately. How much SNAP would I get?"],
+    oracle_id: "ny-snap-earner-1400",
+    expect: [{ pe_variable: "snap", label: "monthly SNAP" }],
+  },
+  {
+    id: "ny-snap-elderly-nl",
+    turns: ["I'm 70, live alone in New York on $1,800 a month of Social Security. My rent is $1,800 and I pay heating separately. How much SNAP can I get?"],
+    oracle_id: "ny-snap-elderly-highrent",
+    expect: [{ pe_variable: "snap", label: "monthly SNAP" }],
+  },
+  {
+    id: "az-snap-medical-nl",
+    turns: ["I'm 67, live alone in Arizona on $1,200 a month of Social Security. Rent is $900, my utility allowance is $323, and I pay about $300 a month in verified out-of-pocket medical expenses. How much SNAP do I get?"],
+    oracle_id: "az-snap-elderly-medical",
+    expect: [{ pe_variable: "snap", label: "monthly SNAP" }],
+  },
+  {
+    id: "eitc-childless-nl",
+    turns: ["I'm 25, single, no kids, and earned $10,000 in 2026. How much EITC do I get?"],
+    oracle_id: "fiit-eitc-childless-10k",
+    expect: [{ pe_variable: "eitc", label: "EITC" }],
+  },
+  {
+    id: "eitc-phaseout-nl",
+    turns: ["Head of household, two qualifying kids, I earned $40,000 in 2026. What's my EITC?"],
+    oracle_id: "fiit-eitc-hoh-40k",
+    expect: [{ pe_variable: "eitc", label: "EITC" }],
+  },
+  {
+    id: "co-tanf-family4-nl",
+    turns: ["Single parent with three kids in Colorado, no income. What's our monthly TANF?"],
+    oracle_id: "co-tanf-family4",
+    expect: [{ pe_variable: "co_tanf", label: "monthly TANF" }],
+  },
+  {
+    id: "tx-tanf-family4-nl",
+    turns: ["I'm a single caretaker in Texas with three kids and no income; we pass the needs test. Monthly TANF from day one?"],
+    oracle_id: "tx-tanf-family4",
+    expect: [{ pe_variable: "tx_tanf", label: "monthly TANF" }],
+  },
+  {
+    // CT TFA is encoded parameter-as-input (payment_standard_for_family and
+    // the FPL are raw inputs, oracle-excluded): computing off their zero
+    // defaults yields $0. Presenting that $0 (or an invented figure) as the
+    // benefit is a failure; flagging the gap is the expected behavior.
+    id: "ct-tfa-trap",
+    turns: ["Family of three in Connecticut, no income. How much TFA cash assistance would we get?"],
+    expect_match: ["incomplete|not fully encoded|cannot|can't|unable|not.{0,40}(reliable|settled|available)|payment standard"],
+    expect_not_match: ["\\*\\*[^*]*\\$\\s?[1-9][\\d,]*[^*]*(TFA|month)[^*]*\\*\\*"],
+    budget_ms: 60_000,
+  },
+  {
+    // Multi-turn recompute where the correct answer is NO CHANGE: the
+    // non-elderly excess-shelter cap already binds at $1,300 rent, so $1,500
+    // leaves the $572 benefit unchanged. Inventing an increase is a failure.
+    id: "ny-snap-rent-followup",
+    turns: [
+      "I'm a single parent in New York with two kids (8 and 5). I earn $2,078 a month, my rent is $1,300, and I pay heating separately from rent. What SNAP would we get?",
+      "What if my rent goes up to $1,500?",
+    ],
+    oracle_id: "ny-snap-family3",
+    expect: [{ pe_variable: "snap", label: "monthly SNAP" }],
+    expect_match: ["(same|unchanged|no change|still|stays?|remains|doesn'?t change|cap)"],
+    budget_ms: 90_000,
+    budget_steps: 8,
   },
 ];
 
@@ -260,7 +368,7 @@ function withDerivedCombinations(grounded: Set<number>): Set<number> {
     out.add(Math.round(a * 0.3));
     out.add(Math.ceil(a * 0.3));
     out.add(Math.floor(a * 0.3));
-    for (const count of [2, 3, 4, 5, 6]) out.add(Math.round(a / count));
+    for (const count of [2, 3, 4, 5, 6, 12]) out.add(Math.round(a / count));
     for (const b of sample) {
       out.add(Math.abs(Math.round(a - b)));
       out.add(Math.round(a + b));

@@ -59,3 +59,26 @@ FINBOT_EVAL_URL=http://localhost:3948 bun run eval:oracle
 ```
 
 Run directories are suffixed with the model name reported by the server.
+
+## Known instabilities (2026-07-21 baseline)
+
+Across nine full runs on gpt-5.5 (temperature 0.2), per-run pass rate ranged
+26–29 of 32. Failures rotate through a small set of repair-flow cases rather
+than repeating deterministically:
+
+- **Gate-repair skips** — ks-tanf-family3, il-scretd-nl, eitc-childless-nl
+  occasionally report $0 when a run doesn't execute the requires-repair
+  recompute (unset assistance-plan/procedural/age gates). The prompt names
+  the pattern (sanity-check zeros, prospective prerequisites); residual
+  variance is the model's.
+- **fiit-wages-only-honesty** — behavior varies between the ideal ($4,400 CTC
+  + ask for taxable income) and honest-but-lesser variants (ask-only;
+  once: a remembered standard deduction, now banned and rubric-caught).
+  Blocked on rulespec-us#953 for the real computation.
+- **describe-thrash** — explanation/repair turns sometimes probe
+  describe_program repeatedly and blow the step budget without being wrong.
+- **Transport timeouts** — back-to-back full runs hit OpenAI rate limits
+  (180s aborts with 0–2 steps). Space runs ≥5 minutes apart.
+
+Treat a case as regressed when it fails on a NEW check or twice
+consecutively on the same one — not on a single rotating flake.
