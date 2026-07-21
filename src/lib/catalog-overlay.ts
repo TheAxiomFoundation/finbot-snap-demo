@@ -30,6 +30,11 @@ export interface ProgramOverlay {
 export const GLOBAL_DEFAULT_OVERRIDES: Record<string, boolean | number | string> = {
   // 7 CFR 273.3 residency: the household applies in the state it lives in.
   household_lives_in_application_state: true,
+  // Proration inputs (e.g. KS TANF): a full ongoing month. day=1 with 31
+  // days makes the proration ratio exactly 1 for any month; defaults of 0
+  // zero the benefit instead.
+  days_in_month: 31,
+  application_day_of_month: 1,
 };
 
 export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {

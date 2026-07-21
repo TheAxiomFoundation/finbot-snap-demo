@@ -36749,7 +36749,8 @@
      {
       "name": "application_day_of_month",
       "dtype": "decimal",
-      "default": 0,
+      "default": 1,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -88110,7 +88111,8 @@
      {
       "name": "application_day_of_month",
       "dtype": "decimal",
-      "default": 0
+      "default": 1,
+      "default_source": "overlay"
      },
      {
       "name": "assistance_reinstated_after_required_information_or_cooperation_provided_in_month_following_closure",
@@ -88135,7 +88137,8 @@
      {
       "name": "days_in_month",
       "dtype": "decimal",
-      "default": 0
+      "default": 31,
+      "default_source": "overlay"
      },
      {
       "name": "tanf_case_reopened_in_month_following_effective_date_of_closure",
@@ -94904,7 +94907,8 @@
      {
       "name": "application_day_of_month",
       "dtype": "decimal",
-      "default": 0,
+      "default": 1,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -163659,7 +163663,8 @@
      {
       "name": "application_day_of_month",
       "dtype": "decimal",
-      "default": 0,
+      "default": 1,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -164535,7 +164540,8 @@
      {
       "name": "days_in_month",
       "dtype": "decimal",
-      "default": 0,
+      "default": 31,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -188906,7 +188912,8 @@
      {
       "name": "application_day_of_month",
       "dtype": "decimal",
-      "default": 0,
+      "default": 1,
+      "default_source": "overlay",
       "aux": true
      },
      {
