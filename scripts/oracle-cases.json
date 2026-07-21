@@ -2195,6 +2195,224 @@
      "pe_variable": "in_tanf"
     }
    ]
+  },
+  {
+   "id": "fiit-eitc-childless-10k",
+   "description": "Childless EITC: single 25-year-old earning $10,000 - exercises the childless credit table and the age/abode eligibility gates, distinct from the with-children table pinned by fiit-eitc-hoh-2kids.",
+   "program": "us-fiit",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "filing_status": 1,
+     "adjusted_gross_income": 10000,
+     "filer_adjusted_earnings": 10000,
+     "taxable_income": 0,
+     "employee_compensation_includible_in_gross_income": 10000,
+     "taxpayer_includes_required_social_security_number_on_return": true,
+     "childless_taxpayer_or_spouse_age_eligible_for_eitc": true,
+     "childless_taxpayer_principal_place_of_abode_in_united_states_more_than_half_year": true
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 25
+       },
+       "employment_income": {
+        "2026": 10000
+       }
+      }
+     },
+     "state": "TX"
+    },
+    "outputs": [
+     {
+      "variable": "eitc",
+      "period": 2026
+     }
+    ]
+   },
+   "pe_values": {
+    "eitc": 664.0
+   },
+   "compare": [
+    {
+     "axiom_output": "eitc",
+     "pe_variable": "eitc"
+    }
+   ]
+  },
+  {
+   "id": "fiit-eitc-hoh-40k",
+   "description": "EITC phase-out region: HoH with 2 qualifying children at $40,000 AGI - the credit is deep into the 21.06% phase-out and both engines agree to the cent ($3,923.23), complementing the plateau case at $18,000.",
+   "program": "us-fiit",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "filing_status": 3,
+     "adjusted_gross_income": 40000,
+     "filer_adjusted_earnings": 40000,
+     "taxable_income": 15850,
+     "employee_compensation_includible_in_gross_income": 40000,
+     "taxpayer_includes_required_social_security_number_on_return": true
+    },
+    "members": [
+     {
+      "facts": {
+       "age": 8,
+       "$ref": "eitc_child"
+      },
+      "relations": [
+       "qualifying_child_of_tax_unit",
+       "dependent_of_tax_unit"
+      ]
+     },
+     {
+      "facts": {
+       "age": 5,
+       "$ref": "eitc_child"
+      },
+      "relations": [
+       "qualifying_child_of_tax_unit",
+       "dependent_of_tax_unit"
+      ]
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       },
+       "employment_income": {
+        "2026": 40000
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       },
+       "is_tax_unit_dependent": {
+        "2026": true
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       },
+       "is_tax_unit_dependent": {
+        "2026": true
+       }
+      }
+     },
+     "tax_units": {
+      "tu": {
+       "filing_status": {
+        "2026": "HEAD_OF_HOUSEHOLD"
+       }
+      }
+     },
+     "state": "TX"
+    },
+    "outputs": [
+     {
+      "variable": "eitc",
+      "period": 2026
+     }
+    ]
+   },
+   "pe_values": {
+    "eitc": 3923.23
+   },
+   "compare": [
+    {
+     "axiom_output": "eitc",
+     "pe_variable": "eitc"
+    }
+   ]
+  },
+  {
+   "id": "az-snap-elderly-medical",
+   "description": "AZ elderly single with $300/mo verified medical expenses on top of the az-snap-elderly scenario: both engines deduct actual-minus-$35 ($265) and reach the 1-person maximum. $300 sits above AZ's $180 SMD gross threshold where the standard and actual branches coincide; in the $35-$180 range the engines diverge because our chain does not compose the state SMD output (see excluded).",
+   "program": "us-az-snap",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "household_size": 1,
+     "snap_gross_monthly_earned_income": 0,
+     "gross_countable_earned_income": 0,
+     "snap_total_monthly_unearned_income": 1200,
+     "countable_monthly_unearned_income": 1200,
+     "household_shelter_costs_incurred": 900,
+     "actual_shelter_cost_obligation": 900,
+     "budgetary_unit_incurs_shelter_expense": true,
+     "budgetary_unit_contains_elderly_or_disabled_participant": true,
+     "budgetary_unit_has_participant_who_is_elderly_or_has_disability": true,
+     "budgetary_unit_includes_elderly_or_disabled_participant": true,
+     "budgetary_unit_includes_elderly_or_disabled_participant_with_medical_expenses": true,
+     "household_entitled_to_excess_medical_deduction": true,
+     "snap_total_medical_expenses": 300,
+     "monthly_combined_out_of_pocket_medical_expenses": 300,
+     "verified_out_of_pocket_medical_expenses": 300,
+     "medical_expenses_belong_to_and_are_billed_to_elderly_or_disabled_participant": true,
+     "utility_allowance": 323
+    },
+    "members": [
+     {
+      "facts": {
+       "member_age": 67,
+       "snap_member_is_elderly_or_disabled": true
+      }
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "a": {
+       "age": {
+        "2026": 67
+       },
+       "social_security_retirement": {
+        "2026": 14400
+       },
+       "other_medical_expenses": {
+        "2026": 3600
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 10800
+       },
+       "heating_cooling_expense": {
+        "2026": 2400
+       }
+      }
+     },
+     "state": "AZ"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 298.0
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
   }
  ],
  "shared_member_facts": {
@@ -2290,6 +2508,11 @@
    "program": "us-ak-tanf",
    "reason": "Two-adult maximum-payment scenarios only: policyengine-us rebuilds the DPA family-size chart as base + $102 per additional child, undercounting two-adult units ($1,025 vs the chart's $1,127 for size 5). Single-parent max payment (ak-tanf-family3) and the size-keyed need standard / gross income limit (ak-tanf-family5) are pinned.",
    "issue": "https://github.com/PolicyEngine/policyengine-us/issues/9103"
+  },
+  {
+   "program": "us-az-snap",
+   "reason": "Standard-medical-deduction range only ($35-$180/mo of expenses): the AZ module correctly computes the $145 SMD as a certified output (medical_deduction), but the net-income chain composes the federal 7 CFR 273.10 excess-medical module fed by raw snap_total_medical_expenses (actual minus $35) instead - $150/mo of expenses yields a $115 deduction vs PE's $145. Above $180 the branches coincide and are pinned (az-snap-elderly-medical). Same encoded-but-not-composed genre as the OASDI finding.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/952"
   }
  ]
 }
