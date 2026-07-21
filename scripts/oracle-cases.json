@@ -1012,6 +1012,430 @@
      "pe_variable": "snap"
     }
    ]
+  },
+  {
+   "id": "ks-tanf-family3",
+   "description": "KS TANF: assistance plan of 3, zero income, shelter group I (the base county group \u2014 PolicyEngine models a single statewide standard matching it; our groups III-V encode the county variation PE flattens: $391/$403/$429). Full month (day 1, 31 days) so proration is a no-op.",
+   "program": "us-ks-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "assistance_plan_person_count": 3,
+     "all_persons_in_home_in_same_assistance_plan": true,
+     "shelter_group_i_applies": true,
+     "days_in_month": 31,
+     "application_day_of_month": 1
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "state": "KS"
+    },
+    "outputs": [
+     {
+      "variable": "ks_tanf",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "ks_tanf": 386.0
+   },
+   "compare": [
+    {
+     "axiom_output": "ks_tanf",
+     "pe_variable": "ks_tanf"
+    }
+   ]
+  },
+  {
+   "id": "tx-tanf-family3",
+   "description": "TX TANF: family of 3, caretaker without second parent, passes recognizable-needs test, eligibility from day 1.",
+   "program": "us-tx-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "tanf_family_size": 3,
+     "tanf_case_is_caretaker_without_second_parent": true,
+     "household_passes_recognizable_needs_test": true,
+     "date_financial_eligibility_begins_day": 1
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "state": "TX"
+    },
+    "outputs": [
+     {
+      "variable": "tx_tanf",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "tx_tanf": 382.0
+   },
+   "compare": [
+    {
+     "axiom_output": "tx_tanf",
+     "pe_variable": "tx_tanf"
+    }
+   ]
+  },
+  {
+   "id": "fl-snap-family3",
+   "description": "FL SNAP: same plain household as the AL case. Population-scale FL agreement is 91% \u2014 this pins the class that does agree.",
+   "program": "us-fl-snap",
+   "tolerance": 1.5,
+   "axiom": {
+    "facts": {
+     "household_size": 3,
+     "snap_gross_monthly_earned_income": 1800,
+     "household_shelter_costs_incurred": 1100
+    },
+    "members": [
+     {
+      "facts": {
+       "member_age": 30,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 8,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 5,
+       "member_is_us_citizen": true
+      }
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       },
+       "employment_income": {
+        "2026": 21600
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 13200
+       },
+       "heating_cooling_expense": {
+        "2026": 0
+       },
+       "utility_expense": {
+        "2026": 0
+       },
+       "tanf": {
+        "2026": 0
+       }
+      }
+     },
+     "state": "FL"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 561.2
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
+  },
+  {
+   "id": "nc-snap-family3",
+   "description": "NC SNAP: same plain household as the AL case.",
+   "program": "us-nc-snap",
+   "tolerance": 1.5,
+   "axiom": {
+    "facts": {
+     "household_size": 3,
+     "snap_gross_monthly_earned_income": 1800,
+     "household_shelter_costs_incurred": 1100
+    },
+    "members": [
+     {
+      "facts": {
+       "member_age": 30,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 8,
+       "member_is_us_citizen": true
+      }
+     },
+     {
+      "facts": {
+       "member_age": 5,
+       "member_is_us_citizen": true
+      }
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       },
+       "employment_income": {
+        "2026": 21600
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 13200
+       },
+       "heating_cooling_expense": {
+        "2026": 0
+       },
+       "utility_expense": {
+        "2026": 0
+       },
+       "tanf": {
+        "2026": 0
+       }
+      }
+     },
+     "state": "NC"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 561.2
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
+  },
+  {
+   "id": "fiit-single-280k",
+   "description": "FIIT single filer, $280k wages, taxable income $263,900 (PE's figure after the single standard deduction). Exercises the upper brackets of the single schedule; agreement to the cent.",
+   "program": "us-fiit",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "filing_status": 5,
+     "taxable_income": 263900,
+     "adjusted_gross_income": 280000,
+     "taxpayer_includes_required_social_security_number_on_return": true
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 40
+       },
+       "employment_income": {
+        "2026": 280000
+       }
+      }
+     },
+     "state": "TX"
+    },
+    "outputs": [
+     {
+      "variable": "income_tax_main_rates",
+      "period": 2026
+     },
+     {
+      "variable": "taxable_income",
+      "period": 2026
+     }
+    ]
+   },
+   "pe_values": {
+    "income_tax_main_rates": 61134.25,
+    "taxable_income": 263900.0
+   },
+   "compare": [
+    {
+     "axiom_output": "regular_tax_before_credits",
+     "pe_variable": "income_tax_main_rates"
+    }
+   ]
+  },
+  {
+   "id": "fiit-ctc-phaseout-420k",
+   "description": "FIIT CTC phaseout: MFJ, $420k AGI, 2 qualifying children \u2014 $4,400 reduced by $50 per $1,000 over the $400k joint threshold = $3,400.",
+   "program": "us-fiit",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "filing_status": 1,
+     "taxable_income": 387800,
+     "adjusted_gross_income": 420000,
+     "ctc_phaseout_joint_threshold_applies": true
+    },
+    "members": [
+     {
+      "facts": {
+       "age": 8,
+       "$ref": "ctc_child"
+      },
+      "relations": [
+       "ctc_qualifying_child_of_tax_unit",
+       "dependent_of_tax_unit"
+      ]
+     },
+     {
+      "facts": {
+       "age": 5,
+       "$ref": "ctc_child"
+      },
+      "relations": [
+       "ctc_qualifying_child_of_tax_unit",
+       "dependent_of_tax_unit"
+      ]
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "h": {
+       "age": {
+        "2026": 45
+       },
+       "employment_income": {
+        "2026": 420000
+       }
+      },
+      "s2": {
+       "age": {
+        "2026": 44
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       },
+       "is_tax_unit_dependent": {
+        "2026": true
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       },
+       "is_tax_unit_dependent": {
+        "2026": true
+       }
+      }
+     },
+     "tax_units": {
+      "tu": {
+       "filing_status": {
+        "2026": "JOINT"
+       }
+      }
+     },
+     "state": "TX"
+    },
+    "outputs": [
+     {
+      "variable": "ctc_value",
+      "period": 2026
+     }
+    ]
+   },
+   "pe_values": {
+    "ctc_value": 3400.0
+   },
+   "compare": [
+    {
+     "axiom_output": "ctc_after_advance_payments",
+     "pe_variable": "ctc_value"
+    }
+   ]
   }
  ],
  "shared_member_facts": {
@@ -1053,6 +1477,26 @@
   {
    "program": "us-ks-tanf",
    "reason": "Requires KS county shelter-group selection (shelter_group_i..v) not yet mapped to PolicyEngine's model."
+  },
+  {
+   "program": "us-ca-tanf",
+   "reason": "CalWORKs encoding takes maximum_aid_payment_under_section_11450 and the COLA as inputs (parameter-as-input); no meaningful oracle without supplying the law values."
+  },
+  {
+   "program": "us-de-tanf",
+   "reason": "Takes applicable_tanf_standard_of_need as an input (parameter-as-input)."
+  },
+  {
+   "program": "us-in-tanf",
+   "reason": "Upstream table cash_assistance_maximum_monthly_benefit_for_recipient_parent_or_caretaker_ag_table is sparsely encoded (keys 1 and 6 only) \u2014 participating_members=3 cannot evaluate. Upstream filing."
+  },
+  {
+   "program": "us-me-tanf",
+   "reason": "policyengine-us ME maximum-benefit table is stale: missing the 2025-10-01 COLA (PE $895 for size 3 at 2026-07 vs $917 in the encoded FY-2026 table). Our value is the current one; report upstream to policyengine-us."
+  },
+  {
+   "program": "us-md-tca",
+   "reason": "policyengine-us has no md_tanf variable (engine-side value $773 is pinned in test:regression instead)."
   }
  ]
 }
