@@ -138,7 +138,7 @@ function timed<A, R>(name: string, execute: (args: A) => Promise<R>): (args: A) 
 export const tools = {
   list_programs: tool({
     description:
-      "List every benefit and tax program certified in the pinned rulespec-us release (SNAP, TANF, federal income tax, state income tax, payroll, and more, across many US states). Call this FIRST for any program question — it is the source of truth for what Axiom has encoded. Pass `search` to find specific encoded outputs (thresholds, deductions, credits) across all programs.",
+      "Search encoded output names (thresholds, deductions, credits) across all certified programs via `search`. The system-prompt coverage digest already lists every program with its primary output — do NOT call this to confirm a program exists or to restate coverage; call it only when you genuinely need the output-name search.",
     parameters: z.object({
       jurisdiction: z
         .string()

@@ -183,6 +183,8 @@ export interface BuiltRequest {
     member_count: number;
     facts_applied: Facts;
     defaulted_slots: number;
+    /** Non-aux income-like slots left at a zero default (zero-headline suspects). */
+    defaulted_income_slots?: string[];
     notes: string[];
   };
 }
@@ -330,10 +332,19 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
 
   const inputs: InputRecord[] = [];
   let defaultedSlots = 0;
+  // Non-aux income-like slots left at a zero default: if the primary output
+  // comes back $0, these are the usual suspects (see shapeResult's warning).
+  const INCOME_SLOT = /(taxable|gross|earned|countable|unearned|net)_income/;
+  const defaultedIncomeSlots = new Set<string>();
 
   const record = (slot: CatalogInputSlot, entity: string, entityId: string, override?: FactScalar) => {
     const value = override !== undefined ? override : slot.default;
-    if (override === undefined) defaultedSlots++;
+    if (override === undefined) {
+      defaultedSlots++;
+      if (!slot.aux && slot.default === 0 && INCOME_SLOT.test(slot.name)) {
+        defaultedIncomeSlots.add(slot.name);
+      }
+    }
     inputs.push({
       name: legalInputId(program.slug, slot.name),
       entity,
@@ -455,6 +466,9 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       member_count: memberCount,
       facts_applied: facts,
       defaulted_slots: defaultedSlots,
+      ...(defaultedIncomeSlots.size > 0 && {
+        defaulted_income_slots: [...defaultedIncomeSlots],
+      }),
       notes,
     },
   };
@@ -547,6 +561,20 @@ export function shapeResult(
   });
 
   const incomplete = mainOutputs.filter((o) => o.acknowledged_incomplete).map((o) => o.name);
+
+  // A $0 primary output while income-like slots sat at their zero defaults is
+  // the classic spurious-zero: the engine faithfully computed from zeros the
+  // user never asserted. Flag it loudly so the model asks instead of headlining.
+  const primary = mainOutputs.find((o) => o.name === program.primary_output);
+  const suspects = built.applied.defaulted_income_slots ?? [];
+  const userGaveIncome = Object.keys(built.applied.facts_applied).some((n) =>
+    /(income|wages|earnings|compensation)/.test(n)
+  );
+  if (typeof primary?.value === "number" && primary.value === 0 && suspects.length > 0 && userGaveIncome) {
+    built.applied.notes.push(
+      `WARNING: ${program.primary_output} is $0, but income-like slot(s) ${suspects.join(", ")} stayed at their 0 defaults — the engine computed from zeros the user never asserted. Do NOT headline this $0. Derive the missing slot from encoded values if possible; otherwise make asking for it your headline. Only present $0 if the user's facts genuinely imply the slot is zero, and say so explicitly. Outputs that do NOT depend on the zeroed slot (e.g. credits computed from earned income or AGI) are still reliable — report those normally alongside the ask. (If this call was a variant run for a delta and your main computation already has the slot filled, the warning is expected — keep the main answer and do NOT rerun this variant.)`
+    );
+  }
 
   return {
     program: program.slug,

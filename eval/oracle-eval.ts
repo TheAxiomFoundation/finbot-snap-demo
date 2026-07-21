@@ -103,6 +103,26 @@ const CASES: EvalCase[] = [
   },
   // ── Multi-turn flow ──────────────────────────────────────────────────────
   {
+    // Wages-only FIIT question: 26 USC 63 is not encoded (rulespec-us#953),
+    // so taxable income is underivable. This pins the acceptable band: the
+    // reply must ask for taxable income and must NOT present the spurious
+    // $0 tax (computed off the taxable_income default) or a $1,000 CTC (the
+    // SSN-gate demotion to 2 × $500 other-dependent credits). The ideal reply
+    // also states the $4,400 CTC — model behavior varies between computing it
+    // and deferring it; both are honest, so the amount is not required.
+    // Once #953 lands and the release is bumped, tighten this back to
+    // expect_amounts [7040, 4400] with no ask.
+    id: "fiit-wages-only-honesty",
+    turns: ["We're a married couple filing jointly with two young kids and $95,000 in wages. What's our 2026 federal income tax and child tax credit?"],
+    expect_match: ["taxable income"],
+    expect_not_match: [
+      "(income tax|federal tax)[^.]{0,40}\\$0|\\$0[^.]{0,30}(income tax|federal tax)",
+      "child tax credit[^.]{0,60}\\$1,000|\\$1,000[^.]{0,60}child tax credit",
+    ],
+    // describe + full-facts compute + demotion repair legitimately runs long
+    budget_ms: 60_000,
+  },
+  {
     id: "fiit-ctc-why-flow",
     turns: [
       "Married filing jointly, two kids (8 and 5) with valid SSNs who live with us all year. Taxable income $62,800 on $95,000 of wages. What's our 2026 federal income tax before credits, and our child tax credit?",
@@ -228,8 +248,9 @@ function dollarsIn(text: string): number[] {
 }
 
 /** Extend grounded numbers with simple shown-arithmetic combinations the
- *  reply may legitimately derive from them: pairwise sums/differences and the
- *  SNAP 30%-of-net figure. */
+ *  reply may legitimately derive from them: pairwise sums/differences, the
+ *  SNAP 30%-of-net figure, and per-unit divisions by small member counts
+ *  ("$4,400 across 2 qualifying children" → $2,200). */
 function withDerivedCombinations(grounded: Set<number>): Set<number> {
   const out = new Set(grounded);
   const values = [...grounded].filter((n) => n >= 1 && n <= 1_000_000);
@@ -239,6 +260,7 @@ function withDerivedCombinations(grounded: Set<number>): Set<number> {
     out.add(Math.round(a * 0.3));
     out.add(Math.ceil(a * 0.3));
     out.add(Math.floor(a * 0.3));
+    for (const count of [2, 3, 4, 5, 6]) out.add(Math.round(a / count));
     for (const b of sample) {
       out.add(Math.abs(Math.round(a - b)));
       out.add(Math.round(a + b));

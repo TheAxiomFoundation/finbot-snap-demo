@@ -2513,6 +2513,11 @@
    "program": "us-az-snap",
    "reason": "Standard-medical-deduction range only ($35-$180/mo of expenses): the AZ module correctly computes the $145 SMD as a certified output (medical_deduction), but the net-income chain composes the federal 7 CFR 273.10 excess-medical module fed by raw snap_total_medical_expenses (actual minus $35) instead - $150/mo of expenses yields a $115 deduction vs PE's $145. Above $180 the branches coincide and are pinned (az-snap-elderly-medical). Same encoded-but-not-composed genre as the OASDI finding.",
    "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/952"
+  },
+  {
+   "program": "us-fiit",
+   "reason": "Wages-only scenarios: 26 USC 63 is not encoded (standard_deduction is an input referenced only by the AMT chain; no 63(c) amounts), so taxable_income cannot be derived from wages/AGI and is taken as a raw input. Wages-only questions are uncomputable - the app's zero-income warning makes the assistant ask for taxable income instead of headlining the $0 computed off the default. Cases supplying taxable_income directly (fiit-*) are unaffected and pinned.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/953"
   }
  ]
 }
