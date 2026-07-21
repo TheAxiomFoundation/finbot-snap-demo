@@ -1464,11 +1464,13 @@
  "excluded": [
   {
    "program": "us-ny-income-tax",
-   "reason": "Pilot pipeline takes NY bracket floors/rates and the standard deduction as inputs; feeding them would test arithmetic, not encoded law."
+   "reason": "Pilot pipeline takes NY bracket floors/rates and the standard deduction as inputs; feeding them would test arithmetic, not encoded law.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/949"
   },
   {
    "program": "us-az-tanf",
-   "reason": "Payment-standard chain takes federal poverty levels as inputs (parameter-as-input); no meaningful oracle without supplying the law values."
+   "reason": "Payment-standard chain takes federal poverty levels as inputs (parameter-as-input); no meaningful oracle without supplying the law values.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/949"
   },
   {
    "program": "us-ar-tanf",
@@ -1480,19 +1482,23 @@
   },
   {
    "program": "us-ca-tanf",
-   "reason": "CalWORKs encoding takes maximum_aid_payment_under_section_11450 and the COLA as inputs (parameter-as-input); no meaningful oracle without supplying the law values."
+   "reason": "CalWORKs encoding takes maximum_aid_payment_under_section_11450 and the COLA as inputs (parameter-as-input); no meaningful oracle without supplying the law values.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/949"
   },
   {
    "program": "us-de-tanf",
-   "reason": "Takes applicable_tanf_standard_of_need as an input (parameter-as-input)."
+   "reason": "Takes applicable_tanf_standard_of_need as an input (parameter-as-input).",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/949"
   },
   {
    "program": "us-in-tanf",
-   "reason": "Upstream table cash_assistance_maximum_monthly_benefit_for_recipient_parent_or_caretaker_ag_table is sparsely encoded (keys 1 and 6 only) \u2014 participating_members=3 cannot evaluate. Upstream filing."
+   "reason": "Upstream table cash_assistance_maximum_monthly_benefit_for_recipient_parent_or_caretaker_ag_table is sparsely encoded (keys 1 and 6 only) \u2014 participating_members=3 cannot evaluate. Upstream filing.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/949"
   },
   {
    "program": "us-me-tanf",
-   "reason": "policyengine-us ME maximum-benefit table is stale: missing the 2025-10-01 COLA (PE $895 for size 3 at 2026-07 vs $917 in the encoded FY-2026 table). Our value is the current one; report upstream to policyengine-us."
+   "reason": "policyengine-us ME maximum-benefit table is stale: missing the 2025-10-01 COLA (PE $895 for size 3 at 2026-07 vs $917 in the encoded FY-2026 table). Our value is the current one; report upstream to policyengine-us.",
+   "issue": "https://github.com/PolicyEngine/policyengine-us/issues/9101"
   },
   {
    "program": "us-md-tca",
