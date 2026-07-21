@@ -2273,15 +2273,23 @@
   },
   {
    "program": "us-al-tanf",
-   "reason": "Earner scenarios only: our encoding applies a 20% work-expense rate sourced to the 2007 DHR payment manual, while policyengine-us applies 30% per Ala. Admin. Code r. 660-2-2-.30(2) (eff. 2022-05-15) - $184 vs $204/mo benefit on $200/mo earnings. Our rate appears stale; report upstream to the AL rulespec repo. Zero-income cases (al-tanf-family3) are unaffected and pinned."
+   "reason": "Earner scenarios only: our encoding applies a 20% work-expense rate sourced to the 2007 DHR payment manual, while policyengine-us applies 30% per Ala. Admin. Code r. 660-2-2-.30(2) (eff. 2022-05-15) - $184 vs $204/mo benefit on $200/mo earnings. Our rate appears stale; report upstream to the AL rulespec repo. Zero-income cases (al-tanf-family3) are unaffected and pinned.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/950"
   },
   {
    "program": "us-oasdi-wage-tax",
-   "reason": "Above-base scenarios only: oasdi_wage_tax is rate x statutory 'wages' taken as input; the 26 USC 3121(a)(1) excess-remuneration exclusion is encoded on the Payment entity but not composed into the tax, so a $250k wage yields $15,500 vs PE's capped $11,439. Below-base cases (oasdi-wage-95k) are unaffected and pinned. Report composition gap upstream to rulespec-us."
+   "reason": "Above-base scenarios only: oasdi_wage_tax is rate x statutory 'wages' taken as input; the 26 USC 3121(a)(1) excess-remuneration exclusion is encoded on the Payment entity but not composed into the tax, so a $250k wage yields $15,500 vs PE's capped $11,439. Below-base cases (oasdi-wage-95k) are unaffected and pinned. Report composition gap upstream to rulespec-us.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/951"
   },
   {
    "program": "us-ny-snap",
-   "reason": "No-utility scenarios only: policyengine-us applies the NY heating/cooling SUA even when the household reports no heating costs separate from rent (PE $247.90 vs our $24 for a single earner at $1,400/mo with $400 rent and no separate utilities). Separate-heating scenarios agree and are pinned (ny-snap-family3, ny-snap-earner-1400). Needs upstream clarification of PE's SUA gating."
+   "reason": "No-utility scenarios only: policyengine-us applies the NY heating/cooling SUA even when the household reports no heating costs separate from rent (PE $247.90 vs our $24 for a single earner at $1,400/mo with $400 rent and no separate utilities). Separate-heating scenarios agree and are pinned (ny-snap-family3, ny-snap-earner-1400). Needs upstream clarification of PE's SUA gating.",
+   "issue": "https://github.com/PolicyEngine/policyengine-us/issues/9104"
+  },
+  {
+   "program": "us-ak-tanf",
+   "reason": "Two-adult maximum-payment scenarios only: policyengine-us rebuilds the DPA family-size chart as base + $102 per additional child, undercounting two-adult units ($1,025 vs the chart's $1,127 for size 5). Single-parent max payment (ak-tanf-family3) and the size-keyed need standard / gross income limit (ak-tanf-family5) are pinned.",
+   "issue": "https://github.com/PolicyEngine/policyengine-us/issues/9103"
   }
  ]
 }
