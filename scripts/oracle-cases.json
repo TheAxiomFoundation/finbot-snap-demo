@@ -1436,6 +1436,765 @@
      "pe_variable": "ctc_value"
     }
    ]
+  },
+  {
+   "id": "ak-tanf-family3",
+   "description": "AK ATAP: assistance unit of 3 (caretaker + 2 kids over two), zero income. Full ak_atap is acknowledged-incomplete on our side and PE's ak_atap adds components beyond the maximum payment, so this pins the table-driven standards both engines encode: need standard, gross income limit (185% test), and maximum payment. Tolerance 1 absorbs PE's unrounded 185% FPL product (3975.65 vs our 3975).",
+   "program": "us-ak-tanf",
+   "tolerance": 1,
+   "axiom": {
+    "facts": {
+     "assistance_unit_size": 3,
+     "dependent_children_two_or_older_included_in_atap_count": 2,
+     "oldest_individual_age_in_assistance_unit": 30,
+     "resources_within_limits_under_7_aac_45_280": true
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "state": "AK"
+    },
+    "outputs": [
+     {
+      "variable": "ak_atap_need_standard",
+      "period": "2026-07"
+     },
+     {
+      "variable": "ak_atap_gross_income_limit",
+      "period": "2026-07"
+     },
+     {
+      "variable": "ak_atap_maximum_payment",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "ak_atap_need_standard": 2149.0,
+    "ak_atap_gross_income_limit": 3975.65,
+    "ak_atap_maximum_payment": 923.0
+   },
+   "compare": [
+    {
+     "axiom_output": "ak_atap_need_standard",
+     "pe_variable": "ak_atap_need_standard"
+    },
+    {
+     "axiom_output": "ak_atap_gross_income_limit",
+     "pe_variable": "ak_atap_gross_income_limit"
+    },
+    {
+     "axiom_output": "ak_atap_maximum_payment",
+     "pe_variable": "ak_atap_maximum_payment"
+    }
+   ]
+  },
+  {
+   "id": "al-tanf-family3",
+   "description": "AL TANF: assistance unit of 3, zero income. Our encoding certifies the annual benefit; PE's al_tanf is monthly, so the oracle freezes PE's 2026 annual sum (12 x 344).",
+   "program": "us-al-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "household_has_minor_or_pregnant_member": true,
+     "assistance_unit_size": 3
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "state": "AL"
+    },
+    "outputs": [
+     {
+      "variable": "al_tanf",
+      "period": "2026"
+     }
+    ]
+   },
+   "pe_values": {
+    "al_tanf": 4128.0
+   },
+   "compare": [
+    {
+     "axiom_output": "al_tanf_annual_benefit",
+     "pe_variable": "al_tanf"
+    }
+   ]
+  },
+  {
+   "id": "ga-tanf-family3",
+   "description": "GA TANF: assistance unit of 3, zero income, at application. Annual benefit vs PE's 2026 annual sum (12 x 280).",
+   "program": "us-ga-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "household_has_minor_or_pregnant_member": true,
+     "assistance_unit_member_count": 3,
+     "determination_is_at_application": true
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "state": "GA"
+    },
+    "outputs": [
+     {
+      "variable": "ga_tanf",
+      "period": "2026"
+     }
+    ]
+   },
+   "pe_values": {
+    "ga_tanf": 3360.0
+   },
+   "compare": [
+    {
+     "axiom_output": "ga_tanf_annual_benefit",
+     "pe_variable": "ga_tanf"
+    }
+   ]
+  },
+  {
+   "id": "ut-tanf-family3",
+   "description": "UT FEP: household of 3 (caretaker + 2 minor children), zero income. Pins the payment-standard table; full ut_fep_eligible is acknowledged-incomplete on our side.",
+   "program": "us-ut-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "household_size": 3,
+     "qualifying_minor_dependent_child_count": 2,
+     "application_completion_requirement_met": true,
+     "household_satisfies_other_fep_and_r986_100_eligibility_requirements": true,
+     "school_age_minor_children_attend_school_or_are_exempt": true
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      }
+     },
+     "state": "UT"
+    },
+    "outputs": [
+     {
+      "variable": "ut_fep_payment_standard",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "ut_fep_payment_standard": 662.0
+   },
+   "compare": [
+    {
+     "axiom_output": "ut_fep_payment_standard_amount",
+     "pe_variable": "ut_fep_payment_standard"
+    }
+   ]
+  },
+  {
+   "id": "il-scretd-senior-4k",
+   "description": "IL senior real-estate tax deferral: 70-year-old owner-occupant, income within limits, $4,000 of taxes payable, all statutory application/agreement conditions met. Deferral below the annual cap passes through in full.",
+   "program": "us-il-scretd",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "property_is_income_producing": false,
+     "property_is_land_and_buildings_or_covered_dwelling_unit": true,
+     "property_not_disqualified_by_trust_rule": true,
+     "property_subject_to_unpaid_real_estate_tax_lien_when_claim_filed": false,
+     "taxpayer_occupies_property_as_residence": true,
+     "taxpayer_or_taxpayer_and_spouse_own_or_are_purchasing_property_in_fee_simple_under_recorded_instrument": true,
+     "taxpayer_temporarily_unoccupied_property_because_residing_not_more_than_one_year_in_licensed_nursing_home_care_act_facility": false,
+     "all_joint_owners_gave_written_prior_approval_for_agreement": true,
+     "application_filed_with_appropriate_collector_or_designated_official": true,
+     "application_on_department_prescribed_form_furnished_by_collector": true,
+     "application_on_or_before_march_1": true,
+     "application_specifies_deferral_scope_and_amount_if_partial": true,
+     "property_has_separate_assessed_valuation": true,
+     "real_estate_taxes_or_special_assessment_installments_payable_during_year": 4000,
+     "requested_deferral_amount": 4000,
+     "senior_citizens_real_estate_deferred_tax_revolving_fund_available_amount": 1000000,
+     "tax_deferral_and_recovery_agreement_entered": true,
+     "taxpayer_certifies_owned_and_occupied_property_or_other_qualifying_property_in_state_for_at_least_last_3_years_except_temporary_nursing_or_sheltered_care_home_residence": true,
+     "taxpayer_eligible_for_low_income_senior_citizens_assessment_freeze_homestead_exemption": true,
+     "taxpayer_equity_interest_in_property": 300000,
+     "taxpayer_filed_required_appraisal_and_appraiser_certificate": true,
+     "taxpayer_or_agent_provided_sufficient_fire_or_casualty_insurance_evidence_for_total_deferred_taxes": true,
+     "taxpayer_will_be_65_or_older_by_june_1_of_tax_deferral_year": true,
+     "total_deferred_taxes_plus_interest_before_current_deferral": 0
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 70
+       },
+       "real_estate_taxes": {
+        "2026": 4000
+       }
+      }
+     },
+     "state": "IL"
+    },
+    "outputs": [
+     {
+      "variable": "il_scretd_deferral_amount",
+      "period": "2026"
+     }
+    ]
+   },
+   "pe_values": {
+    "il_scretd_deferral_amount": 4000.0
+   },
+   "compare": [
+    {
+     "axiom_output": "il_scretd_deferral_amount",
+     "pe_variable": "il_scretd_deferral_amount"
+    }
+   ]
+  },
+  {
+   "id": "il-scretd-senior-capped",
+   "description": "IL senior real-estate tax deferral: same senior with $9,000 of taxes payable \u2014 both engines cap the deferral at the $7,500 annual maximum.",
+   "program": "us-il-scretd",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "property_is_income_producing": false,
+     "property_is_land_and_buildings_or_covered_dwelling_unit": true,
+     "property_not_disqualified_by_trust_rule": true,
+     "property_subject_to_unpaid_real_estate_tax_lien_when_claim_filed": false,
+     "taxpayer_occupies_property_as_residence": true,
+     "taxpayer_or_taxpayer_and_spouse_own_or_are_purchasing_property_in_fee_simple_under_recorded_instrument": true,
+     "taxpayer_temporarily_unoccupied_property_because_residing_not_more_than_one_year_in_licensed_nursing_home_care_act_facility": false,
+     "all_joint_owners_gave_written_prior_approval_for_agreement": true,
+     "application_filed_with_appropriate_collector_or_designated_official": true,
+     "application_on_department_prescribed_form_furnished_by_collector": true,
+     "application_on_or_before_march_1": true,
+     "application_specifies_deferral_scope_and_amount_if_partial": true,
+     "property_has_separate_assessed_valuation": true,
+     "real_estate_taxes_or_special_assessment_installments_payable_during_year": 9000,
+     "requested_deferral_amount": 9000,
+     "senior_citizens_real_estate_deferred_tax_revolving_fund_available_amount": 1000000,
+     "tax_deferral_and_recovery_agreement_entered": true,
+     "taxpayer_certifies_owned_and_occupied_property_or_other_qualifying_property_in_state_for_at_least_last_3_years_except_temporary_nursing_or_sheltered_care_home_residence": true,
+     "taxpayer_eligible_for_low_income_senior_citizens_assessment_freeze_homestead_exemption": true,
+     "taxpayer_equity_interest_in_property": 300000,
+     "taxpayer_filed_required_appraisal_and_appraiser_certificate": true,
+     "taxpayer_or_agent_provided_sufficient_fire_or_casualty_insurance_evidence_for_total_deferred_taxes": true,
+     "taxpayer_will_be_65_or_older_by_june_1_of_tax_deferral_year": true,
+     "total_deferred_taxes_plus_interest_before_current_deferral": 0
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 70
+       },
+       "real_estate_taxes": {
+        "2026": 9000
+       }
+      }
+     },
+     "state": "IL"
+    },
+    "outputs": [
+     {
+      "variable": "il_scretd_deferral_amount",
+      "period": "2026"
+     }
+    ]
+   },
+   "pe_values": {
+    "il_scretd_deferral_amount": 7500.0
+   },
+   "compare": [
+    {
+     "axiom_output": "il_scretd_deferral_amount",
+     "pe_variable": "il_scretd_deferral_amount"
+    }
+   ]
+  },
+  {
+   "id": "ny-snap-earner-1400",
+   "description": "NY single adult earning $1,400/mo, $400 rent, heating billed separately. Interior value exercising the 20% earned-income deduction, standard deduction, and heating/cooling SUA at household size 1. Note: with NO separate heating costs the engines diverge (ours $24, PE $247.90) because PE applies the heating SUA regardless of the separate-heating flag - scenario documented in excluded.",
+   "program": "us-ny-snap",
+   "tolerance": 1,
+   "axiom": {
+    "facts": {
+     "household_size": 1,
+     "snap_gross_monthly_earned_income": 1400,
+     "household_shelter_costs_incurred": 400,
+     "household_incurred_or_anticipated_heating_or_cooling_costs_separate_from_rent_or_mortgage": true,
+     "household_incurs_heating_or_cooling_expenses_separately_from_rent_or_mortgage": true
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       },
+       "employment_income": {
+        "2026": 16800
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 4800
+       },
+       "heating_cooling_expense": {
+        "2026": 2400
+       }
+      }
+     },
+     "state": "NY"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 247.9
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
+  },
+  {
+   "id": "ny-snap-elderly-highrent",
+   "description": "NY elderly single (70) on $1,800/mo Social Security with $1,800 rent and separate heating: the uncapped excess-shelter deduction for elderly/disabled households drives net income to zero and the benefit to the 1-person maximum allotment on both engines.",
+   "program": "us-ny-snap",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "household_size": 1,
+     "snap_total_monthly_unearned_income": 1800,
+     "household_shelter_costs_incurred": 1800,
+     "household_includes_elderly_or_disabled_member": true,
+     "household_incurred_or_anticipated_heating_or_cooling_costs_separate_from_rent_or_mortgage": true,
+     "household_incurs_heating_or_cooling_expenses_separately_from_rent_or_mortgage": true
+    },
+    "members": [
+     {
+      "facts": {
+       "member_age": 70,
+       "snap_member_is_elderly_or_disabled": true
+      }
+     }
+    ]
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 70
+       },
+       "social_security_retirement": {
+        "2026": 21600
+       }
+      }
+     },
+     "spm_units": {
+      "spm": {
+       "housing_cost": {
+        "2026": 21600
+       },
+       "heating_cooling_expense": {
+        "2026": 2400
+       }
+      }
+     },
+     "state": "NY"
+    },
+    "outputs": [
+     {
+      "variable": "snap",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "snap": 298.0
+   },
+   "compare": [
+    {
+     "axiom_output": "snap_benefit",
+     "pe_variable": "snap"
+    }
+   ]
+  },
+  {
+   "id": "ak-tanf-family5",
+   "description": "AK ATAP: assistance unit of 5 (two adults + kids 8, 5, 2), zero income. Pins the size-5 rows of the need standard and gross income limit. The maximum payment is deliberately NOT compared: our encoding follows the DPA 2026 adult-included family-size chart ($1,127 for size 5) while PE reconstructs it as base + $102 per additional CHILD, undercounting two-adult units ($1,025) - the constructions coincide on single-parent units (see ak-tanf-family3). Report upstream to policyengine-us.",
+   "program": "us-ak-tanf",
+   "tolerance": 1,
+   "axiom": {
+    "facts": {
+     "assistance_unit_size": 5,
+     "dependent_children_two_or_older_included_in_atap_count": 3,
+     "oldest_individual_age_in_assistance_unit": 30,
+     "resources_within_limits_under_7_aac_45_280": true
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "s": {
+       "age": {
+        "2026": 28
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      },
+      "k3": {
+       "age": {
+        "2026": 2
+       }
+      }
+     },
+     "state": "AK"
+    },
+    "outputs": [
+     {
+      "variable": "ak_atap_need_standard",
+      "period": "2026-07"
+     },
+     {
+      "variable": "ak_atap_gross_income_limit",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "ak_atap_need_standard": 2629.0,
+    "ak_atap_gross_income_limit": 4863.65
+   },
+   "compare": [
+    {
+     "axiom_output": "ak_atap_need_standard",
+     "pe_variable": "ak_atap_need_standard"
+    },
+    {
+     "axiom_output": "ak_atap_gross_income_limit",
+     "pe_variable": "ak_atap_gross_income_limit"
+    }
+   ]
+  },
+  {
+   "id": "ut-tanf-family5",
+   "description": "UT FEP: household of 5 (two adults + 3 minor children), zero income. Pins the size-5 payment-standard row.",
+   "program": "us-ut-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "household_size": 5,
+     "qualifying_minor_dependent_child_count": 3,
+     "application_completion_requirement_met": true,
+     "household_satisfies_other_fep_and_r986_100_eligibility_requirements": true,
+     "school_age_minor_children_attend_school_or_are_exempt": true
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "s": {
+       "age": {
+        "2026": 28
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      },
+      "k3": {
+       "age": {
+        "2026": 2
+       }
+      }
+     },
+     "state": "UT"
+    },
+    "outputs": [
+     {
+      "variable": "ut_fep_payment_standard",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "ut_fep_payment_standard": 882.0
+   },
+   "compare": [
+    {
+     "axiom_output": "ut_fep_payment_standard_amount",
+     "pe_variable": "ut_fep_payment_standard"
+    }
+   ]
+  },
+  {
+   "id": "co-tanf-family4",
+   "description": "CO Colorado Works (TANF): single caretaker + 3 children, zero income. Second table row alongside co-tanf-family3.",
+   "program": "us-co-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "number_of_caretakers_in_assistance_unit": 1,
+     "number_of_children_in_assistance_unit": 3
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      },
+      "k3": {
+       "age": {
+        "2026": 2
+       }
+      }
+     },
+     "state": "CO"
+    },
+    "outputs": [
+     {
+      "variable": "co_tanf",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "co_tanf": 754.0
+   },
+   "compare": [
+    {
+     "axiom_output": "co_tanf",
+     "pe_variable": "co_tanf"
+    }
+   ]
+  },
+  {
+   "id": "tx-tanf-family4",
+   "description": "TX TANF: family of 4, caretaker without second parent, passes recognizable-needs test, eligibility from day 1. Second table row alongside tx-tanf-family3.",
+   "program": "us-tx-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "tanf_family_size": 4,
+     "tanf_case_is_caretaker_without_second_parent": true,
+     "household_passes_recognizable_needs_test": true,
+     "date_financial_eligibility_begins_day": 1
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "p": {
+       "age": {
+        "2026": 30
+       }
+      },
+      "k1": {
+       "age": {
+        "2026": 8
+       }
+      },
+      "k2": {
+       "age": {
+        "2026": 5
+       }
+      },
+      "k3": {
+       "age": {
+        "2026": 2
+       }
+      }
+     },
+     "state": "TX"
+    },
+    "outputs": [
+     {
+      "variable": "tx_tanf",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "tx_tanf": 459.0
+   },
+   "compare": [
+    {
+     "axiom_output": "tx_tanf",
+     "pe_variable": "tx_tanf"
+    }
+   ]
+  },
+  {
+   "id": "in-tanf-child-only",
+   "description": "IN TANF: child-only assistance group of 1 (participating_members=1), zero income - the one size the sparsely-encoded upstream benefit table (keys 1 and 6) can evaluate, partially lifting the exclusion the same way ks-tanf-family3 pins the KS shelter-group scenario. federal_income_poverty_level is fed as an input for the gross test (moot at zero income). Both the new-application and ongoing benefits equal PE's in_tanf.",
+   "program": "us-in-tanf",
+   "tolerance": 0.5,
+   "axiom": {
+    "facts": {
+     "assistance_group_size": 1,
+     "participating_members": 1,
+     "assistance_group_has_recipient_parent_children_only": true,
+     "assistance_group_is_tanf_or_refugee_cash_assistance_applicant": true,
+     "gross_income": 0,
+     "non_exempt_gross_earned_income": 0,
+     "non_exempt_gross_unearned_income": 0,
+     "deemed_income": 0,
+     "federal_income_poverty_level": 1305
+    }
+   },
+   "pe": {
+    "situation": {
+     "people": {
+      "k": {
+       "age": {
+        "2026": 8
+       }
+      }
+     },
+     "state": "IN"
+    },
+    "outputs": [
+     {
+      "variable": "in_tanf",
+      "period": "2026-07"
+     }
+    ]
+   },
+   "pe_values": {
+    "in_tanf": 248.0
+   },
+   "compare": [
+    {
+     "axiom_output": "in_tanf_new_application_monthly_benefit",
+     "pe_variable": "in_tanf"
+    },
+    {
+     "axiom_output": "in_tanf_ongoing_monthly_benefit",
+     "pe_variable": "in_tanf"
+    }
+   ]
   }
  ],
  "shared_member_facts": {
@@ -1492,7 +2251,7 @@
   },
   {
    "program": "us-in-tanf",
-   "reason": "Upstream table cash_assistance_maximum_monthly_benefit_for_recipient_parent_or_caretaker_ag_table is sparsely encoded (keys 1 and 6 only) \u2014 participating_members=3 cannot evaluate. Upstream filing.",
+   "reason": "Upstream table cash_assistance_maximum_monthly_benefit_for_recipient_parent_or_caretaker_ag_table is sparsely encoded (keys 1 and 6 only) \u2014 participating_members=3 cannot evaluate. Upstream filing. Size-1 (child-only) row now pinned by in-tanf-child-only; sizes 2-5 remain blocked.",
    "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/949"
   },
   {
@@ -1503,6 +2262,26 @@
   {
    "program": "us-md-tca",
    "reason": "policyengine-us has no md_tanf variable (engine-side value $773 is pinned in test:regression instead)."
+  },
+  {
+   "program": "us-ct-tanf",
+   "reason": "Encoding takes payment_standard_for_family and federal_poverty_level as inputs (parameter-as-input); no meaningful oracle without supplying the law values. No upstream filing yet."
+  },
+  {
+   "program": "us-fl-tca",
+   "reason": "Encoding takes appropriate_eligibility_standard and applicable_budget_standard as inputs (parameter-as-input); no meaningful oracle without supplying the law values. No upstream filing yet."
+  },
+  {
+   "program": "us-al-tanf",
+   "reason": "Earner scenarios only: our encoding applies a 20% work-expense rate sourced to the 2007 DHR payment manual, while policyengine-us applies 30% per Ala. Admin. Code r. 660-2-2-.30(2) (eff. 2022-05-15) - $184 vs $204/mo benefit on $200/mo earnings. Our rate appears stale; report upstream to the AL rulespec repo. Zero-income cases (al-tanf-family3) are unaffected and pinned."
+  },
+  {
+   "program": "us-oasdi-wage-tax",
+   "reason": "Above-base scenarios only: oasdi_wage_tax is rate x statutory 'wages' taken as input; the 26 USC 3121(a)(1) excess-remuneration exclusion is encoded on the Payment entity but not composed into the tax, so a $250k wage yields $15,500 vs PE's capped $11,439. Below-base cases (oasdi-wage-95k) are unaffected and pinned. Report composition gap upstream to rulespec-us."
+  },
+  {
+   "program": "us-ny-snap",
+   "reason": "No-utility scenarios only: policyengine-us applies the NY heating/cooling SUA even when the household reports no heating costs separate from rent (PE $247.90 vs our $24 for a single earner at $1,400/mo with $400 rent and no separate utilities). Separate-heating scenarios agree and are pinned (ny-snap-family3, ny-snap-earner-1400). Needs upstream clarification of PE's SUA gating."
   }
  ]
 }
