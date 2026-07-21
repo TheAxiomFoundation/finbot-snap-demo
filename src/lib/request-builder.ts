@@ -572,7 +572,7 @@ export function shapeResult(
   );
   if (typeof primary?.value === "number" && primary.value === 0 && suspects.length > 0 && userGaveIncome) {
     built.applied.notes.push(
-      `WARNING: ${program.primary_output} is $0, but income-like slot(s) ${suspects.join(", ")} stayed at their 0 defaults — the engine computed from zeros the user never asserted. Do NOT headline this $0. Derive the missing slot from encoded values if possible; otherwise make asking for it your headline. Only present $0 if the user's facts genuinely imply the slot is zero, and say so explicitly. Outputs that do NOT depend on the zeroed slot (e.g. credits computed from earned income or AGI) are still reliable — report those normally alongside the ask. (If this call was a variant run for a delta and your main computation already has the slot filled, the warning is expected — keep the main answer and do NOT rerun this variant.)`
+      `WARNING: ${program.primary_output} is $0, but income-like slot(s) ${suspects.join(", ")} stayed at their 0 defaults — the engine computed from zeros the user never asserted. Do NOT headline this $0. Derive the missing slot ONLY from values a tool returned in this conversation; if none exists, make asking for it your headline — never fill it from remembered law, even disclosed as an assumption. Only present $0 if the user's facts genuinely imply the slot is zero, and say so explicitly. Outputs that do NOT depend on the zeroed slot (e.g. credits computed from earned income or AGI) are still reliable — report those normally alongside the ask. (If this call was a variant run for a delta and your main computation already has the slot filled, the warning is expected — keep the main answer and do NOT rerun this variant.)`
     );
   }
 
