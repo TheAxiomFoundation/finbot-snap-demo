@@ -2518,6 +2518,21 @@
    "program": "us-fiit",
    "reason": "Wages-only scenarios: 26 USC 63 is not encoded (standard_deduction is an input referenced only by the AMT chain; no 63(c) amounts), so taxable_income cannot be derived from wages/AGI and is taken as a raw input. Wages-only questions are uncomputable - the app's zero-income warning makes the assistant ask for taxable income instead of headlining the $0 computed off the default. Cases supplying taxable_income directly (fiit-*) are unaffected and pinned.",
    "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/953"
+  },
+  {
+   "program": "us-tn-snap",
+   "reason": "Utility scenarios only: the SUA state-option values are stubbed to 0 (the 7 CFR 273.9(d)(6)(iii) machinery is encoded; TN's allowance table is not), so heating scenarios understate the benefit - $400 vs PE's $546.50 for a family of 3 at $2,078/mo with $900 rent and separate heating (PE applies TN's $485 heating SUA). The pinned tn-snap-family3 case is shelter-free and unaffected.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/972"
+  },
+  {
+   "program": "us-al-snap",
+   "reason": "Utility scenarios only: SUA state-option values stubbed to 0, same as us-tn-snap. The pinned al-snap-family3 case zeroes utilities on both sides and is unaffected.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/972"
+  },
+  {
+   "program": "us-sc-snap",
+   "reason": "Utility scenarios only: SUA state-option values stubbed to 0, same as us-tn-snap. The pinned sc-snap-family3 case zeroes utilities on both sides and is unaffected.",
+   "issue": "https://github.com/TheAxiomFoundation/rulespec-us/issues/972"
   }
  ]
 }
