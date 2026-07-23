@@ -8,19 +8,26 @@ import type { ToolInvocation } from "ai";
  * "running axiom-rules-engine" pill with the real chain of work.
  */
 
+/** Model-written tool arguments render into these labels; a glitched call
+ *  (e.g. a system-prompt echo in `program`) must not flood the trail. */
+function clip(s: string, max = 48): string {
+  const oneLine = s.replace(/\s+/g, " ");
+  return oneLine.length > max ? oneLine.slice(0, max) + "…" : oneLine;
+}
+
 function stepLabel(inv: ToolInvocation): string {
   const args = (inv.args ?? {}) as Record<string, unknown>;
-  const program = typeof args.program === "string" ? args.program : null;
+  const program = typeof args.program === "string" ? clip(args.program) : null;
   const done = inv.state === "result";
   switch (inv.toolName) {
     case "list_programs":
       if (typeof args.search === "string" && args.search)
         return done
-          ? `searched certified outputs for “${args.search}”`
-          : `searching certified outputs for “${args.search}”`;
+          ? `searched certified outputs for “${clip(args.search)}”`
+          : `searching certified outputs for “${clip(args.search)}”`;
       return done ? "checked the certified-program catalog" : "checking the certified-program catalog";
     case "describe_program": {
-      const filter = typeof args.inputs_search === "string" && args.inputs_search ? args.inputs_search : null;
+      const filter = typeof args.inputs_search === "string" && args.inputs_search ? clip(args.inputs_search) : null;
       if (filter)
         return done
           ? `scanned ${program ?? "program"} inputs for “${filter}”`
@@ -34,11 +41,11 @@ function stepLabel(inv: ToolInvocation): string {
         ? `computed ${program ?? "the program"} in the rules engine`
         : `running ${program ?? "the program"} in the rules engine`;
     case "lookup_value": {
-      const output = typeof args.output === "string" ? args.output : "a value";
+      const output = typeof args.output === "string" ? clip(args.output) : "a value";
       return done ? `looked up ${output}` : `looking up ${output}`;
     }
     case "fetch_citation": {
-      const id = typeof args.legal_id === "string" ? args.legal_id : "the legal source";
+      const id = typeof args.legal_id === "string" ? clip(args.legal_id, 64) : "the legal source";
       return done ? `fetched ${id}` : `fetching ${id}`;
     }
     default:
