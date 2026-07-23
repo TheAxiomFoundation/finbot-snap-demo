@@ -35,7 +35,11 @@ export function AssistantTurn({
   const [expanded, setExpanded] = useState(false);
   const hasTools = !!toolInvocations && toolInvocations.length > 0;
   const hasText = !!text && text.trim().length > 0;
-  if (!hasTools && !hasText) return null;
+  // While streaming, an assistant message can land before its first tool
+  // call or text arrives — render the same pill the chat surface showed so
+  // the handoff doesn't blink blank (returning null here caused a visible
+  // gap between the pre-turn pill unmounting and the trail appearing).
+  if (!hasTools && !hasText && !isStreaming) return null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -51,7 +55,7 @@ export function AssistantTurn({
       {isStreaming && (
         hasTools
           ? <ActivityTrail invocations={toolInvocations!} settled={hasText} />
-          : !hasText && <RunningPill label="thinking" />
+          : !hasText && <RunningPill label="consulting the rules engine" />
       )}
       {hasTools && !isStreaming && (
         <div style={indentTools ? { marginLeft: 8 } : undefined}>
