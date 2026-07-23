@@ -44,10 +44,14 @@ export function AssistantTurn({
           Sources are hidden; instead we show the live chain of engine work
           (one line per tool call) so the wait reads as progress, not
           "stuck". Falls back to a plain pill before the first tool call. */}
-      {isStreaming && !hasText && (
+      {/* Keep the trail mounted for the whole streaming turn once tools
+          exist — the model sometimes emits text fragments between tool
+          rounds, and unmounting on hasText made the trail blink out and
+          reappear. */}
+      {isStreaming && (
         hasTools
-          ? <ActivityTrail invocations={toolInvocations!} />
-          : <RunningPill label="thinking" />
+          ? <ActivityTrail invocations={toolInvocations!} settled={hasText} />
+          : !hasText && <RunningPill label="thinking" />
       )}
       {hasTools && !isStreaming && (
         <div style={indentTools ? { marginLeft: 8 } : undefined}>

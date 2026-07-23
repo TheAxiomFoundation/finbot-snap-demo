@@ -15,60 +15,83 @@ function clip(s: string, max = 48): string {
   return oneLine.length > max ? oneLine.slice(0, max) + "…" : oneLine;
 }
 
-function stepLabel(inv: ToolInvocation): string {
+/** Both wordings for a step, derived from args only — the running/done split
+ *  is applied per GROUP in the collapse below, so a step's identity (and the
+ *  ×N grouping) never changes as its state flips. */
+function stepPhrases(inv: ToolInvocation): { running: string; done: string } {
   const args = (inv.args ?? {}) as Record<string, unknown>;
   const program = typeof args.program === "string" ? clip(args.program) : null;
-  const done = inv.state === "result";
   switch (inv.toolName) {
-    case "list_programs":
-      if (typeof args.search === "string" && args.search)
-        return done
-          ? `searched certified outputs for “${clip(args.search)}”`
-          : `searching certified outputs for “${clip(args.search)}”`;
-      return done ? "checked the certified-program catalog" : "checking the certified-program catalog";
+    case "list_programs": {
+      if (typeof args.search === "string" && args.search) {
+        const s = clip(args.search);
+        return { running: `searching certified outputs for “${s}”`, done: `searched certified outputs for “${s}”` };
+      }
+      return { running: "checking the certified-program catalog", done: "checked the certified-program catalog" };
+    }
     case "describe_program": {
       const filter = typeof args.inputs_search === "string" && args.inputs_search ? clip(args.inputs_search) : null;
       if (filter)
-        return done
-          ? `scanned ${program ?? "program"} inputs for “${filter}”`
-          : `scanning ${program ?? "program"} inputs for “${filter}”`;
-      return done
-        ? `read the ${program ?? "program"} rule schema`
-        : `reading the ${program ?? "program"} rule schema`;
+        return {
+          running: `scanning ${program ?? "program"} inputs for “${filter}”`,
+          done: `scanned ${program ?? "program"} inputs for “${filter}”`,
+        };
+      return {
+        running: `reading the ${program ?? "program"} rule schema`,
+        done: `read the ${program ?? "program"} rule schema`,
+      };
     }
     case "compute":
-      return done
-        ? `computed ${program ?? "the program"} in the rules engine`
-        : `running ${program ?? "the program"} in the rules engine`;
+      return {
+        running: `running ${program ?? "the program"} in the rules engine`,
+        done: `computed ${program ?? "the program"} in the rules engine`,
+      };
     case "lookup_value": {
       const output = typeof args.output === "string" ? clip(args.output) : "a value";
-      return done ? `looked up ${output}` : `looking up ${output}`;
+      return { running: `looking up ${output}`, done: `looked up ${output}` };
     }
     case "fetch_citation": {
       const id = typeof args.legal_id === "string" ? clip(args.legal_id, 64) : "the legal source";
-      return done ? `fetched ${id}` : `fetching ${id}`;
+      return { running: `fetching ${id}`, done: `fetched ${id}` };
     }
     default:
-      return done ? inv.toolName : `running ${inv.toolName}`;
+      return { running: `running ${inv.toolName}`, done: inv.toolName };
   }
 }
 
-export function ActivityTrail({ invocations }: { invocations: ToolInvocation[] }) {
+export function ActivityTrail({
+  invocations,
+  settled = false,
+}: {
+  invocations: ToolInvocation[];
+  /** True once the final answer text has started streaming — suppresses the
+   *  "reading the results" trailer since the results have clearly been read. */
+  settled?: boolean;
+}) {
   if (invocations.length === 0) return null;
   // Between a tool result landing and the model's next move (another call or
   // the final text) nothing is technically in flight — without a trailing
   // line the trail reads as hung. Model-thinking time dominates those gaps.
   const allDone = invocations.every((inv) => inv.state === "result");
 
-  // Collapse consecutive steps that render identically (the model sometimes
-  // probes the same tool repeatedly) into one line with a ×N counter.
+  // Collapse consecutive steps with the same settled wording into one line
+  // with a ×N counter. Grouping keys on the DONE phrasing (state-independent)
+  // so lines never split, merge, or re-key as a step's state flips — only the
+  // wording of the group flips once, when its last member completes.
   const steps: Array<{ key: string; label: string; done: boolean; count: number }> = [];
+  let lastSig: string | null = null;
   for (const inv of invocations) {
-    const label = stepLabel(inv);
+    const phrases = stepPhrases(inv);
     const done = inv.state === "result";
     const last = steps[steps.length - 1];
-    if (last && last.label === label && last.done === done) last.count++;
-    else steps.push({ key: inv.toolCallId, label, done, count: 1 });
+    if (last && lastSig === phrases.done) {
+      last.count++;
+      last.done = last.done && done;
+      last.label = last.done ? phrases.done : phrases.running;
+    } else {
+      steps.push({ key: inv.toolCallId, label: done ? phrases.done : phrases.running, done, count: 1 });
+      lastSig = phrases.done;
+    }
   }
 
   return (
@@ -110,7 +133,7 @@ export function ActivityTrail({ invocations }: { invocations: ToolInvocation[] }
           )}
         </div>
       ))}
-      {allDone && (
+      {allDone && !settled && (
         <div
           className="mono"
           style={{ display: "flex", alignItems: "baseline", gap: 7, fontSize: 11.5, color: "#374151" }}
