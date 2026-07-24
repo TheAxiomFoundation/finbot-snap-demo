@@ -1,30 +1,26 @@
 #!/usr/bin/env bash
-# One-shot: clone axiom repos, build the Rust binary, and compile/copy artifacts.
-# Idempotent — safe to re-run.
+# One-shot local setup: build the axiom-rules-engine binary at the pinned ref
+# and fetch the pinned program-artifacts release. Idempotent — safe to re-run.
+#
+# The pin lives in artifacts.lock.json. Production (Vercel) never runs this;
+# it talks to the Modal-hosted engine via AXIOM_ENGINE_URL instead.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 mkdir -p engine
 
-clone_or_pull() {
-  local repo="$1" dest="engine/$1"
-  if [ -d "$dest/.git" ]; then
-    echo "==> updating $repo"
-    git -C "$dest" pull --ff-only
-  else
-    echo "==> cloning $repo"
-    git clone --depth 1 "https://github.com/TheAxiomFoundation/$repo.git" "$dest"
-  fi
-}
+ENGINE_REPO=$(python3 -c "import json; print(json.load(open('artifacts.lock.json'))['engine']['repo'])")
+ENGINE_REF=$(python3 -c "import json; print(json.load(open('artifacts.lock.json'))['engine']['ref'])")
 
-clone_or_pull axiom-rules-engine
-clone_or_pull rulespec-us
-clone_or_pull rulespec-us-co
-clone_or_pull rulespec-uk
-clone_or_pull axiom-programs
-
-git -C engine/axiom-programs fetch origin codex/uk-uc-compose-housing-schedules-20260604
-git -C engine/axiom-programs checkout 762a1666c77f6643590ce2bc97e3c8263dd22879
+if [ -d engine/axiom-rules-engine/.git ]; then
+  echo "==> updating axiom-rules-engine"
+  git -C engine/axiom-rules-engine fetch origin
+else
+  echo "==> cloning axiom-rules-engine"
+  git clone "https://github.com/${ENGINE_REPO}.git" engine/axiom-rules-engine
+fi
+git -C engine/axiom-rules-engine checkout --quiet "$ENGINE_REF"
+echo "==> axiom-rules-engine @ $ENGINE_REF"
 
 if ! command -v cargo >/dev/null; then
   echo "cargo not found — install Rust first: https://rustup.rs"
@@ -34,5 +30,7 @@ fi
 echo "==> building axiom-rules-engine (release)"
 ( cd engine/axiom-rules-engine && cargo build --release )
 
-bash scripts/build-artifacts.sh
+echo "==> fetching program artifacts"
+npx tsx scripts/fetch-artifacts.ts
+
 echo "==> done. binary: engine/axiom-rules-engine/target/release/axiom-rules-engine"

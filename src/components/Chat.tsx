@@ -2,21 +2,14 @@
 import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef, useState } from "react";
 
-import type { Country } from "@/lib/catalog";
-import { inputPlaceholderForCountry } from "@/lib/country-copy";
-import { startersForCountry } from "@/lib/starters";
+import { INPUT_PLACEHOLDER } from "@/lib/copy";
+import { STARTERS } from "@/lib/starters";
 
 import { AssistantTurn } from "./AssistantTurn";
 import { MarkdownText } from "./MarkdownText";
 import { RunningPill } from "./RunningPill";
 
-interface ChatProps {
-  country?: Country;
-}
-
-export function Chat({ country = "us" }: ChatProps) {
-  const STARTERS = startersForCountry(country);
-  const inputPlaceholder = inputPlaceholderForCountry(country);
+export function Chat() {
   const {
     messages,
     input,
@@ -29,8 +22,7 @@ export function Chat({ country = "us" }: ChatProps) {
     append,
   } = useChat({
     api: "/api/chat",
-    maxSteps: 6,
-    body: { country },
+    maxSteps: 12,
     onError(err) {
       console.error("[finbot] chat error:", err);
     },
@@ -42,15 +34,6 @@ export function Chat({ country = "us" }: ChatProps) {
    *  request was made (compare mode was off when the user submitted). */
   const [rawResponses, setRawResponses] = useState<Record<string, string | null>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Clearing the conversation on a country toggle keeps tool surfaces and
-  // prompts coherent — the UK side has never seen the US tool names and
-  // vice versa, so leaving stale turns around invites incoherent follow-ups.
-  useEffect(() => {
-    setMessages([]);
-    setRawResponses({});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country]);
 
   // Resize the textarea whenever `input` changes — including programmatic
   // updates from the starter buttons.
@@ -70,7 +53,7 @@ export function Chat({ country = "us" }: ChatProps) {
       const r = await fetch("/api/raw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: messagesForRaw, country }),
+        body: JSON.stringify({ messages: messagesForRaw }),
       });
       const json = (await r.json()) as { text?: string; error?: string };
       setRawResponses((m) => ({ ...m, [userMsgId]: json.text ?? `error: ${json.error ?? "no text"}` }));
@@ -183,13 +166,13 @@ export function Chat({ country = "us" }: ChatProps) {
               `messages`, the per-turn rendering above owns the running
               state — we only show this for the gap before that first
               stream event. In compare mode, mirror the column layout so
-              "running axiom-rules-engine" sits inside the right card the same
+              "consulting the rules engine" sits inside the right card the same
               way "running" sits inside the left. */}
           {isLoading
             && !compareMode
             && messages[messages.length - 1]?.role === "user"
             && (
-              <RunningPill label="running axiom-rules-engine" />
+              <RunningPill label="consulting the rules engine" />
             )}
           {isLoading
             && compareMode
@@ -205,7 +188,7 @@ export function Chat({ country = "us" }: ChatProps) {
                       : <RunningPill label="running" />}
                   </Column>
                   <Column title="OpenAI + Axiom" tone="grounded">
-                    <RunningPill label="running axiom-rules-engine" />
+                    <RunningPill label="consulting the rules engine" />
                   </Column>
                 </div>
               );
@@ -250,7 +233,7 @@ export function Chat({ country = "us" }: ChatProps) {
               }
             }
           }}
-          placeholder={inputPlaceholder}
+          placeholder={INPUT_PLACEHOLDER}
           autoComplete="off"
           rows={1}
           style={{

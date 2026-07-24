@@ -1,112 +1,134 @@
 /**
- * Encoded-program catalog. The expansion seam: drop a new entry here and the
- * `list_encoded_outputs` tool exposes it to the LLM automatically.
+ * Typed accessor over the generated program catalog.
+ *
+ * src/lib/generated/catalog.json is produced by scripts/generate-catalog.ts
+ * from the pinned rulespec-us program-artifacts release (see
+ * artifacts.lock.json). Everything the runtime knows about programs — outputs,
+ * input slots, entities, relations, citations — flows through here.
  */
-export type Country = "us" | "uk";
+import rawCatalog from "./generated/catalog.json";
 
-export interface EncodedProgram {
+export interface CatalogOutput {
+  name: string;
+  /** Legal id (`us:statutes/7/2017/a#snap_regular_month_allotment`); null for
+   *  composition glue rules, which are queried by bare name. */
+  id: string | null;
+  entity: string;
+  semantics: string;
+  dtype: string | null;
+  unit: string | null;
+  period: string | null;
+  source: string | null;
+  certified: boolean;
+  acknowledged_incomplete: boolean;
+  /** For judgments: facts in the rule's unconditional conjunction chain with
+   *  the values that satisfy them — what must be set for it to hold. */
+  requires?: Array<{ slot: string; value: boolean | number | string }>;
+  requires_partial?: boolean;
+}
+
+export interface CatalogInputSlot {
+  name: string;
+  dtype: "bool" | "integer" | "decimal" | "date" | "text";
+  default: boolean | number | string;
+  /** Where the default came from; omitted for the plain dtype heuristic. */
+  default_source?: "fixture" | "table_min" | "overlay";
+  /** Enum-coded input: value → label mined from the branch each code selects. */
+  enum?: Record<string, string>;
+  /** Values some rules compare this slot against for equality that the
+   *  default does not satisfy. */
+  eq_hints?: Array<number | string>;
+  /** Bool flag whose branches select different rules/parameters. */
+  variant_switch?: boolean;
+  /** Not reachable from any certified output — cannot change the headline. */
+  aux?: boolean;
+}
+
+export interface CatalogRelation {
+  name: string;
+  related_entity: string | null;
+  member_slot: number;
+  primary_slot: number;
+  used: boolean;
+  /** Judgment rules referenced inside aggregators over this relation — the
+   *  checks that decide whether a member counts. */
+  gate_judgments?: string[];
+}
+
+export interface CatalogProgram {
   slug: string;
-  country: Country;
   jurisdiction: string;
+  program_id: string;
+  period: string;
+  /** Default period for evaluation — differs from `period` when parameter
+   *  coverage starts later than the certified period. */
+  evaluation_period: string;
   display_name: string;
-  scope: string;
-  rulespec_path: string;
-  outputs: Array<{
-    legal_id: string;
-    label: string;
-    kind: "scalar" | "judgment";
-    short: string;
-  }>;
+  description: string;
+  spec_path: string;
+  primary_entity: string;
+  member_entity: string | null;
+  entities: string[];
+  relations: CatalogRelation[];
+  certified_outputs: string[];
+  acknowledged_incomplete: string[];
   primary_output: string;
+  outputs: CatalogOutput[];
+  inputs: Record<string, CatalogInputSlot[]>;
+  counts: { derived: number; parameters: number; relations: number };
 }
 
-export const CATALOG: EncodedProgram[] = [
-  {
-    slug: "co-snap",
-    country: "us",
-    jurisdiction: "us-co",
-    display_name: "Colorado SNAP — FY 2026 benefit calculation",
-    scope: "Monthly benefit and eligibility for Colorado SNAP households as of FY 2026.",
-    rulespec_path: "rulespec-us-co/policies/cdhs/snap/fy-2026-benefit-calculation.yaml",
-    outputs: [
-      { legal_id: "us:statutes/7/2017/a#snap_regular_month_allotment", label: "Regular monthly SNAP allotment", kind: "scalar", short: "Final monthly allotment in dollars before initial-month proration." },
-      { legal_id: "us-co:regulations/10-ccr-2506-1/4.207.2#snap_allotment", label: "Colorado SNAP allotment", kind: "scalar", short: "Allotment after Colorado's proration rules." },
-      { legal_id: "us-co:policies/cdhs/snap/fy-2026-benefit-calculation#snap_eligible", label: "Eligible for SNAP this month", kind: "judgment", short: "Composite eligibility judgment." },
-      { legal_id: "us-co:regulations/10-ccr-2506-1/4.401#snap_income_eligible", label: "Income eligible", kind: "judgment", short: "Whether the household passes gross/net income tests." },
-      { legal_id: "us:regulations/7-cfr/273/8#snap_resource_eligible", label: "Resource eligible", kind: "judgment", short: "Whether countable resources are below the asset limit." },
-      { legal_id: "us:policies/usda/snap/fy-2026-cola/maximum-allotments#snap_maximum_allotment", label: "Maximum SNAP allotment for household size", kind: "scalar", short: "USDA FY 2026 max allotment table for the household's size." },
-    ],
-    primary_output: "us:statutes/7/2017/a#snap_regular_month_allotment",
-  },
-  {
-    slug: "ca-snap",
-    country: "us",
-    jurisdiction: "us-ca",
-    display_name: "California SNAP — FY 2026 benefit calculation",
-    scope: "Monthly benefit and eligibility for California SNAP households as of FY 2026.",
-    rulespec_path: "rules-us-ca/programs/snap/fy-2026.yaml",
-    outputs: [
-      { legal_id: "us-ca:programs/snap/fy-2026#snap_benefit", label: "California SNAP benefit", kind: "scalar", short: "Final monthly SNAP benefit in dollars." },
-      { legal_id: "us-ca:programs/snap/fy-2026#snap_eligible", label: "Eligible for SNAP this month", kind: "judgment", short: "Composite eligibility judgment." },
-      { legal_id: "us-ca:programs/snap/fy-2026#snap_gross_monthly_income", label: "Gross monthly SNAP income", kind: "scalar", short: "Monthly earned plus unearned income." },
-      { legal_id: "us-ca:programs/snap/fy-2026#snap_total_allowable_shelter_expenses", label: "Allowable shelter expenses", kind: "scalar", short: "Shelter expenses used by the SNAP calculation." },
-    ],
-    primary_output: "us-ca:programs/snap/fy-2026#snap_benefit",
-  },
-  {
-    slug: "ny-snap",
-    country: "us",
-    jurisdiction: "us-ny",
-    display_name: "New York SNAP — FY 2026 benefit calculation",
-    scope: "Monthly benefit and eligibility for New York SNAP households as of FY 2026.",
-    rulespec_path: "rules-us-ny/programs/snap/fy-2026.yaml",
-    outputs: [
-      { legal_id: "us-ny:programs/snap/fy-2026#snap_benefit", label: "New York SNAP benefit", kind: "scalar", short: "Final monthly SNAP benefit in dollars." },
-      { legal_id: "us-ny:programs/snap/fy-2026#snap_eligible", label: "Eligible for SNAP this month", kind: "judgment", short: "Composite eligibility judgment." },
-      { legal_id: "us-ny:programs/snap/fy-2026#snap_gross_monthly_income", label: "Gross monthly SNAP income", kind: "scalar", short: "Monthly earned plus unearned income." },
-      { legal_id: "us-ny:programs/snap/fy-2026#snap_total_allowable_shelter_expenses", label: "Allowable shelter expenses", kind: "scalar", short: "Shelter expenses used by the SNAP calculation." },
-    ],
-    primary_output: "us-ny:programs/snap/fy-2026#snap_benefit",
-  },
-  {
-    slug: "uk-universal-credit",
-    country: "uk",
-    jurisdiction: "uk",
-    display_name: "UK Universal Credit — FY 2026-27 composed award",
-    scope: "End-to-end monthly Universal Credit award for a household. Composes WRA 2012 s.8 (award = max − deductions) with UC Regs 2013 regs 22 (work allowance + 55% taper), 24 (child element), 26, 27, 29, 34, and 36 (element amounts). Headline output: universal_credit_award_amount. Benefit cap (reg 80A) is encoded standalone but not yet wired in.",
-    rulespec_path: "axiom-programs/uk/universal-credit/fy-2026-27.yaml",
-    outputs: [
-      { legal_id: "uk:statutes/ukpga/2012/5/8#universal_credit_award_amount", label: "UC award (monthly)", kind: "scalar", short: "Final monthly UC award after taper and unearned-income deduction." },
-      { legal_id: "uk:statutes/ukpga/2012/5/8#universal_credit_maximum_amount", label: "UC maximum amount (monthly)", kind: "scalar", short: "Sum of all element amounts before deductions." },
-      { legal_id: "uk:statutes/ukpga/2012/5/8#universal_credit_amounts_to_be_deducted", label: "Amounts to be deducted (monthly)", kind: "scalar", short: "55% earned-income taper after work allowance, plus unearned income." },
-      { legal_id: "uk:regulations/uksi/2013/376/36#standard_allowance_amount", label: "Standard allowance (monthly)", kind: "scalar", short: "Picked by single/joint × under-25/25+." },
-      { legal_id: "uk:regulations/uksi/2013/376/22#applicable_work_allowance_amount", label: "Applicable work allowance (monthly)", kind: "scalar", short: "Lower (£404, with housing element) or higher (£710, no housing element)." },
-      { legal_id: "uk:regulations/uksi/2013/376/22#earned_income_deduction_from_maximum_amount", label: "Earned-income deduction (monthly)", kind: "scalar", short: "55% of earned income above the work allowance." },
-    ],
-    primary_output: "uk:statutes/ukpga/2012/5/8#universal_credit_award_amount",
-  },
-  {
-    slug: "uk-personal-allowance",
-    country: "uk",
-    jurisdiction: "uk",
-    display_name: "UK personal allowance — Income Tax Act 2007 s.35",
-    scope: "Personal allowance for UK income tax, including the £100,000 adjusted-net-income taper. Tax year 2025-26.",
-    rulespec_path: "rulespec-uk/statutes/ukpga/2007/3/35.yaml",
-    outputs: [
-      { legal_id: "uk:statutes/ukpga/2007/3/35#personal_allowance", label: "Personal allowance", kind: "scalar", short: "Allowance after the £100k taper, in £." },
-      { legal_id: "uk:statutes/ukpga/2007/3/35#individual_entitled_to_personal_allowance", label: "Entitled to personal allowance", kind: "judgment", short: "Whether the individual meets s.35(1) and s.56 requirements." },
-      { legal_id: "uk:statutes/ukpga/2007/3/35#personal_allowance_base_amount", label: "Personal allowance base amount", kind: "scalar", short: "Statutory base allowance before taper (£12,570)." },
-      { legal_id: "uk:statutes/ukpga/2007/3/35#adjusted_net_income_reduction_threshold", label: "Taper threshold", kind: "scalar", short: "Adjusted-net-income threshold above which the allowance tapers (£100,000)." },
-    ],
-    primary_output: "uk:statutes/ukpga/2007/3/35#personal_allowance",
-  },
-];
-
-export function programsForCountry(country: Country): EncodedProgram[] {
-  return CATALOG.filter((p) => p.country === country);
+export interface Catalog {
+  release_tag: string;
+  corpus_sha: string;
+  repo: string;
+  programs: CatalogProgram[];
+  corpus_paths: Record<string, string>;
 }
 
-export function programsForJurisdiction(jurisdiction?: string): EncodedProgram[] {
-  if (!jurisdiction) return CATALOG;
-  return CATALOG.filter((p) => p.jurisdiction === jurisdiction);
+const catalog = rawCatalog as unknown as Catalog;
+
+export function getCatalog(): Catalog {
+  return catalog;
+}
+
+const bySlug = new Map(catalog.programs.map((p) => [p.slug, p]));
+
+export function getProgram(slug: string): CatalogProgram | undefined {
+  return bySlug.get(slug);
+}
+
+/** Case-insensitive multi-token search across output names of every program.
+ *  All tokens must appear in the output name (any order). */
+export function searchOutputs(
+  query: string,
+  options: { jurisdiction?: string; limit?: number } = {}
+): Array<{ program: string; output: CatalogOutput }> {
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const tokens = normalize(query).split(" ").filter(Boolean);
+  if (tokens.length === 0) return [];
+  const limit = options.limit ?? 24;
+  const matches: Array<{ program: string; output: CatalogOutput }> = [];
+  for (const program of catalog.programs) {
+    if (options.jurisdiction && program.jurisdiction !== options.jurisdiction) continue;
+    for (const output of program.outputs) {
+      const hay = " " + normalize(output.name) + " ";
+      if (tokens.every((t) => hay.includes(t))) {
+        matches.push({ program: program.slug, output });
+        if (matches.length >= limit * 4) return matches.slice(0, limit * 4);
+      }
+    }
+  }
+  // Certified outputs first, then shorter (more specific) names.
+  matches.sort((a, b) =>
+    Number(b.output.certified) - Number(a.output.certified) ||
+    a.output.name.length - b.output.name.length
+  );
+  return matches.slice(0, limit);
+}
+
+/** Legal-id-prefix → corpus_citation_path map declared by rulespec modules.
+ *  Used by fetch_citation to hit real axiom-corpus documents. */
+export function allCorpusPaths(): Record<string, string> {
+  return catalog.corpus_paths;
 }

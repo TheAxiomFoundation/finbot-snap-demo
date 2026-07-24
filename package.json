@@ -4,14 +4,17 @@
   "private": true,
   "scripts": {
     "engine:setup": "bash scripts/setup-engine.sh",
-    "engine:build": "bash scripts/build-artifacts.sh",
-    "engine:test": "tsx scripts/test-engine.ts",
-    "engine:test:uk": "tsx scripts/test-uk.ts",
+    "artifacts:fetch": "tsx scripts/fetch-artifacts.ts",
+    "catalog:generate": "tsx scripts/generate-catalog.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:country-copy": "tsx scripts/test-country-copy.ts",
+    "test:smoke": "tsx scripts/smoke-all.ts",
+    "test:oracle": "tsx scripts/test-oracle.ts",
+    "eval:llm": "tsx scripts/eval-llm.ts",
+    "eval:oracle": "tsx eval/oracle-eval.ts",
+    "test:regression": "tsx scripts/test-regression.ts",
     "test:legal-links": "tsx scripts/test-legal-links.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -31,7 +34,8 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
-    "tsx": "^4.21.0",
-    "typescript": "^5.7.3"
+    "tsx": "^4.23.1",
+    "typescript": "^5.7.3",
+    "yaml": "^2.9.0"
   }
 }

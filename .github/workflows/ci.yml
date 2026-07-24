@@ -16,7 +16,11 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Typecheck
         run: bun run typecheck
+      - name: Legal-link tests
+        run: bun run test:legal-links
       - name: Build
         # next build needs no secrets: API routes (OpenAI, engine) are
-        # dynamic and only read env at request time.
+        # dynamic and only read env at request time. The committed
+        # src/lib/generated/catalog.json makes the build hermetic — no
+        # artifact fetch or Rust toolchain needed here.
         run: bun run build

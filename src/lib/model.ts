@@ -2,8 +2,8 @@
  * Single source of truth for which OpenAI model the chat layer uses.
  *
  * Defaults to gpt-5.5 — the current standard-tier release (2026-04-22),
- * strong on the tool-sequencing patterns this app needs (compute_*_snap,
- * compute_uk_*, Colorado ranking, correct primary-output field selection).
+ * strong on the tool-sequencing patterns this app needs (describe-before-
+ * compute, correct primary-output field selection).
  * Pro tier works but takes ~10x longer per turn; set FINBOT_MODEL=gpt-5.5-pro
  * to opt in (finbotModel() routes pro through the Responses API).
  *
@@ -24,9 +24,16 @@ export const FINBOT_MODEL_NAME = process.env.FINBOT_MODEL ?? "gpt-5.5";
  *  /v1/chat/completions — they require the Responses API. Switch adapter
  *  based on the model name so the env var can flip between tiers without
  *  touching this file. */
+/** Reasoning-effort dial for the gpt-5 family. Latency tracing showed model
+ *  thinking gaps of 7-9s per step at the default effort while engine work is
+ *  ~50ms/turn — "low" cuts those gaps substantially. Raise via env if answer
+ *  quality regresses (verify with `bun run eval:llm`).
+ *
+ *  gpt-5.5 only supports tools + reasoning_effort on the Responses API, so
+ *  all gpt-5 models route through openai.responses(); the effort itself is
+ *  passed via providerOptions in the routes (see api/chat, api/raw). */
+export const REASONING_EFFORT = (process.env.FINBOT_REASONING ?? "low") as "low" | "medium" | "high";
+
 export const finbotModel = () => {
-  if (FINBOT_MODEL_NAME.includes("-pro")) {
-    return openai.responses(FINBOT_MODEL_NAME);
-  }
-  return openai(FINBOT_MODEL_NAME, { structuredOutputs: false });
+  return openai.responses(FINBOT_MODEL_NAME);
 };

@@ -26,6 +26,19 @@ const ORDERED_LINE = /^\s*\d+\.\s+(.*)$/;
  *  shape) commonly emits these — without this rule we'd render the
  *  literal `###` as text. */
 const HEADING_LINE = /^\s*(#{1,6})\s+(.+?)\s*$/;
+/** GFM pipe-table row (`| a | b |`) and its alignment separator
+ *  (`|---|---:|`). The plain-LLM side emits these freely. */
+const TABLE_ROW = /^\s*\|.*\|\s*$/;
+const TABLE_SEPARATOR = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+
+function splitTableRow(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
 
 function renderInline(text: string): ReactNode[] {
   const parts = text.split(TOKEN).filter(Boolean);
@@ -55,7 +68,8 @@ type Block =
   | { type: "section_label"; text: string }
   | { type: "heading"; level: number; text: string }
   | { type: "paragraph"; lines: string[] }
-  | { type: "list"; ordered: boolean; items: string[] };
+  | { type: "list"; ordered: boolean; items: string[] }
+  | { type: "table"; header: string[] | null; aligns: Array<"left" | "center" | "right">; rows: string[][] };
 
 function parse(source: string): Block[] {
   const lines = source.split("\n");
@@ -63,6 +77,7 @@ function parse(source: string): Block[] {
   let para: string[] = [];
   let list: string[] = [];
   let listOrdered = false;
+  let table: string[] = [];
 
   function flushPara() {
     if (para.length) {
@@ -87,14 +102,47 @@ function parse(source: string): Block[] {
       listOrdered = false;
     }
   }
+  function flushTable() {
+    if (!table.length) return;
+    const rawRows = table;
+    table = [];
+    // Header when the second line is an alignment separator; otherwise treat
+    // every row as body so partial/streaming tables still render sensibly.
+    let header: string[] | null = null;
+    let aligns: Array<"left" | "center" | "right"> = [];
+    let bodyLines = rawRows;
+    if (rawRows.length >= 2 && TABLE_SEPARATOR.test(rawRows[1])) {
+      header = splitTableRow(rawRows[0]);
+      aligns = splitTableRow(rawRows[1]).map((cell) => {
+        const left = cell.startsWith(":");
+        const right = cell.endsWith(":");
+        if (left && right) return "center";
+        if (right) return "right";
+        return "left";
+      });
+      bodyLines = rawRows.slice(2);
+    }
+    const rows = bodyLines.map(splitTableRow);
+    const width = Math.max(header?.length ?? 0, ...rows.map((r) => r.length), aligns.length, 1);
+    while (aligns.length < width) aligns.push("left");
+    blocks.push({ type: "table", header, aligns, rows });
+  }
 
   for (const raw of lines) {
     const line = raw;
     if (line.trim() === "") {
       flushPara();
       flushList();
+      flushTable();
       continue;
     }
+    if (TABLE_ROW.test(line)) {
+      flushPara();
+      flushList();
+      table.push(line);
+      continue;
+    }
+    flushTable();
     const heading = line.match(HEADING_LINE);
     if (heading) {
       flushPara();
@@ -122,6 +170,7 @@ function parse(source: string): Block[] {
   }
   flushPara();
   flushList();
+  flushTable();
 
   // If the very first block is a one-line bold paragraph, promote to headline.
   if (blocks[0]?.type === "paragraph" && blocks[0].lines.length === 1) {
@@ -186,6 +235,52 @@ export function MarkdownText({ source }: { source: string }) {
               }}
             >
               {renderInline(block.text)}
+            </div>
+          );
+        }
+        if (block.type === "table") {
+          const cellStyle = (col: number): React.CSSProperties => ({
+            padding: "4px 10px",
+            textAlign: block.aligns[col] ?? "left",
+            borderBottom: "1px solid #eeeee8",
+            fontSize: 13,
+            lineHeight: 1.45,
+          });
+          return (
+            <div key={i} style={{ overflowX: "auto", margin: "8px 0" }}>
+              <table style={{ borderCollapse: "collapse", minWidth: 280 }}>
+                {block.header && (
+                  <thead>
+                    <tr>
+                      {block.header.map((cell, c) => (
+                        <th
+                          key={c}
+                          style={{
+                            ...cellStyle(c),
+                            fontWeight: 600,
+                            color: "#374151",
+                            borderBottom: "1.5px solid #d7d8d0",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {renderInline(cell)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                )}
+                <tbody>
+                  {block.rows.map((row, r) => (
+                    <tr key={r}>
+                      {row.map((cell, c) => (
+                        <td key={c} style={cellStyle(c)}>
+                          {renderInline(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           );
         }

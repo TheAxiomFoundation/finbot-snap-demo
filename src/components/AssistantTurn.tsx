@@ -2,6 +2,7 @@
 import type { ToolInvocation } from "ai";
 import { useState } from "react";
 
+import { ActivityTrail } from "./ActivityTrail";
 import { MarkdownText } from "./MarkdownText";
 import { RunningPill } from "./RunningPill";
 import { ToolCallCard } from "./ToolCallCard";
@@ -34,16 +35,27 @@ export function AssistantTurn({
   const [expanded, setExpanded] = useState(false);
   const hasTools = !!toolInvocations && toolInvocations.length > 0;
   const hasText = !!text && text.trim().length > 0;
-  if (!hasTools && !hasText) return null;
+  // While streaming, an assistant message can land before its first tool
+  // call or text arrives — render the same pill the chat surface showed so
+  // the handoff doesn't blink blank (returning null here caused a visible
+  // gap between the pre-turn pill unmounting and the trail appearing).
+  if (!hasTools && !hasText && !isStreaming) return null;
 
   return (
     <div className="flex flex-col gap-2">
       {/* Bridge the gap between tool-call rounds and the final text
-          streaming in. While streaming, the per-turn tool disclosure
-          and Sources are hidden; without this pill the bubble area is
-          empty for several seconds and reads as "stuck". */}
-      {isStreaming && !hasText && (
-        <RunningPill label="running axiom-rules-engine" />
+          streaming in. While streaming, the per-turn tool disclosure and
+          Sources are hidden; instead we show the live chain of engine work
+          (one line per tool call) so the wait reads as progress, not
+          "stuck". Falls back to a plain pill before the first tool call. */}
+      {/* Keep the trail mounted for the whole streaming turn once tools
+          exist — the model sometimes emits text fragments between tool
+          rounds, and unmounting on hasText made the trail blink out and
+          reappear. */}
+      {isStreaming && (
+        hasTools
+          ? <ActivityTrail invocations={toolInvocations!} settled={hasText} />
+          : !hasText && <RunningPill label="consulting the rules engine" />
       )}
       {hasTools && !isStreaming && (
         <div style={indentTools ? { marginLeft: 8 } : undefined}>
@@ -89,12 +101,12 @@ interface CitationLike {
   url: string;
 }
 
-/** Pull citation links out of every tool result on this turn. compute_* tools
- *  returns `citations: [{id, url}]`; lookup_value returns `{legal_id, url}`;
- *  fetch_citation returns `{legal_id, url}`. We dedupe by legal_id and render
- *  a small footer below the bubble.
+/** Pull citation links out of every tool result on this turn. compute returns
+ *  `citations: [{id, url}]`; lookup_value and fetch_citation return
+ *  `{legal_id, url}`. We dedupe by legal_id and render a small footer below
+ *  the bubble.
  *
- *  When there are more than INLINE_SOURCE_LIMIT citations (compute_*_snap can
+ *  When there are more than INLINE_SOURCE_LIMIT citations (compute can
  *  surface ~28 — every regulation the rule chain touches), the inline list is
  *  collapsed behind a "show N sources" disclosure to keep the chat surface
  *  uncluttered. Single-source answers (like lookup_value) stay inline. */
@@ -108,7 +120,7 @@ function Sources({ invocations, indented }: { invocations: ToolInvocation[]; ind
   for (const inv of invocations) {
     const r = "result" in inv ? (inv.result as Record<string, unknown> | undefined) : undefined;
     if (!r || typeof r !== "object") continue;
-    if (isComputeTool(inv.toolName) && Array.isArray(r.citations)) {
+    if (inv.toolName === "compute" && Array.isArray(r.citations)) {
       for (const c of r.citations as Array<{ id?: string; url?: string }>) {
         if (c?.id && c.url && !seen.has(c.id)) {
           seen.add(c.id);
@@ -170,15 +182,5 @@ function Sources({ invocations, indented }: { invocations: ToolInvocation[]; ind
         </button>
       )}
     </div>
-  );
-}
-
-function isComputeTool(toolName: string) {
-  return (
-    toolName === "compute_co_snap" ||
-    toolName === "compute_ca_snap" ||
-    toolName === "compute_ny_snap" ||
-    toolName === "compute_uk_personal_allowance" ||
-    toolName === "compute_uk_universal_credit"
   );
 }

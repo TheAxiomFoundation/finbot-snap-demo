@@ -3,24 +3,20 @@ import assert from "node:assert/strict";
 import { legalIdToUrl } from "../src/lib/legal-links";
 
 assert.equal(
-  legalIdToUrl("uk:regulations/uksi/2013/376/24A"),
-  "https://www.legislation.gov.uk/uksi/2013/376/regulation/24A"
-);
-assert.equal(
-  legalIdToUrl("uk:regulations/uksi/2013/376/schedule/4/paragraph/22"),
-  "https://www.legislation.gov.uk/uksi/2013/376/schedule/4/paragraph/22"
-);
-assert.equal(
-  legalIdToUrl("uk:statutes/ukpga/2012/5/8"),
-  "https://www.legislation.gov.uk/ukpga/2012/5/section/8"
-);
-assert.equal(
-  legalIdToUrl("uk:statutes/ukpga/2007/3/35#personal_allowance"),
-  "https://www.legislation.gov.uk/ukpga/2007/3/section/35"
-);
-assert.equal(
   legalIdToUrl("us:statutes/7/2017/a"),
   "https://app.axiom-foundation.org/us/statute/7/2017/a"
+);
+assert.equal(
+  legalIdToUrl("us:statutes/7/2017/a#snap_regular_month_allotment"),
+  "https://app.axiom-foundation.org/us/statute/7/2017/a"
+);
+assert.equal(
+  legalIdToUrl("us-co:regulations/10-ccr-2506-1/4.207.3"),
+  "https://app.axiom-foundation.org/us-co/regulation/10-ccr-2506-1/4.207.3"
+);
+assert.equal(
+  legalIdToUrl("us:policies/usda/snap/fy-2026-cola/maximum-allotments"),
+  "https://app.axiom-foundation.org/us/policy/usda/snap/fy-2026-cola/maximum-allotments"
 );
 
 console.log("legal link checks passed");

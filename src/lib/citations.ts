@@ -5,20 +5,21 @@
  *
  * Resolution order for the corpus path:
  *   1. Use the explicit `corpus_citation_path` declared in the source rulespec
- *      module (extracted at build time into CO_SNAP_BASE.corpus_paths). This
- *      is authoritative — for `us:policies/usda/snap/fy-2026-cola/...` files,
- *      the corpus path is `us/guidance/usda/fns/snap-fy2026-cola/...`, which
- *      can never be derived structurally.
+ *      module (extracted at catalog-generation time into catalog.json's
+ *      corpus_paths map). This is authoritative — for
+ *      `us:policies/usda/snap/fy-2026-cola/...` files, the corpus path is
+ *      `us/guidance/usda/fns/snap-fy2026-cola/...`, which can never be
+ *      derived structurally.
  *   2. Fall back to the structural rewrite (statutes→statute etc.) for
  *      jurisdictions where it happens to line up.
  */
-import { CO_SNAP_BASE } from "./programs/co-snap-base";
+import { allCorpusPaths } from "./catalog";
 import { legalIdToUrl } from "./legal-links";
 
 const CORPUS_API_BASE =
   process.env.AXIOM_CORPUS_API ?? "https://axiom-foundation.org/api/axiom";
 
-const CORPUS_PATH_BY_FILE = CO_SNAP_BASE.corpus_paths as Record<string, string>;
+const CORPUS_PATH_BY_FILE = allCorpusPaths();
 
 export interface Citation {
   legal_id: string;

@@ -6,8 +6,8 @@
  * each call; that costs ~80–150ms but keeps the surface trivial.
  *
  * The engine speaks legal-ID inputs (e.g. `us:statutes/7/2017/a#input.household_size`).
- * Callers in lib/programs/* assemble those payloads from a small typed
- * "user-facing facts" object so the chat layer never has to know legal IDs.
+ * lib/request-builder.ts assembles those payloads from the generated catalog
+ * so the chat layer never has to know legal IDs.
  */
 import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
@@ -50,8 +50,14 @@ export interface RelationRecord {
 
 export interface QueryRequest {
   entity_id: string;
-  period: { period_kind: "month" | "year" | "tax_year" | "benefit_week" | "custom"; start: string; end: string };
-  outputs: string[]; // legal IDs
+  period: {
+    period_kind: "month" | "tax_year" | "benefit_week" | "custom";
+    start: string;
+    end: string;
+    /** Required by the engine for custom periods. */
+    name?: string;
+  };
+  outputs: string[]; // legal IDs or bare rule names for composition glue rules
 }
 
 export interface ExecutionRequest {
@@ -95,29 +101,13 @@ export function fact(value: FactScalar, dtype?: "bool" | "integer" | "decimal" |
   return { kind: "text", value };
 }
 
-/** Convert a record of {legal_id: scalar} into InputRecord[] for one entity. */
-export function recordsForEntity(
-  facts: Record<string, FactScalar>,
-  entity: InputRecord["entity"],
-  entity_id: string,
-  interval: Interval
-): InputRecord[] {
-  return Object.entries(facts).map(([name, value]) => ({
-    name,
-    entity,
-    entity_id,
-    interval,
-    value: fact(value),
-  }));
-}
-
-/** Build a half-open UK tax-year interval from a year that the tax year starts.
- *  UK tax years run 6 April YYYY → 6 April YYYY+1. Pass the calendar year the
- *  tax year *starts* (e.g. 2025 for the 2025–26 tax year). */
-export function taxYearInterval(startYear: number): { interval: Interval; period: { period_kind: "tax_year"; start: string; end: string } } {
-  const start = `${startYear.toString().padStart(4, "0")}-04-06`;
-  const end = `${(startYear + 1).toString().padStart(4, "0")}-04-06`;
-  return { interval: { start, end }, period: { period_kind: "tax_year", start, end } };
+/** Build a half-open calendar-year interval for "YYYY". The engine has no
+ *  first-class calendar-year period kind, so this uses a named custom period —
+ *  verified equivalent for Year-period rules. */
+export function yearInterval(year: number): { interval: Interval; period: QueryRequest["period"] } {
+  const start = `${year.toString().padStart(4, "0")}-01-01`;
+  const end = `${(year + 1).toString().padStart(4, "0")}-01-01`;
+  return { interval: { start, end }, period: { period_kind: "custom", name: `cy-${year}`, start, end } };
 }
 
 /** Build a half-open monthly interval for "YYYY-MM". */
