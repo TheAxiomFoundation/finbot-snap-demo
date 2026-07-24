@@ -33,22 +33,28 @@ CORPUS_SHA = LOCK["corpus_sha"]
 
 RELEASE_BASE = f"https://github.com/{RELEASE_REPO}/releases/download/{RELEASE_TAG}"
 
-# Python one-liner-ish script run inside the image: download every compiled
-# artifact listed in the release manifest and verify its sha256.
-FETCH_ARTIFACTS_PY = f"""
-import hashlib, json, urllib.request
-base = {RELEASE_BASE!r}
-manifest = json.load(urllib.request.urlopen(base + "/manifest.json"))
-assert manifest["corpus"]["sha"] == {CORPUS_SHA!r}, "corpus sha mismatch vs artifacts.lock.json"
-json.dump(manifest, open("/opt/artifacts/manifest.json", "w"))
-for program in manifest["programs"]:
-    name = program["artifact"]
-    data = urllib.request.urlopen(base + "/" + name).read()
-    digest = hashlib.sha256(data).hexdigest()
-    assert digest == program["artifact_sha256"], f"sha256 mismatch for {{name}}"
-    open("/opt/artifacts/" + name, "wb").write(data)
-print(f"fetched {{len(manifest['programs'])}} artifacts")
-"""
+def fetch_artifacts(base: str, corpus_sha: str) -> None:
+    """Build-time step: download every compiled artifact listed in the
+    release manifest and verify its sha256. Runs via Image.run_function —
+    a real Python function, not a shell one-liner (the previous `python3 -c
+    {script!r}` form broke on /bin/sh quoting of the script's inner quotes)."""
+    import hashlib
+    import json
+    import pathlib
+    import urllib.request
+
+    pathlib.Path("/opt/artifacts").mkdir(parents=True, exist_ok=True)
+    manifest = json.load(urllib.request.urlopen(base + "/manifest.json"))
+    assert manifest["corpus"]["sha"] == corpus_sha, "corpus sha mismatch vs artifacts.lock.json"
+    json.dump(manifest, open("/opt/artifacts/manifest.json", "w"))
+    for program in manifest["programs"]:
+        name = program["artifact"]
+        data = urllib.request.urlopen(base + "/" + name).read()
+        digest = hashlib.sha256(data).hexdigest()
+        assert digest == program["artifact_sha256"], f"sha256 mismatch for {name}"
+        open("/opt/artifacts/" + name, "wb").write(data)
+    print(f"fetched {len(manifest['programs'])} artifacts")
+
 
 image = (
     modal.Image.debian_slim(python_version="3.13")
@@ -64,9 +70,16 @@ image = (
         f"git clone https://github.com/{ENGINE_REPO}.git /opt/axiom-rules-engine",
         f"cd /opt/axiom-rules-engine && git checkout {ENGINE_REF}",
         ". $HOME/.cargo/env && cd /opt/axiom-rules-engine && cargo build --release",
-        "mkdir -p /opt/artifacts",
-        f"python3 -c {FETCH_ARTIFACTS_PY!r}",
     )
+    # The lock file must exist inside the image: this module re-imports in
+    # the container (both for run_function at build time and web() at
+    # runtime), and the module-level LOCK read above resolves to /root/.
+    .add_local_file(
+        Path(__file__).parent / "artifacts.lock.json",
+        "/root/artifacts.lock.json",
+        copy=True,
+    )
+    .run_function(fetch_artifacts, args=(RELEASE_BASE, CORPUS_SHA))
     .pip_install("fastapi>=0.109", "uvicorn>=0.27", "pydantic>=2.0")
 )
 
