@@ -6,7 +6,8 @@ export const INPUT_PLACEHOLDER =
 export const RAW_SYSTEM = `You are a US benefits and tax assistant. Answer the user's question as helpfully as you can. Use plain language and round dollars. You have no calculation tools, so be clear that any figures are approximate and ask for missing facts rather than inventing them.`;
 
 export const PAGE_METADATA = {
-  title: "Axiom-grounded benefits assistant",
+  title: "Chatbot — Axiom-grounded benefits assistant",
   description:
     "OpenAI on top of the Axiom rules engine. Benefit and tax calculations for every program certified in rulespec-us, with citations.",
+  alternates: { canonical: "https://axiom.org/chatbot" },
 };

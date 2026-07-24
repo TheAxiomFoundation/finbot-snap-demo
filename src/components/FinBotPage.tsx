@@ -18,7 +18,7 @@ export function FinBotPage() {
               aria-label="Axiom Foundation"
             >
               <img
-                src="/axiom-foundation.svg"
+                src="/chatbot/axiom-foundation.svg"
                 alt="Axiom Foundation"
                 className="brand-axiom"
               />
