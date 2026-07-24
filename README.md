@@ -1,4 +1,4 @@
-# FinBot demo
+# Chatbot demo
 
 Live demo: OpenAI side-by-side comparison grounded in the [Axiom rules engine](https://github.com/TheAxiomFoundation/axiom-rules-engine). The app is fully **catalog-driven**: it can answer questions and run calculations for every program certified in the pinned [rulespec-us](https://github.com/TheAxiomFoundation/rulespec-us) `program-artifacts` release — currently 32 programs across 23 US jurisdictions (SNAP, TANF, federal individual income tax, state income tax, payroll, and more).
 

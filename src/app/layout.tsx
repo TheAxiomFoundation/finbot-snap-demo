@@ -21,7 +21,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Axiom-grounded benefits assistant",
+  metadataBase: new URL("https://axiom.org/chatbot"),
+  title: "Chatbot — Axiom-grounded benefits assistant",
   description:
     "OpenAI on top of the Axiom rules engine, with real tax and benefits calculations and citations.",
 };

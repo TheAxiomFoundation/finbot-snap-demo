@@ -1,6 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
+  "redirects": [
+    { "source": "/", "destination": "https://axiom.org/chatbot", "permanent": true }
+  ],
   "functions": {
     "src/app/api/chat/route.ts": { "maxDuration": 300 },
     "src/app/api/raw/route.ts": { "maxDuration": 300 }
