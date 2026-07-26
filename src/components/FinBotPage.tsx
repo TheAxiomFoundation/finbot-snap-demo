@@ -24,19 +24,40 @@ export function FinBotPage() {
               />
             </a>
           </span>
-          <Link
-            href="/programs"
+          <span
             className="mono"
             style={{
               marginLeft: "auto",
-              fontSize: 13,
-              color: "#374151",
-              textDecoration: "underline",
-              textUnderlineOffset: 3,
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
             }}
           >
-            Programs
-          </Link>
+            <a
+              href="https://axiom-foundation.org/demos"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                fontSize: 13,
+                color: "#374151",
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+              }}
+            >
+              All demos
+            </a>
+            <Link
+              href="/programs"
+              style={{
+                fontSize: 13,
+                color: "#374151",
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+              }}
+            >
+              Programs
+            </Link>
+          </span>
         </div>
       </header>
 
