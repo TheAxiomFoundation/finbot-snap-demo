@@ -379,17 +379,56 @@ a.cite:hover { color: #0b1220; }
 }
 .brand-link:hover { opacity: 0.75; }
 
-/* Wraps the Axiom Foundation logo link in the top bar. */
+/* Wraps the Axiom Foundation logo link + title block in the top bar. */
 .brand-group {
   display: inline-flex;
-  align-items: flex-start;
-  gap: 14px;
+  align-items: center;
+  gap: 12px;
 }
 
 .brand-axiom {
   display: inline-block;
-  height: 32px;
-  width: auto;
+  width: 100px;
+  height: auto;
+}
+
+/* Divider + demo title block, after the logo. Links to the demo root. */
+.brand-title {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 1px solid var(--hairline);
+  padding-left: 12px;
+  text-decoration: none;
+}
+.brand-eyebrow {
+  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-mute);
+}
+.brand-name {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+/* Right-side header links (All demos, Programs). */
+.topbar-link {
+  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, Menlo, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-mute);
+  text-decoration: none;
+}
+.topbar-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* Page intro — light-weight Geist headline in the Axiom register,
@@ -497,7 +536,8 @@ a.cite:hover { color: #0b1220; }
     max-width: 100%;
   }
   .brand-axiom {
-    height: 26px;
+    width: 84px;
+    height: auto;
   }
   .brand-product {
     font-size: 17px;

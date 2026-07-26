@@ -12,8 +12,6 @@ export function FinBotPage() {
           <span className="brand-group">
             <a
               href="https://axiom-foundation.org"
-              target="_blank"
-              rel="noreferrer"
               className="brand-link"
               aria-label="Axiom Foundation"
             >
@@ -23,9 +21,12 @@ export function FinBotPage() {
                 className="brand-axiom"
               />
             </a>
+            <Link href="/" className="brand-title">
+              <span className="brand-eyebrow">Interactive</span>
+              <span className="brand-name">Chatbot</span>
+            </Link>
           </span>
           <span
-            className="mono"
             style={{
               marginLeft: "auto",
               display: "flex",
@@ -33,28 +34,10 @@ export function FinBotPage() {
               gap: 16,
             }}
           >
-            <a
-              href="https://axiom-foundation.org/demos"
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                fontSize: 13,
-                color: "#374151",
-                textDecoration: "underline",
-                textUnderlineOffset: 3,
-              }}
-            >
+            <a href="https://axiom.org/demos" className="topbar-link">
               All demos
             </a>
-            <Link
-              href="/programs"
-              style={{
-                fontSize: 13,
-                color: "#374151",
-                textDecoration: "underline",
-                textUnderlineOffset: 3,
-              }}
-            >
+            <Link href="/programs" className="topbar-link">
               Programs
             </Link>
           </span>
