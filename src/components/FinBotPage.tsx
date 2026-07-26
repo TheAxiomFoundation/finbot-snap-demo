@@ -22,7 +22,6 @@ export function FinBotPage() {
               />
             </a>
             <Link href="/" className="brand-title">
-              <span className="brand-eyebrow">Interactive</span>
               <span className="brand-name">Chatbot</span>
             </Link>
           </span>

@@ -395,18 +395,10 @@ a.cite:hover { color: #0b1220; }
 /* Divider + demo title block, after the logo. Links to the demo root. */
 .brand-title {
   display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
   border-left: 1px solid var(--hairline);
   padding-left: 12px;
   text-decoration: none;
-}
-.brand-eyebrow {
-  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, Menlo, monospace;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--ink-mute);
 }
 .brand-name {
   font-family: Georgia, "Times New Roman", serif;
