@@ -1,6 +1,7 @@
 import { streamText, type CoreMessage } from "ai";
 
 import { FINBOT_MODEL_NAME, finbotModel, REASONING_EFFORT } from "@/lib/model";
+import { prefetchSection } from "@/lib/prefetch";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { tools } from "@/lib/tools";
 
@@ -19,6 +20,23 @@ export async function POST(req: Request) {
   const body = (await req.json()) as { messages: CoreMessage[] };
   const { messages } = body;
 
+  // Server-side describe pre-fetch: appended AFTER the static prompt so the
+  // cacheable prefix stays byte-identical across requests. Detection runs
+  // over every user message so the section stays stable on follow-up turns.
+  const userText = messages
+    .filter((m) => m.role === "user")
+    .map((m) =>
+      typeof m.content === "string"
+        ? m.content
+        : m.content.map((part) => ("text" in part ? part.text : "")).join(" ")
+    )
+    .join("\n");
+  const prefetch = prefetchSection(userText);
+  if (prefetch) {
+    const slugs = [...prefetch.matchAll(/^### (\S+)/gm)].map((m) => m[1]);
+    console.log(`[finbot:prefetch] injected ${slugs.join(", ")}`);
+  }
+
   // Per-step latency attribution: each step = one LLM round-trip (generation
   // of text and/or tool calls) plus the tool executions inside it. Tool
   // execution time is logged separately by the `timed` wrapper in tools.ts —
@@ -29,8 +47,11 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: finbotModel(),
-    system: buildSystemPrompt(),
+    system: prefetch ? `${buildSystemPrompt()}\n\n${prefetch}` : buildSystemPrompt(),
     messages,
+    // A stalled upstream stream has been observed hanging for 9+ minutes in
+    // dev; fail fast (under the 300s maxDuration) instead of wedging the UI.
+    abortSignal: AbortSignal.timeout(280_000),
     tools,
     maxSteps: 12,
     temperature: 0.2,

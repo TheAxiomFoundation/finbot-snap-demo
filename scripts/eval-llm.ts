@@ -87,7 +87,8 @@ const CASES: EvalCase[] = [
     prompt: "How much WIC would I get for my newborn in Colorado?",
     // Any phrasing of "WIC isn't certified/encoded/among the certified
     // programs" counts; the point is refusing to invent a number.
-    expect_match: [/(hasn'?t|has not|isn'?t|is not|not)[^.]{0,80}(certif|encod)/i],
+    // Apostrophe class covers both ASCII ' and the typographic ’ models emit.
+    expect_match: [/(hasn['’]?t|has not|isn['’]?t|is not|not)[^.]{0,80}(certif|encod)/i],
     check_grounding: true,
   },
 ];

@@ -12,6 +12,7 @@ import { z } from "zod";
 
 import { getCatalog, getProgram, searchOutputs, type CatalogProgram } from "./catalog";
 import { fetchCitation } from "./citations";
+import { describeProgramPayload } from "./describe";
 import { legalIdToUrl } from "./legal-links";
 import {
   UnknownInputError,
@@ -56,36 +57,6 @@ const PeriodSchema = z
     "Evaluation period, YYYY-MM or YYYY. Defaults to the current month (current year for annual programs) — only pass this when the user asks about a different time."
   );
 
-/** Compact one-token slot description for describe_program:
- *  `name:dtype`, `=default` when non-zero/false, `{1=joint,2=separate}` for
- *  enum codes (labels reduced to their distinctive tails), `(eq 12)` for
- *  equality-gate values, trailing `*` for branch-selector flags. */
-function describeSlot(s: CatalogProgram["inputs"][string][number]): string {
-  let out = `${s.name}:${s.dtype}`;
-  if (s.enum) {
-    const labels = Object.values(s.enum);
-    const prefix = commonPrefix(labels.filter(Boolean));
-    const entries = Object.entries(s.enum)
-      .map(([value, label]) => `${value}${label ? `=${label.slice(prefix.length) || label}` : ""}`)
-      .join(",");
-    out += `{${entries}}`;
-  }
-  if (!(s.default === false || s.default === 0 || s.default === "")) out += `=${s.default}`;
-  if (s.eq_hints?.length) out += `(eq ${s.eq_hints.join("|")})`;
-  if (s.variant_switch) out += "*";
-  if (s.aux) out = "~" + out;
-  return out;
-}
-
-function commonPrefix(strings: string[]): string {
-  if (strings.length < 2) return "";
-  let prefix = strings[0];
-  for (const s of strings.slice(1)) {
-    while (!s.startsWith(prefix)) prefix = prefix.slice(0, -1);
-  }
-  return prefix;
-}
-
 function programOr404(slug: string): CatalogProgram | { error: string; known_slugs: string[] } {
   const program = getProgram(slug);
   if (program) return program;
@@ -128,6 +99,9 @@ function timed<A, R>(name: string, execute: (args: A) => Promise<R>): (args: A) 
     const ms = Date.now() - started;
     const bytes = JSON.stringify(result)?.length ?? 0;
     console.log(`[finbot:timing] tool ${name} ${ms}ms ${bytes}B`);
+    if (isErr(result)) {
+      console.warn(`[finbot:tool-error] ${name} args=${JSON.stringify(args)} result=${JSON.stringify(result)}`);
+    }
     if (result && typeof result === "object" && !Array.isArray(result)) {
       return { ...(result as object), _ms: ms } as R;
     }
@@ -195,59 +169,7 @@ export const tools = {
     execute: timed("describe_program", async ({ program: slug, inputs_search }) => {
       const program = programOr404(slug);
       if (isErr(program)) return program;
-
-      const INPUT_CAP = 120;
-      const filter = inputs_search?.toLowerCase();
-      const inputs: Record<string, { slots: string[]; omitted: number; aux_hidden?: number }> = {};
-      const defaultOverrides: Record<string, boolean | number | string> = {};
-      for (const [entity, slots] of Object.entries(program.inputs)) {
-        const matching = slots.filter((s) => !filter || s.name.toLowerCase().includes(filter));
-        // Without a search filter, show only slots on the certified-output
-        // path — the auxiliary majority can't move the headline and would
-        // drown the ones that do (and bloat every later model step).
-        const relevant = filter ? matching : matching.filter((s) => !s.aux);
-        const shown = relevant.slice(0, INPUT_CAP);
-        inputs[entity] = {
-          slots: shown.map(describeSlot),
-          omitted: relevant.length - shown.length,
-          ...(filter ? {} : { aux_hidden: matching.length - relevant.length }),
-        };
-        for (const s of slots) {
-          if (s.default_source === "overlay") defaultOverrides[s.name] = s.default;
-        }
-      }
-      const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
-      return {
-        slug: program.slug,
-        display_name: program.display_name,
-        description: program.description,
-        default_period: defaultPeriodFor(program),
-        primary_entity: program.primary_entity,
-        member_entity: program.member_entity,
-        relations: program.relations
-          .filter((r) => r.used)
-          .map((r) => ({ name: shortName(r.name), related_entity: r.related_entity })),
-        primary_output: program.primary_output,
-        certified_outputs: program.certified_outputs,
-        acknowledged_incomplete: program.acknowledged_incomplete,
-        total_outputs: program.outputs.length,
-        inputs,
-        ...(Object.keys(defaultOverrides).length > 0 && {
-          default_overrides: defaultOverrides,
-          default_overrides_note:
-            "Curated defaults for law-variant/administrative inputs (already applied; override only if the user's situation differs).",
-        }),
-        slot_legend:
-          "{1=a,2=b} enum codes (use ONLY listed codes; unlisted values fall through to the default branch) · (eq N) a value some rules require exactly — set it when ordinarily true and disclose · trailing * = branch selector that flips which rules apply, set deliberately · leading ~ = auxiliary slot NOT on the certified-output path: setting it cannot change the headline, prefer the non-~ sibling",
-        notes: [
-          "Facts you don't provide default to false/0 — state the defaults you rely on.",
-          "aux_hidden counts auxiliary slots not on the certified-output path (they can't change the headline); pass inputs_search to see them.",
-          program.member_entity
-            ? `Members: pass members[] (facts use ${program.member_entity}-scope slots), or a *_size fact to synthesize identical members.`
-            : "This program has no member entity; only top-level facts apply.",
-          "Any of the total_outputs encoded outputs can be read with lookup_value or compute extra_outputs.",
-        ],
-      };
+      return describeProgramPayload(program, inputs_search);
     }),
   }),
 
@@ -268,13 +190,38 @@ export const tools = {
       const program = programOr404(slug);
       if (isErr(program)) return program;
       try {
-        return await computeProgram({
+        // An unknown extra_outputs name must not fail the whole compute — the
+        // main calculation is still valid, and failing it costs the model a
+        // full retry round-trip (the dominant latency flake before this).
+        // Skip unknown names and report them with suggestions instead.
+        const extraErrors: Array<{ name: string; error: string; suggestions?: string[] }> = [];
+        const validExtras = extra_outputs?.filter((name) => {
+          try {
+            resolveOutput(program, name);
+            return true;
+          } catch (err) {
+            if (err instanceof UnknownOutputError) {
+              extraErrors.push({ name, error: err.message, suggestions: err.suggestions });
+              return false;
+            }
+            throw err;
+          }
+        });
+        const result = await computeProgram({
           program,
           period,
           facts,
           members,
-          extraOutputs: extra_outputs,
+          extraOutputs: validExtras,
         });
+        return extraErrors.length === 0
+          ? result
+          : {
+              ...result,
+              extra_outputs_errors: extraErrors,
+              extra_outputs_note:
+                "Unknown extra_outputs names were SKIPPED (suggestions listed) — every other output above is complete and correct. Re-request a skipped output (once, via a suggested name) only if it is essential to the user's question.",
+            };
       } catch (err) {
         try {
           return asToolError(err);
