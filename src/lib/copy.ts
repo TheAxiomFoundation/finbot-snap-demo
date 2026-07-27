@@ -9,5 +9,5 @@ export const PAGE_METADATA = {
   title: "Chatbot — Axiom-grounded benefits assistant",
   description:
     "OpenAI on top of the Axiom rules engine. Benefit and tax calculations for every program certified in rulespec-us, with citations.",
-  alternates: { canonical: "https://axiom.org/chatbot" },
+  alternates: { canonical: "https://axiom.org/gallery/chatbot" },
 };

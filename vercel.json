@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "redirects": [
-    { "source": "/", "destination": "https://axiom.org/chatbot", "permanent": true }
+    { "source": "/", "destination": "https://axiom.org/gallery/chatbot", "permanent": true }
   ],
   "functions": {
     "src/app/api/chat/route.ts": { "maxDuration": 300 },
