@@ -26,7 +26,7 @@ artifacts.lock.json ──▶ scripts/fetch-artifacts.ts ──▶ engine/artifa
 | Chat UI | Next.js 15 App Router + AI SDK (`ai` + `@ai-sdk/openai` + `@ai-sdk/react`) |
 | Engine | `axiom-rules-engine` Rust binary, Modal-hosted in production or spawned locally |
 | Rules content | Compiled artifacts from the pinned `rulespec-us` GitHub release (no repo cloning, no local compilation) |
-| Citations | `axiom-foundation.org/api/axiom/documents/...` + app.axiom-foundation.org legal links |
+| Citations | `axiom.org/api/axiom/documents/...` + app.axiom-foundation.org legal links |
 
 ## Setup
 
