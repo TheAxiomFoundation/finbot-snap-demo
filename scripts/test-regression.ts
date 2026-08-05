@@ -11,6 +11,12 @@
  *    subsection-h-qualifying children linked through
  *    ctc_qualifying_child_of_tax_unit + dependent_of_tax_unit →
  *    CTC = 2 × $2,200 = $4,400, and the $95k taxable-income tax figure.
+ *    Since program-artifacts-4755928bfb8a the federal pipeline selects
+ *    brackets by filing_status (1 = joint), so the case pins the joint
+ *    schedule: regular_tax_before_credits = $10,904 on $95k taxable
+ *    (the July release's single-schedule $15,612 predates that machinery),
+ *    and income_tax_before_credits moved into the acknowledged-incomplete
+ *    section 55 wrapper, so the regular-tax figure is the pinned one.
  * 3. us-md-tca — TANF-family lookup: household of 3 → $773/month maximum
  *    benefit per the FIA IM 26-13 Allowable TCA Monthly Payment schedule.
  *
@@ -69,13 +75,14 @@ async function fiitCtcMembers() {
       taxable_year_months: 12,
       ctc_subsection_h_special_rules_apply: true,
       ctc_phaseout_joint_threshold_applies: true,
+      filing_status: 1,
     },
     members: [child, child],
     extraOutputs: ["ctc_qualifying_children_count"],
   });
   assert.equal(value(result, "ctc_qualifying_children_count"), 2);
   assert.equal(value(result, "ctc_after_advance_payments"), 4400);
-  assert.equal(value(result, "income_tax_before_credits"), 15612);
+  assert.equal(value(result, "regular_tax_before_credits"), 10904);
   console.log("ok   us-fiit members[].relations: 2 qualifying children, $4,400 CTC");
 }
 
