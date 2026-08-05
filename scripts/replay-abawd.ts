@@ -1,5 +1,5 @@
 import { getProgram } from "../src/lib/catalog";
-import { computeProgram } from "../src/lib/request-builder";
+import { computeProgram, type Facts } from "../src/lib/request-builder";
 
 const VERDICTS = [
   "snap_member_abawd_exception_applies",
@@ -8,7 +8,7 @@ const VERDICTS = [
   "snap_member_work_requirement_ineligible",
 ];
 
-async function scenario(label: string, facts: Record<string, unknown>) {
+async function scenario(label: string, facts: Facts) {
   const program = getProgram("us-ca-snap")!;
   const result = await computeProgram({ program, facts, extraOutputs: VERDICTS });
   console.log(`--- ${label}`);
