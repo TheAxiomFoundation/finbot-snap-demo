@@ -32,6 +32,9 @@ import YAML from "yaml";
 
 import { CATALOG_OVERLAY, GLOBAL_DEFAULT_OVERRIDES } from "../src/lib/catalog-overlay";
 
+/** Global override keys that matched at least one slot across all programs. */
+const matchedGlobalOverrides = new Set<string>();
+
 const ROOT = path.resolve(path.join(import.meta.dirname ?? __dirname, ".."));
 const ARTIFACTS_DIR = path.join(ROOT, "engine", "artifacts");
 const CACHE_DIR = path.join(ROOT, ".cache");
@@ -1065,6 +1068,7 @@ function analyzeProgram(
     if (override !== undefined) {
       slot.default = override;
       slot.default_source = "overlay";
+      if (GLOBAL_DEFAULT_OVERRIDES[name] !== undefined) matchedGlobalOverrides.add(name);
     }
 
     // Decision-point annotations.
@@ -1239,6 +1243,15 @@ async function main() {
   const programs = manifest.programs
     .map((mp) => analyzeProgram(mp, corpusDir, warnings))
     .sort((a, b) => a.slug.localeCompare(b.slug));
+
+  // A global default whose slot no longer exists anywhere is a silent no-op
+  // waiting to reintroduce a fail-closed bug (an artifact bump can rename a
+  // slot out from under the overlay). Surface it as a warning every run.
+  for (const key of Object.keys(GLOBAL_DEFAULT_OVERRIDES)) {
+    if (!matchedGlobalOverrides.has(key)) {
+      warnings.push(`GLOBAL_DEFAULT_OVERRIDES["${key}"] matched no slot in any program — renamed or removed by the artifact pin?`);
+    }
+  }
 
   const corpusPaths = collectCorpusPaths(corpusDir);
 

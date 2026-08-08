@@ -185,6 +185,10 @@ export interface BuiltRequest {
     defaulted_slots: number;
     /** Non-aux income-like slots left at a zero default (zero-headline suspects). */
     defaulted_income_slots?: string[];
+    /** Curated overlay defaults that sit ON this answer's rule path and were
+     *  not overridden by caller facts. Present only when non-empty, so a
+     *  question that never touches those rules carries no disclosure noise. */
+    overlay_defaults_in_effect?: Facts;
     notes: string[];
   };
 }
@@ -469,6 +473,23 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       ...(defaultedIncomeSlots.size > 0 && {
         defaulted_income_slots: [...defaultedIncomeSlots],
       }),
+      ...(() => {
+        // Disclose overlay defaults only when the slot can actually reach the
+        // queried answer (non-aux) and the caller didn't set it themselves.
+        const userSet = new Set([
+          ...Object.keys(options.facts ?? {}),
+          ...(options.members ?? []).flatMap((m) => Object.keys(m.facts ?? {})),
+        ]);
+        const inEffect: Facts = {};
+        for (const slots of Object.values(program.inputs)) {
+          for (const s of slots) {
+            if (s.default_source === "overlay" && !s.aux && !userSet.has(s.name)) {
+              inEffect[s.name] = s.default as Facts[string];
+            }
+          }
+        }
+        return Object.keys(inEffect).length > 0 ? { overlay_defaults_in_effect: inEffect } : {};
+      })(),
       notes,
     },
   };

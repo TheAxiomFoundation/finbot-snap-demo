@@ -620,7 +620,6 @@
     "facts": {
      "filing_status": 3,
      "adjusted_gross_income": 18000,
-     "filer_adjusted_earnings": 18000,
      "taxable_income": 0,
      "employee_compensation_includible_in_gross_income": 18000,
      "taxpayer_includes_required_social_security_number_on_return": true
@@ -2205,7 +2204,6 @@
     "facts": {
      "filing_status": 1,
      "adjusted_gross_income": 10000,
-     "filer_adjusted_earnings": 10000,
      "taxable_income": 0,
      "employee_compensation_includible_in_gross_income": 10000,
      "taxpayer_includes_required_social_security_number_on_return": true,
@@ -2253,7 +2251,6 @@
     "facts": {
      "filing_status": 3,
      "adjusted_gross_income": 40000,
-     "filer_adjusted_earnings": 40000,
      "taxable_income": 15850,
      "employee_compensation_includible_in_gross_income": 40000,
      "taxpayer_includes_required_social_security_number_on_return": true

@@ -1,4 +1,4 @@
-import { streamText, type CoreMessage } from "ai";
+import { NoSuchToolError, generateObject, jsonSchema, streamText, type CoreMessage } from "ai";
 
 import { FINBOT_MODEL_NAME, finbotModel, REASONING_EFFORT } from "@/lib/model";
 import { prefetchSection } from "@/lib/prefetch";
@@ -65,6 +65,41 @@ export async function POST(req: Request) {
     // the same surface working on both the chat-completions and Responses
     // adapters. No-op on chat-completions models.
     providerOptions: { openai: { strictSchemas: false, reasoningEffort: REASONING_EFFORT } },
+    // A malformed tool call (invalid JSON args, schema mismatch) used to kill
+    // the whole run and stream the raw fragment into the UI. Re-derive the
+    // arguments once against the tool's schema instead. A hallucinated tool
+    // NAME cannot be repaired into a valid call — returning null rethrows the
+    // original error, which stays the (rare) hard-failure case. A failed
+    // repair also returns null so the original, smaller error surfaces
+    // instead of a ToolCallRepairError.
+    experimental_repairToolCall: async ({ toolCall, parameterSchema, error }) => {
+      if (NoSuchToolError.isInstance(error)) return null;
+      console.warn(`[finbot:tool-repair] ${toolCall.toolName}: ${error.message}`);
+      try {
+        const { object: repairedArgs } = await generateObject({
+          model: finbotModel(),
+          // The SDK hands us the JSON schema directly; it also transmits it
+          // to the provider, so the prompt doesn't need to repeat it.
+          schema: jsonSchema<Record<string, unknown>>(parameterSchema(toolCall)),
+          // Keep the repair inside the route's fail-fast envelope — without
+          // its own signal a stalled repair round-trip rides to the 300s
+          // platform kill.
+          abortSignal: AbortSignal.timeout(60_000),
+          providerOptions: { openai: { strictSchemas: false, reasoningEffort: REASONING_EFFORT } },
+          prompt: [
+            `A call to the tool "${toolCall.toolName}" carried invalid arguments:`,
+            toolCall.args,
+            `Validation error: ${error.message}`,
+            "Emit the corrected arguments, preserving the caller's evident intent. Do not invent facts that are not present in the original arguments.",
+          ].join("\n"),
+        });
+        console.log(`[finbot:tool-repair] ${toolCall.toolName} repaired`);
+        return { ...toolCall, args: JSON.stringify(repairedArgs) };
+      } catch (repairError) {
+        console.error(`[finbot:tool-repair] ${toolCall.toolName} repair failed:`, repairError);
+        return null;
+      }
+    },
     onError({ error }) {
       console.error("[finbot] streamText error:", error);
     },

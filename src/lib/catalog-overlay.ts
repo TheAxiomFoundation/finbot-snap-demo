@@ -35,6 +35,31 @@ export const GLOBAL_DEFAULT_OVERRIDES: Record<string, boolean | number | string>
   // zero the benefit instead.
   days_in_month: 31,
   application_day_of_month: 1,
+  // 7 CFR 273.7(a) general work requirement: the compliant judgment is a
+  // conjunction of procedural facts that are administratively true for a
+  // fresh applicant — the state agency registers members at application
+  // (273.7(a)(2)(i)), and the "if assigned / if referred / if offered"
+  // conditionals are vacuously satisfied before any assignment exists.
+  // Left at false they zero every non-exempt adult's benefit in programs
+  // that compose the work gate (e.g. us-ny-snap), while programs that don't
+  // compose it stay unaffected — the source of cross-state $0 flakes.
+  // Genuine noncompliance is still expressible by setting one false.
+  member_registered_for_work_or_registered_by_state: true,
+  member_participated_in_snap_et_if_assigned: true,
+  member_participated_in_workfare_if_assigned: true,
+  member_provided_employment_status_or_availability_information: true,
+  member_reported_to_referred_suitable_employer_if_referred: true,
+  member_accepted_bona_fide_suitable_employment_offer_if_offered: true,
+  // Colorado's encoding spells the same 273.7(a) compliance facts its own
+  // way (10 CCR 2506-1 restates the federal rule). Off the certified path
+  // today, but cover them so a future artifact pin promoting them cannot
+  // silently reintroduce the $0 flake, and so describe_program never shows
+  // a fresh applicant as compliant and noncompliant on the same legal fact.
+  member_registered_for_work_at_initial_application_or_recognition_by_required_signature: true,
+  member_registered_for_work_at_recognition_by_required_signature: true,
+  member_provided_eligibility_technician_sufficient_employment_status_or_availability_information: true,
+  member_reported_to_employer_if_referred_by_local_office_and_potential_employment_was_suitable: true,
+  member_accepted_offer_of_suitable_employment: true,
 };
 
 export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {

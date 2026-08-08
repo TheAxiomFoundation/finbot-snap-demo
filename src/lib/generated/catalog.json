@@ -6029,7 +6029,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_age",
@@ -6212,12 +6213,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -6243,7 +6246,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_receives_blindness_or_disability_benefits",
@@ -6268,7 +6272,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -6278,7 +6283,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_responsible_for_dependent_child_under_six_or_incapacitated_person",
@@ -11813,7 +11819,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -11992,13 +11999,15 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -12022,7 +12031,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -12054,7 +12064,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -12066,7 +12077,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -20017,7 +20029,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_age",
@@ -20233,12 +20246,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -20261,7 +20276,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_receives_blindness_or_disability_benefits",
@@ -20290,7 +20306,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -20301,7 +20318,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_responsible_for_dependent_child_under_six_or_incapacitated_person",
@@ -45659,12 +45677,14 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_accepted_offer_of_suitable_employment",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -45850,12 +45870,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -45884,13 +45906,15 @@
      {
       "name": "member_provided_eligibility_technician_sufficient_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_provided_qualified_health_professional_statement_of_unfitness_for_employment",
@@ -45942,19 +45966,22 @@
      {
       "name": "member_registered_for_work_at_initial_application_or_recognition_by_required_signature",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
       "name": "member_registered_for_work_at_recognition_by_required_signature",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -45965,13 +45992,15 @@
      {
       "name": "member_reported_to_employer_if_referred_by_local_office_and_potential_employment_was_suitable",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_required_to_provide_ssn",
@@ -55626,7 +55655,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_age",
@@ -55761,12 +55791,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -55786,7 +55818,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_receives_blindness_or_disability_benefits",
@@ -55811,7 +55844,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -55821,7 +55855,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_responsible_for_dependent_child_under_six_or_incapacitated_person",
@@ -86925,7 +86960,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_age",
@@ -87065,12 +87101,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -87090,7 +87128,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_receives_blindness_or_disability_benefits",
@@ -87135,7 +87174,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -87145,7 +87185,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_responsible_for_dependent_child_under_six_or_incapacitated_person",
@@ -98362,7 +98403,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_age",
@@ -98533,12 +98575,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -98570,7 +98614,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_receives_blindness_or_disability_benefits",
@@ -98595,7 +98640,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -98605,7 +98651,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_responsible_for_dependent_child_under_six_or_incapacitated_person",
@@ -130127,7 +130174,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_age",
@@ -130376,12 +130424,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -130407,7 +130457,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_receives_blindness_or_disability_benefits",
@@ -130432,7 +130483,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -130442,7 +130494,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_responsible_for_dependent_child_under_six_or_incapacitated_person",
@@ -137607,7 +137660,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_age",
@@ -137786,12 +137840,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -137814,7 +137870,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_receives_blindness_or_disability_benefits",
@@ -137848,7 +137905,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -137859,7 +137917,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_responsible_for_dependent_child_under_six_or_incapacitated_person",
@@ -139060,7 +139119,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -139126,13 +139186,15 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -139156,7 +139218,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -139174,7 +139237,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -139186,7 +139250,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -176658,7 +176723,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_age",
@@ -176817,12 +176883,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -176848,7 +176916,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_receives_blindness_or_disability_benefits",
@@ -176879,7 +176948,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -176889,7 +176959,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_responsible_for_dependent_child_under_six_or_incapacitated_person",
@@ -195104,7 +195175,8 @@
      {
       "name": "member_accepted_bona_fide_suitable_employment_offer_if_offered",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_age",
@@ -195281,12 +195353,14 @@
      {
       "name": "member_participated_in_snap_et_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participated_in_workfare_if_assigned",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_participates_in_abawd_work_program_20_hours_weekly",
@@ -195306,7 +195380,8 @@
      {
       "name": "member_provided_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_receives_blindness_or_disability_benefits",
@@ -195331,7 +195406,8 @@
      {
       "name": "member_registered_for_work_or_registered_by_state",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_regular_participant_in_drug_or_alcohol_treatment",
@@ -195341,7 +195417,8 @@
      {
       "name": "member_reported_to_referred_suitable_employer_if_referred",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "member_responsible_for_dependent_child_under_six_or_incapacitated_person",
