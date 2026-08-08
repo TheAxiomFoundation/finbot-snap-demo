@@ -50,6 +50,16 @@ export const GLOBAL_DEFAULT_OVERRIDES: Record<string, boolean | number | string>
   member_provided_employment_status_or_availability_information: true,
   member_reported_to_referred_suitable_employer_if_referred: true,
   member_accepted_bona_fide_suitable_employment_offer_if_offered: true,
+  // Colorado's encoding spells the same 273.7(a) compliance facts its own
+  // way (10 CCR 2506-1 restates the federal rule). Off the certified path
+  // today, but cover them so a future artifact pin promoting them cannot
+  // silently reintroduce the $0 flake, and so describe_program never shows
+  // a fresh applicant as compliant and noncompliant on the same legal fact.
+  member_registered_for_work_at_initial_application_or_recognition_by_required_signature: true,
+  member_registered_for_work_at_recognition_by_required_signature: true,
+  member_provided_eligibility_technician_sufficient_employment_status_or_availability_information: true,
+  member_reported_to_employer_if_referred_by_local_office_and_potential_employment_was_suitable: true,
+  member_accepted_offer_of_suitable_employment: true,
 };
 
 export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {

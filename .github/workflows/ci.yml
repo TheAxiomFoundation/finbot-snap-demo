@@ -18,6 +18,14 @@ jobs:
         run: bun run typecheck
       - name: Legal-link tests
         run: bun run test:legal-links
+      - name: Catalog freshness
+        # The committed catalog must equal what the pinned artifacts
+        # generate — otherwise overlay/generator edits (or artifact renames
+        # that silently orphan a global default) ship without taking effect.
+        run: |
+          bun run artifacts:fetch
+          bun run catalog:generate
+          git diff --exit-code src/lib/generated/catalog.json
       - name: Build
         # next build needs no secrets: API routes (OpenAI, engine) are
         # dynamic and only read env at request time. The committed

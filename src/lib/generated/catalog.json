@@ -45683,7 +45683,8 @@
      {
       "name": "member_accepted_offer_of_suitable_employment",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -45905,7 +45906,8 @@
      {
       "name": "member_provided_eligibility_technician_sufficient_employment_status_or_availability_information",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -45964,13 +45966,15 @@
      {
       "name": "member_registered_for_work_at_initial_application_or_recognition_by_required_signature",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
       "name": "member_registered_for_work_at_recognition_by_required_signature",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -45988,7 +45992,8 @@
      {
       "name": "member_reported_to_employer_if_referred_by_local_office_and_potential_employment_was_suitable",
       "dtype": "bool",
-      "default": false,
+      "default": true,
+      "default_source": "overlay",
       "aux": true
      },
      {
