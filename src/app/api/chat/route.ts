@@ -1,4 +1,5 @@
-import { streamText, type CoreMessage } from "ai";
+import { NoSuchToolError, generateObject, streamText, type CoreMessage } from "ai";
+import type { z } from "zod";
 
 import { FINBOT_MODEL_NAME, finbotModel, REASONING_EFFORT } from "@/lib/model";
 import { prefetchSection } from "@/lib/prefetch";
@@ -65,6 +66,29 @@ export async function POST(req: Request) {
     // the same surface working on both the chat-completions and Responses
     // adapters. No-op on chat-completions models.
     providerOptions: { openai: { strictSchemas: false, reasoningEffort: REASONING_EFFORT } },
+    // A malformed tool call (invalid JSON args, schema mismatch) used to kill
+    // the whole run and stream the raw fragment into the UI. Re-derive the
+    // arguments once against the tool's schema instead; unknown tool names
+    // fall through to the structured nearest-match error the tools already
+    // return, which the model self-corrects from.
+    experimental_repairToolCall: async ({ toolCall, tools, parameterSchema, error }) => {
+      if (NoSuchToolError.isInstance(error)) return null;
+      console.warn(`[finbot:tool-repair] ${toolCall.toolName}: ${error.message}`);
+      const tool = tools[toolCall.toolName as keyof typeof tools];
+      const { object: repairedArgs } = await generateObject({
+        model: finbotModel(),
+        schema: tool.parameters as z.ZodType<Record<string, unknown>>,
+        prompt: [
+          `The model called the tool "${toolCall.toolName}" with invalid arguments:`,
+          JSON.stringify(toolCall.args),
+          `The tool accepts the following schema:`,
+          JSON.stringify(parameterSchema(toolCall)),
+          "Emit the corrected arguments, preserving the caller's evident intent. Do not invent facts that are not present in the original arguments.",
+        ].join("\n"),
+      });
+      console.log(`[finbot:tool-repair] ${toolCall.toolName} repaired`);
+      return { ...toolCall, args: JSON.stringify(repairedArgs) };
+    },
     onError({ error }) {
       console.error("[finbot] streamText error:", error);
     },

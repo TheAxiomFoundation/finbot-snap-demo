@@ -35,6 +35,21 @@ export const GLOBAL_DEFAULT_OVERRIDES: Record<string, boolean | number | string>
   // zero the benefit instead.
   days_in_month: 31,
   application_day_of_month: 1,
+  // 7 CFR 273.7(a) general work requirement: the compliant judgment is a
+  // conjunction of procedural facts that are administratively true for a
+  // fresh applicant — the state agency registers members at application
+  // (273.7(a)(2)(i)), and the "if assigned / if referred / if offered"
+  // conditionals are vacuously satisfied before any assignment exists.
+  // Left at false they zero every non-exempt adult's benefit in programs
+  // that compose the work gate (e.g. us-ny-snap), while programs that don't
+  // compose it stay unaffected — the source of cross-state $0 flakes.
+  // Genuine noncompliance is still expressible by setting one false.
+  member_registered_for_work_or_registered_by_state: true,
+  member_participated_in_snap_et_if_assigned: true,
+  member_participated_in_workfare_if_assigned: true,
+  member_provided_employment_status_or_availability_information: true,
+  member_reported_to_referred_suitable_employer_if_referred: true,
+  member_accepted_bona_fide_suitable_employment_offer_if_offered: true,
 };
 
 export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
