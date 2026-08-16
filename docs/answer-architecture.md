@@ -292,11 +292,15 @@ Three things earn their place:
 
 ### 7.3 Roadmap
 
-**Phase 0 — Surface what already exists.** Set `mode: "explain"`, stop discarding
-`trace`, thread exact provenance and stamps into the response, and promote the
-eval's `grounded` predicate into a runtime claim verifier. No new vocabulary, no
-new model behavior. This phase is almost entirely deletion of workarounds, and it
-delivers the transparency claim honestly for the first time.
+**Phase 0 — Surface what already exists.** Stop discarding `trace`, thread exact
+provenance and stamps into the response, and promote the eval's `grounded`
+predicate into a runtime claim verifier. No new vocabulary, no new model
+behavior. This phase is almost entirely deletion of workarounds, and it delivers
+the transparency claim honestly for the first time. (Correction from the trace
+investigation, §10: `buildRequest` already defaults to `mode: "explain"` —
+`request-builder.ts:462` — so the trace is computed and shipped on *every*
+compute today. Phase 0 has zero engine cost; it is purely "stop dropping the
+data.")
 
 **Phase 1 — Canonical Fact Model + bindings.** Offline, tested, per-program.
 The expensive one (§5). Retires the largest block of prompt rules.
@@ -342,3 +346,65 @@ as if public (§3) is what keeps that true.
 4. **Binding ownership.** Bindings encode legal judgment about which slot means
    which real-world fact. That is rulespec-author work, not app work — should
    bindings live in this repo at all, or upstream alongside the encodings?
+
+## 10. Appendix — trace investigation findings (2026-08-16)
+
+Ran with the engine built locally at the locked ref (`ffd8213`) against the
+pinned artifacts, using `scripts/trace-dump.ts` (the ny-snap-family3 oracle
+case through the production `buildRequest` path). Answers to §9 question 3 and
+inputs to Phase 0:
+
+**The app is already in explain mode.** `buildRequest` defaults `mode` to
+`"explain"` (`request-builder.ts:462`), so every production compute already
+computes and ships the trace; `shapeResult` reads `outputs` and drops the rest.
+Phase 0 needs no engine or transport change at all.
+
+**Trace shape** (`engine/src/api.rs`, `DerivedTraceNode`): a map keyed by public
+derived key, one node per rule *actually evaluated* — `collect_trace` only
+includes cached evaluations, so the trace is the fired closure, not the whole
+program. Each node carries `name`, `id` (legal id), `value`/`outcome`, `source`
+(citation string), `source_url`, `dependencies` (public keys), and — when the
+rule declares rounding — `rounding` + `pre_rounding_value`. Per-query-group:
+household- and person-entity queries each get their own trace.
+
+**Measured sizes** (local binary, includes ~80–150 ms artifact load in wall):
+
+| Program | Engine wall | Trace | Nodes evaluated / encoded |
+|---|---:|---:|---:|
+| us-ny-snap | 17 ms | 20.4 KB | 44 / 176 (+20 person-entity) |
+| us-co-snap | 33 ms | 49 KB | 114 / 791 |
+| us-fiit | 12 ms | 20 KB | 54 / 150 |
+
+In the ny-snap run, **100% of nodes carried a legal id and 100% carried a
+source citation**. 20–50 KB is trivially fine server-side and clearly too big
+for model context — confirming the envelope design: trace stays server-side,
+provenance rides to the UI as stream annotations, the model sees only compact
+values.
+
+**The §7.2 envelope is derivable today.** A ~20-line walk over `dependencies`
+renders the complete legal derivation with no model involvement — abridged:
+
+```
+snap_benefit = $572           ← 7 CFR 273.10(e)(2)(ii)
+  snap_eligible = HOLDS       ← NY SNAP FY 2026 composition
+    ny_snap_categorically_eligible = HOLDS   ← 18-NYCRR 387/14(a)(5)
+      ...residual_130_percent_path = HOLDS   (4 sibling paths NOT_HOLDS)
+    snap_resource_eligible = HOLDS           ← 7 CFR 273.8(a),(b)
+  snap_monthly_allotment = $572              ← 7 CFR 273.10(e)(2)(ii)
+    snap_calculated_..._before_minimums = $572
+      snap_maximum_allotment = $785          ← USDA FY 2026 allotments
+      snap_net_monthly_income = $710         ← 7 CFR 273.10(e)(1)(i)
+```
+
+`rule_path` is a BFS over `dependencies`; `parameters_used` are the leaf nodes;
+`explain_value` is a subtree walk. Dependencies may point at keys absent from
+the trace — short-circuited branches (`snap_minimum_benefit`, member checks the
+gate never reached). That is signal, not noise: the envelope can state which
+branches the determination never needed.
+
+**One incidental confirmation of §2.2:** while writing the size sweep, two
+guessed slot names (`tax_unit_size`, plain `taxable_income` on us-ny-income-tax)
+failed exactly the way the model's do — the correct names were
+unguessable program-specific vocabulary. The error payload's nearest-match
+suggestions were also wrong-by-plausibility. Deterministic bindings remain the
+fix.
