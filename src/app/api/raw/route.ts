@@ -8,11 +8,14 @@ import { generateText, type CoreMessage } from "ai";
 
 import { RAW_SYSTEM } from "@/lib/copy";
 import { finbotModel, REASONING_EFFORT } from "@/lib/model";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
+  const limited = enforceRateLimit(req);
+  if (limited) return limited;
   if (!process.env.OPENAI_API_KEY) {
     return Response.json({ error: "OPENAI_API_KEY not set on the server." }, { status: 500 });
   }
