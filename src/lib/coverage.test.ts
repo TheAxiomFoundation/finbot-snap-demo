@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { getCatalog } from "./catalog";
-import { coverageSentence, summarizeCoverage } from "./coverage";
+import { coverageSentence, incompleteSentence, summarizeCoverage } from "./coverage";
 
 const program = fc.record({
   slug: fc.string({ minLength: 1, maxLength: 12 }),
@@ -32,23 +32,47 @@ describe("summarizeCoverage invariants", () => {
     );
   });
 
-  it("counts incomplete programs by their headline output, bounded by the total", () => {
+  it("counts flagged programs: headline-flagged ≤ any-flagged ≤ total, and groups sum to the total", () => {
     fc.assert(
       fc.property(fc.array(program, { maxLength: 60 }), (programs) => {
         const summary = summarizeCoverage(programs);
-        const expected = programs.filter((p) => p.acknowledged_incomplete.includes(p.primary_output)).length;
-        expect(summary.incomplete).toBe(expected);
-        expect(summary.incomplete).toBeLessThanOrEqual(summary.total);
+        const headline = programs.filter((p) => p.acknowledged_incomplete.includes(p.primary_output)).length;
+        const any = programs.filter((p) => p.acknowledged_incomplete.length > 0).length;
+        expect(summary.incomplete).toBe(headline);
+        expect(summary.flagged).toBe(any);
+        expect(summary.incomplete).toBeLessThanOrEqual(summary.flagged);
+        expect(summary.flagged).toBeLessThanOrEqual(summary.total);
+        expect(summary.groups.reduce((n, g) => n + g.flagged, 0)).toBe(summary.flagged);
+        for (const g of summary.groups) expect(g.flagged).toBeLessThanOrEqual(g.count);
       })
     );
   });
 
-  it("only claims a state count for state-level programs", () => {
+  it("states the flagged counts exactly, and says nothing when nothing is flagged", () => {
+    fc.assert(
+      fc.property(fc.array(program, { maxLength: 60 }), (programs) => {
+        const summary = summarizeCoverage(programs);
+        const sentence = incompleteSentence(summary);
+        if (summary.flagged === 0) {
+          expect(sentence).toBe("");
+          return;
+        }
+        const numbers = (sentence.match(/\d+/g) ?? []).map(Number);
+        expect(numbers).toContain(summary.flagged === summary.incomplete ? summary.incomplete : summary.flagged);
+        if (summary.incomplete > 0) expect(numbers).toContain(summary.incomplete);
+      })
+    );
+  });
+
+  it("only claims a state count for state-level programs, and counts each state once", () => {
     fc.assert(
       fc.property(fc.array(program, { maxLength: 60 }), (programs) => {
         for (const group of summarizeCoverage(programs).groups) {
           if (group.key === "snap" || group.key === "cash" || group.key === "state-income-tax") {
             expect(group.members.every((m) => /^[A-Z]{2}$/.test(m))).toBe(true);
+            expect(new Set(group.members).size).toBe(group.members.length);
+            // The number in the phrase is the number of distinct states listed.
+            expect(Number(/\d+/.exec(group.phrase)?.[0])).toBe(group.members.length);
           }
         }
       })
@@ -81,6 +105,14 @@ describe("summarizeCoverage on the pinned catalog", () => {
     expect(sentence).toMatch(/, and \d+ other programs?$/);
   });
 
+  it("counts flags the way the catalog does", () => {
+    const flagged = catalog.programs.filter((p) => p.acknowledged_incomplete.length > 0).length;
+    const headline = catalog.programs.filter((p) => p.acknowledged_incomplete.includes(p.primary_output)).length;
+    expect(summary.flagged).toBe(flagged);
+    expect(summary.incomplete).toBe(headline);
+    expect(incompleteSentence(summary)).toContain(String(flagged));
+  });
+
   it("lists SNAP states as postal codes that match the catalog", () => {
     const snap = summary.groups.find((g) => g.key === "snap")!;
     const expected = catalog.programs
@@ -92,11 +124,11 @@ describe("summarizeCoverage on the pinned catalog", () => {
 });
 
 describe("coverageSentence", () => {
-  const group = (phrase: string) => ({ key: "other" as const, heading: "", phrase, members: [], count: 1 });
+  const group = (phrase: string) => ({ key: "other" as const, heading: "", phrase, members: [], count: 1, flagged: 0 });
   it("joins one, two, and three phrases", () => {
-    expect(coverageSentence({ total: 1, incomplete: 0, groups: [group("A")] })).toBe("A");
-    expect(coverageSentence({ total: 2, incomplete: 0, groups: [group("A"), group("B")] })).toBe("A and B");
-    expect(coverageSentence({ total: 3, incomplete: 0, groups: [group("A"), group("B"), group("C")] })).toBe(
+    expect(coverageSentence({ total: 1, incomplete: 0, flagged: 0, groups: [group("A")] })).toBe("A");
+    expect(coverageSentence({ total: 2, incomplete: 0, flagged: 0, groups: [group("A"), group("B")] })).toBe("A and B");
+    expect(coverageSentence({ total: 3, incomplete: 0, flagged: 0, groups: [group("A"), group("B"), group("C")] })).toBe(
       "A, B, and C"
     );
   });

@@ -248,12 +248,16 @@ async function evaluate(c: EvalCase): Promise<{ pass: boolean; notes: string[] }
       notes.push(`reply matches forbidden ${re}`);
     }
   }
-  // Every case: the reply may not present results as certified, official,
-  // or guaranteed (the system prompt forbids it; see prompts.ts).
-  const overclaim = /\b(certified|guaranteed|official determination)\b/i.exec(turn.text);
-  if (overclaim && !/\bnot (an? )?(certified|guaranteed|official)/i.test(turn.text)) {
-    pass = false;
-    notes.push(`reply overclaims: "${overclaim[0]}"`);
+  // Every case: the reply may not present results as certified, verified,
+  // validated, guaranteed, or official (the system prompt forbids it; see
+  // prompts.ts). A match only passes when a negation sits right before it
+  // ("not an official determination"), so one "not" elsewhere can't excuse it.
+  for (const m of turn.text.matchAll(/\b(certified|verified|validated|guaranteed|official (?:determination|decision|answer))\b/gi)) {
+    const before = turn.text.slice(Math.max(0, m.index! - 24), m.index);
+    if (!/(\bnot|n['’]t|\bnever|\bno)\b[^.!?]*$/i.test(before)) {
+      pass = false;
+      notes.push(`reply overclaims: "${m[0]}"`);
+    }
   }
 
   notes.push(`tools: ${turn.toolCalls.map((t) => t.toolName).join(" → ") || "none"}`);

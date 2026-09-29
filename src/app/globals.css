@@ -476,6 +476,9 @@ a.cite:hover { color: #0b1220; }
   font-size: 13.5px;
   line-height: 1.55;
   color: var(--ink-soft);
+  /* Clear the sticky topbar when the composer's "About this assistant"
+     link jumps here. */
+  scroll-margin-top: 88px;
 }
 .session-notice-title {
   font-size: 14.5px;
@@ -528,6 +531,7 @@ a.cite:hover { color: #0b1220; }
   text-underline-offset: 3px;
 }
 .session-notice-details a { font-size: 12.5px; }
+.session-notice-flagged { color: var(--ink-mute); }
 .session-notice-foot {
   margin: 10px 0 0;
   font-size: 12.5px;

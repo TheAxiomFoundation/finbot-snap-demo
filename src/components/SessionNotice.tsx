@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import type { CoverageSummary } from "@/lib/coverage";
-import { coverageSentence } from "@/lib/coverage";
+import { coverageSentence, incompleteSentence } from "@/lib/coverage";
 import { MODEL_PROVIDER } from "@/lib/model-label";
 
 /**
@@ -41,36 +41,35 @@ export function SessionNotice({
         <li>
           <strong>For an official answer, go to the agency.</strong> Only the agency that runs a program can
           decide whether you qualify and how much you would get:{" "}
-          <a href="https://www.fna.usda.gov/snap/state-directory" target="_blank" rel="noreferrer">
-            SNAP offices by state
-          </a>
-          ,{" "}
-          <a href="https://www.usa.gov/benefits" target="_blank" rel="noreferrer">
-            other benefits
-          </a>
-          ,{" "}
-          <a href="https://www.irs.gov/help/let-us-help-you" target="_blank" rel="noreferrer">
-            IRS help
-          </a>
-          .
+          <ExternalLink href="https://www.fna.usda.gov/snap/state-directory">SNAP offices by state</ExternalLink>,{" "}
+          <ExternalLink href="https://www.usa.gov/benefits">other benefits</ExternalLink>,{" "}
+          <ExternalLink href="https://www.irs.gov/help/let-us-help-you">IRS help</ExternalLink> or your
+          state tax agency.
         </li>
         <li>
           <strong>It covers {coverage.total} programs:</strong> {coverageSentence(coverage)}. Axiom
-          encoded their rules from statutes, regulations, and agency guidance.
-          {coverage.incomplete > 0 && (
-            <>
-              {" "}
-              For {coverage.incomplete} of them, the main result is flagged as not fully encoded yet.
-            </>
-          )}{" "}
-          It can&rsquo;t estimate other programs or places.{" "}
+          encoded their rules from statutes, regulations, and agency guidance. {incompleteSentence(coverage)}{" "}
+          It is set up to estimate only these programs and should tell you when a question falls outside
+          them.{" "}
           <details className="session-notice-details">
-            <summary>Where each program applies</summary>
+            <summary>What each group includes</summary>
             <dl>
               {coverage.groups.map((group) => (
                 <div key={group.key}>
                   <dt>{group.heading}</dt>
-                  <dd>{group.members.join(", ")}</dd>
+                  <dd>
+                    {group.members.join(", ")}
+                    {group.flagged > 0 && (
+                      <span className="session-notice-flagged">
+                        {" "}
+                        · {group.flagged === group.count
+                          ? group.count === 1
+                            ? "has flagged results"
+                            : "all have flagged results"
+                          : `${group.flagged} of ${group.count} have flagged results`}
+                      </span>
+                    )}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -79,17 +78,26 @@ export function SessionNotice({
         </li>
         <li>
           <strong>Your messages are sent to {MODEL_PROVIDER},</strong> and the household details you give
-          go to Axiom&rsquo;s rules engine to run the calculation. Don&rsquo;t include names, Social Security
-          numbers, or case or account numbers.
+          go to Axiom&rsquo;s rules engine, hosted on Modal, to run the calculation. OpenAI may keep messages
+          for a time, this site&rsquo;s server logs may record the details when a calculation fails, and the
+          page uses Google Analytics and PostHog. Don&rsquo;t include names, Social Security numbers, or case
+          or account numbers.
         </li>
       </ul>
       <p className="session-notice-foot">
         For adults, or with a parent&rsquo;s or guardian&rsquo;s permission. Spot a wrong answer?{" "}
-        <a href="https://axiom.org/contact" target="_blank" rel="noreferrer">
-          Tell us
-        </a>
-        .
+        <ExternalLink href="https://axiom.org/contact">Tell us</ExternalLink>.
       </p>
     </section>
+  );
+}
+
+/** New-tab link that says so to screen readers: leaving would drop the chat. */
+function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a href={href} target="_blank" rel="noreferrer">
+      {children}
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
   );
 }

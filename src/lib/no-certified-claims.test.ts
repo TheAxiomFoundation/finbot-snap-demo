@@ -7,7 +7,7 @@
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { getCatalog } from "./catalog";
 import { INPUT_PLACEHOLDER, PAGE_METADATA, RAW_SYSTEM } from "./copy";
@@ -16,6 +16,19 @@ import { prefetchSection } from "./prefetch";
 import { buildSystemPrompt } from "./prompts";
 import { buildRequest, shapeResult } from "./request-builder";
 import { tools } from "./tools";
+
+// lookup_value runs the engine; stub it so the payload test stays offline.
+vi.mock("./engine", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./engine")>()),
+  runCompiled: async () => ({
+    metadata: { requested_mode: "fast", actual_mode: "fast", fallback_reason: null },
+    results: [],
+  }),
+}));
+
+// Tool executes take (args, options); these tools ignore options.
+const run = (t: { execute?: unknown }, args: object) =>
+  (t.execute as (args: object, options: object) => Promise<unknown>)(args, {});
 
 // The standalone word, not snake_case legal slot names that happen to
 // contain it (`..._physician_disability_certification_...`).
@@ -49,6 +62,18 @@ describe("no certified claims", () => {
     expect(prefetchSection(everyState) ?? "").not.toMatch(CERTIFIED);
   });
 
+  it("list_programs and lookup_value results", async () => {
+    const listed = JSON.stringify(await run(tools.list_programs, { search: "income" }));
+    expect(listed).toContain("published_outputs");
+    expect(listed).toContain("published_output");
+    expect(listed).not.toMatch(CERTIFIED);
+    for (const program of getCatalog().programs) {
+      const looked = JSON.stringify(await run(tools.lookup_value, { program: program.slug, output: program.primary_output }));
+      expect(looked, program.slug).toContain("published_output");
+      expect(looked, program.slug).not.toMatch(CERTIFIED);
+    }
+  });
+
   it("compute results, including the auxiliary-slot warning", () => {
     let warned = 0;
     for (const program of getCatalog().programs) {
@@ -67,14 +92,14 @@ describe("no certified claims", () => {
     expect(warned).toBeGreaterThan(0);
   });
 
-  it("page and component source, outside reads of the legacy catalog field", () => {
+  it("page, route, and component source, outside reads of the legacy catalog field", () => {
     const root = path.resolve(__dirname, "..");
     const files: string[] = [];
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir)) {
         const full = path.join(dir, entry);
         if (statSync(full).isDirectory()) walk(full);
-        else if (full.endsWith(".tsx")) files.push(full);
+        else if (/\.tsx?$/.test(full)) files.push(full);
       }
     };
     walk(path.join(root, "app"));

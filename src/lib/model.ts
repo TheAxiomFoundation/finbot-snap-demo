@@ -12,7 +12,10 @@
  */
 import { openai } from "@ai-sdk/openai";
 
-export const FINBOT_MODEL_NAME = process.env.FINBOT_MODEL ?? "gpt-5.5";
+// `||`, not `??`: .env.example ships `FINBOT_MODEL=`, and an empty value
+// must fall back too (it would otherwise break API calls and render "runs on
+// OpenAI's ." in the session notice).
+export const FINBOT_MODEL_NAME = process.env.FINBOT_MODEL?.trim() || "gpt-5.5";
 
 /** GPT-5 family enforces strict tool schemas by default — every property in
  *  a tool's parameters must be in `required`, which conflicts with our

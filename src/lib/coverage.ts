@@ -19,7 +19,11 @@ export interface CoverageGroup {
   heading: string;
   /** What the group covers, e.g. state postal codes or program names. */
   members: string[];
+  /** Programs in the group. */
   count: number;
+  /** Programs in the group with any output the program spec flags as not
+   *  fully encoded. */
+  flagged: number;
 }
 
 export interface CoverageSummary {
@@ -27,17 +31,23 @@ export interface CoverageSummary {
   /** Programs whose headline output the program spec flags as not fully
    *  encoded (primary_output ∈ acknowledged_incomplete). */
   incomplete: number;
+  /** Programs with any flagged output (acknowledged_incomplete nonempty);
+   *  always ≥ incomplete. */
+  flagged: number;
   groups: CoverageGroup[];
 }
 
 const isState = (jurisdiction: string) => /^us-[a-z]{2}$/.test(jurisdiction);
 const postal = (jurisdiction: string) => jurisdiction.slice(3).toUpperCase();
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+const hasFlag = (p: CoverageProgram) => p.acknowledged_incomplete.length > 0;
 
 interface GroupSpec {
   key: Exclude<CoverageGroup["key"], "other">;
   heading: string;
   match: (p: CoverageProgram) => boolean;
+  /** Phrase from the member count: distinct states for state groups (so a
+   *  state with two cash programs still counts once), programs otherwise. */
   phrase: (n: number) => string;
 }
 
@@ -87,15 +97,17 @@ export function summarizeCoverage<P extends CoverageProgram>(
   for (const spec of GROUP_SPECS) {
     const members = buckets.get(spec.key);
     if (!members?.length) continue;
+    const listed =
+      spec.key === "federal-income-tax"
+        ? members.map(displayName)
+        : [...new Set(members.map((p) => postal(p.jurisdiction)))].sort();
     groups.push({
       key: spec.key,
       heading: spec.heading,
-      phrase: spec.phrase(members.length),
-      members:
-        spec.key === "federal-income-tax"
-          ? members.map(displayName)
-          : [...new Set(members.map((p) => postal(p.jurisdiction)))].sort(),
+      phrase: spec.phrase(spec.key === "federal-income-tax" ? members.length : listed.length),
+      members: listed,
       count: members.length,
+      flagged: members.filter(hasFlag).length,
     });
   }
   const other = buckets.get("other");
@@ -106,12 +118,14 @@ export function summarizeCoverage<P extends CoverageProgram>(
       phrase: `${other.length} other ${plural(other.length, "program", "programs")}`,
       members: other.map(displayName).sort(),
       count: other.length,
+      flagged: other.filter(hasFlag).length,
     });
   }
 
   return {
     total: programs.length,
     incomplete: programs.filter((p) => p.acknowledged_incomplete.includes(p.primary_output)).length,
+    flagged: programs.filter(hasFlag).length,
     groups,
   };
 }
@@ -123,4 +137,18 @@ export function coverageSentence(summary: CoverageSummary): string {
   if (phrases.length <= 1) return phrases.join("");
   if (phrases.length === 2) return `${phrases[0]} and ${phrases[1]}`;
   return `${phrases.slice(0, -1).join(", ")}, and ${phrases[phrases.length - 1]}`;
+}
+
+/** How much of the coverage the program specs flag as not fully encoded,
+ *  in one sentence ("" when nothing is flagged). */
+export function incompleteSentence(summary: CoverageSummary): string {
+  const { flagged, incomplete } = summary;
+  if (flagged === 0) return "";
+  if (incomplete === 0) {
+    return `${flagged} of them have some results flagged as not fully encoded yet.`;
+  }
+  if (incomplete === flagged) {
+    return `For ${incomplete} of them, the main result is flagged as not fully encoded yet.`;
+  }
+  return `${flagged} of them have results flagged as not fully encoded yet, including the main result for ${incomplete}.`;
 }
