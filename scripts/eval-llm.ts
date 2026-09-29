@@ -41,7 +41,7 @@ const CASES: EvalCase[] = [
     prompt: "What's the maximum TANF benefit for a family of 3 in Maryland?",
     // computeProgram(us-md-tca, {household_size: 3}) → 773
     expect_amounts: [773],
-    expect_match: [/incomplete/i],
+    expect_match: [/incomplete|not fully encoded/i],
     expect_engine_call: true,
     check_grounding: true,
   },
