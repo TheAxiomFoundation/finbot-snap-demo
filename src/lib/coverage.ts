@@ -145,10 +145,10 @@ export function incompleteSentence(summary: CoverageSummary): string {
   const { flagged, incomplete } = summary;
   if (flagged === 0) return "";
   if (incomplete === 0) {
-    return `${flagged} of them have some results flagged as not fully encoded yet.`;
+    return `${flagged} of them ${plural(flagged, "has", "have")} some results flagged as not fully encoded yet.`;
   }
   if (incomplete === flagged) {
     return `For ${incomplete} of them, the main result is flagged as not fully encoded yet.`;
   }
-  return `${flagged} of them have results flagged as not fully encoded yet, including the main result for ${incomplete}.`;
+  return `${flagged} of them ${plural(flagged, "has", "have")} results flagged as not fully encoded yet, including the main result for ${incomplete}.`;
 }

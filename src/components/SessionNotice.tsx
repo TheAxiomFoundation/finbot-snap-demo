@@ -66,7 +66,7 @@ export function SessionNotice({
                           ? group.count === 1
                             ? "has flagged results"
                             : "all have flagged results"
-                          : `${group.flagged} of ${group.count} have flagged results`}
+                          : `${group.flagged} of ${group.count} ${group.flagged === 1 ? "has" : "have"} flagged results`}
                       </span>
                     )}
                   </dd>
@@ -79,9 +79,9 @@ export function SessionNotice({
         <li>
           <strong>Your messages are sent to {MODEL_PROVIDER},</strong> and the household details you give
           go to Axiom&rsquo;s rules engine, hosted on Modal, to run the calculation. OpenAI may keep messages
-          for a time, this site&rsquo;s server logs may record the details when a calculation fails, and the
-          page uses Google Analytics and PostHog. Don&rsquo;t include names, Social Security numbers, or case
-          or account numbers.
+          for a time, and this site&rsquo;s server logs may record the details if something goes wrong. The
+          page uses Google Analytics and PostHog; PostHog&rsquo;s session recordings leave out the
+          conversation. Don&rsquo;t include names, Social Security numbers, or case or account numbers.
         </li>
       </ul>
       <p className="session-notice-foot">

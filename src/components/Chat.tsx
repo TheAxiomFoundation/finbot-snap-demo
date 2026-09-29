@@ -122,8 +122,12 @@ export function Chat() {
       {/* The conversation card only appears once a query has been run.
           The empty state is just starters + a clean canvas; the input
           stays sticky at the bottom of the viewport. */}
+      {/* ph-no-capture: PostHog session recordings (on for this project)
+          block these elements, so the conversation, the draft in the
+          composer, and chat errors never reach a replay. SessionNotice
+          tells users so; keep the two in step. */}
       {messages.length > 0 && (
-      <div className="card">
+      <div className="card ph-no-capture">
         <div className="flex flex-col gap-3">
           {messages.map((m, idx) => {
             if (m.role === "user") {
@@ -198,7 +202,7 @@ export function Chat() {
       )}
 
       {error && (
-        <div className="card" style={{ background: "#fee2e2", borderColor: "#fca5a5" }}>
+        <div className="card ph-no-capture" style={{ background: "#fee2e2", borderColor: "#fca5a5" }}>
           <div className="text-sm" style={{ color: "#991b1b" }}>
             <strong>Chat error:</strong> {error.message}
           </div>
@@ -219,7 +223,7 @@ export function Chat() {
           gap: 8,
         }}
       >
-      <form onSubmit={handleSubmit} className="input-pill">
+      <form onSubmit={handleSubmit} className="input-pill ph-no-capture">
         <textarea
           ref={textareaRef}
           name="prompt"
