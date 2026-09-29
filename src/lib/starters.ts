@@ -2,11 +2,11 @@
  *  (a TANF lookup, a SNAP calc, a CTC calc), each phrased the way a real
  *  person asks and chosen because the plain-model answer visibly diverges
  *  from the engine's: stale $727 vs $773 (MD TANF), a hedged guess vs an
- *  exact certified monthly SNAP amount (NY, oracle case ny-snap-family3),
+ *  exact encoded monthly SNAP amount (NY, oracle case ny-snap-family3),
  *  and TCJA-sunset guesses ($1,000–2,000/child) vs the current-law $4,400
  *  (CTC). The federal EITC starter was dropped: `eitc` is listed under
- *  us-fiit's acknowledged_incomplete outputs in the certified catalog, same
- *  as `ctc_after_advance_payments` — but SNAP across the certified states
+ *  us-fiit's acknowledged_incomplete outputs in the catalog, same
+ *  as `ctc_after_advance_payments` — but SNAP across the encoded states
  *  (including NY) carries no incomplete flags, so it replaces EITC here as
  *  a question the pinned release actually backs end to end. The CTC
  *  question asks about the credit rather than total income tax because tax

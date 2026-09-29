@@ -197080,7 +197080,7 @@
    "program_id": "us-tariff-duty",
    "period": "2026-01",
    "evaluation_period": "2026-08",
-   "display_name": "Federal US TARIFF DUTY",
+   "display_name": "Federal Tariff Duty",
    "description": "Deterministic composition for us/us-tariff-duty at 2026-01. Outputs: us_tariff_duty. Corpus: unversioned corpus.",
    "spec_path": "programs/us/us-tariff-duty/fy-2026.yaml",
    "primary_entity": "CustomsEntry",

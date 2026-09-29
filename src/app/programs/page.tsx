@@ -4,9 +4,9 @@ import Link from "next/link";
 import { getCatalog } from "@/lib/catalog";
 
 export const metadata: Metadata = {
-  title: "Certified programs — Axiom rules engine",
+  title: "Encoded programs — Axiom rules engine",
   description:
-    "Every program certified in the pinned rulespec-us release, grouped by jurisdiction.",
+    "Every program encoded in the rulespec-us release the chatbot runs on, grouped by jurisdiction.",
 };
 
 export default function ProgramsPage() {
@@ -29,7 +29,12 @@ export default function ProgramsPage() {
           ← chat
         </Link>
       </div>
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Certified programs</h1>
+      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Encoded programs</h1>
+      <p style={{ color: "#374151", fontSize: 14, lineHeight: 1.55, maxWidth: 720, margin: "4px 0 8px" }}>
+        The chatbot can compute only these programs, whose rules Axiom encoded from statutes,
+        regulations, and agency guidance in the rulespec-us release it pins. Encodings can contain
+        errors, and outputs marked incomplete are flagged in their program specs as not fully encoded.
+      </p>
       <p className="mono" style={{ fontSize: 12, color: "#6b7280", marginBottom: 24 }}>
         release {catalog.release_tag} · corpus{" "}
         <a
@@ -73,9 +78,9 @@ export default function ProgramsPage() {
                         key={`inc-${name}`}
                         className="badge"
                         style={{ fontSize: 10, background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }}
-                        title="Flagged acknowledged_incomplete by the rulespec authors."
+                        title="Flagged in the program spec as not fully encoded."
                       >
-                        {name} ⚠
+                        {name} · incomplete
                       </span>
                     ))}
                   </div>

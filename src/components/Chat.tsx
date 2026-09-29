@@ -166,13 +166,13 @@ export function Chat() {
               `messages`, the per-turn rendering above owns the running
               state — we only show this for the gap before that first
               stream event. In compare mode, mirror the column layout so
-              "consulting the rules engine" sits inside the right card the same
+              "working" sits inside the right card the same
               way "running" sits inside the left. */}
           {isLoading
             && !compareMode
             && messages[messages.length - 1]?.role === "user"
             && (
-              <RunningPill label="consulting the rules engine" />
+              <RunningPill label="working" />
             )}
           {isLoading
             && compareMode
@@ -188,7 +188,7 @@ export function Chat() {
                       : <RunningPill label="running" />}
                   </Column>
                   <Column title="OpenAI + Axiom" tone="grounded">
-                    <RunningPill label="consulting the rules engine" />
+                    <RunningPill label="working" />
                   </Column>
                 </div>
               );
@@ -271,6 +271,10 @@ export function Chat() {
         />
         Compare side-by-side with plain AI (no axiom-rules-engine)
       </label>
+      <p className="composer-disclaimer">
+        AI-generated estimates, not official determinations.{" "}
+        <a href="#about-this-assistant">About this assistant</a>
+      </p>
       </div>
     </div>
   );

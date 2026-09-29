@@ -463,6 +463,91 @@ a.cite:hover { color: #0b1220; }
   font-weight: 500;
 }
 
+/* Session notice — the AI disclosure every conversation starts under.
+   Quiet enough to sit above the starters, plain enough to read in full:
+   ink text on white, one amber rule marking it as a notice. */
+.session-notice {
+  background: white;
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin: 0 0 20px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.session-notice-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+.session-notice-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.session-notice-list strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.session-notice-details {
+  margin-top: 6px;
+}
+.session-notice-details summary {
+  cursor: pointer;
+  color: var(--ink-mute);
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  width: fit-content;
+}
+.session-notice-details summary:hover { color: var(--accent); }
+.session-notice-details summary:focus-visible,
+.session-notice a:focus-visible {
+  outline: 2px solid #06b6d4;
+  outline-offset: 2px;
+}
+.session-notice-details dl {
+  margin: 8px 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  font-size: 12.5px;
+}
+.session-notice-details dl > div { display: contents; }
+.session-notice-details dt { color: var(--ink); font-weight: 500; }
+.session-notice-details dd { margin: 0; }
+.session-notice a {
+  color: #075985;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 12.5px;
+}
+@media (max-width: 560px) {
+  .session-notice { padding: 12px 14px; }
+  .session-notice-details dl { grid-template-columns: 1fr; gap: 2px; }
+  .session-notice-details dd { margin-bottom: 6px; }
+}
+
+/* One-line reminder under the composer, so the disclosure stays in view
+   however far a conversation scrolls. */
+.composer-disclaimer {
+  font-size: 11.5px;
+  color: var(--ink-mute);
+  margin: 0;
+  padding: 0 4px;
+}
+.composer-disclaimer a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ─────────────────────────────────────────────────────────────────
    Responsive grids. These mirror the previous inline styles 1:1 at
    desktop widths and only collapse at phone/tablet breakpoints, so

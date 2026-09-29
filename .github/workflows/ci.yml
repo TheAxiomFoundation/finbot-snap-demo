@@ -18,6 +18,11 @@ jobs:
         run: bun run typecheck
       - name: Legal-link tests
         run: bun run test:legal-links
+      - name: Unit tests
+        # Vitest: rate limiter, coverage summary and model label (with
+        # property tests), and the guard that keeps "certified" out of
+        # everything users and the model read.
+        run: bun run test
       - name: Catalog freshness
         # The committed catalog must equal what the pinned artifacts
         # generate — otherwise overlay/generator edits (or artifact renames

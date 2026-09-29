@@ -44,7 +44,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
   const defaultOverrides: Record<string, boolean | number | string> = {};
   for (const [entity, slots] of Object.entries(program.inputs)) {
     const matching = slots.filter((s) => !filter || s.name.toLowerCase().includes(filter));
-    // Without a search filter, show only slots on the certified-output
+    // Without a search filter, show only slots on the published-output
     // path — the auxiliary majority can't move the headline and would
     // drown the ones that do (and bloat every later model step).
     const relevant = filter ? matching : matching.filter((s) => !s.aux);
@@ -70,7 +70,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
       .filter((r) => r.used)
       .map((r) => ({ name: shortName(r.name), related_entity: r.related_entity })),
     primary_output: program.primary_output,
-    certified_outputs: program.certified_outputs,
+    published_outputs: program.certified_outputs,
     acknowledged_incomplete: program.acknowledged_incomplete,
     total_outputs: program.outputs.length,
     inputs,
@@ -80,10 +80,10 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
         "Curated defaults for law-variant/administrative inputs (already applied; override only if the user's situation differs).",
     }),
     slot_legend:
-      "{1=a,2=b} enum codes (use ONLY listed codes; unlisted values fall through to the default branch) · (eq N) a value some rules require exactly — set it when ordinarily true and disclose · trailing * = branch selector that flips which rules apply, set deliberately · leading ~ = auxiliary slot NOT on the certified-output path: setting it cannot change the headline, prefer the non-~ sibling",
+      "{1=a,2=b} enum codes (use ONLY listed codes; unlisted values fall through to the default branch) · (eq N) a value some rules require exactly — set it when ordinarily true and disclose · trailing * = branch selector that flips which rules apply, set deliberately · leading ~ = auxiliary slot NOT on the published-output path: setting it cannot change the headline, prefer the non-~ sibling",
     notes: [
-      "Facts you don't provide default to false/0 — state the defaults you rely on.",
-      "aux_hidden counts auxiliary slots not on the certified-output path (they can't change the headline); pass inputs_search to see them.",
+      "Facts you don't provide take the default shown after = (false/0 when none is shown) — state the defaults you rely on.",
+      "aux_hidden counts auxiliary slots not on the published-output path (they can't change the headline); pass inputs_search to see them.",
       program.member_entity
         ? `Members: pass members[] (facts use ${program.member_entity}-scope slots), or a *_size fact to synthesize identical members.`
         : "This program has no member entity; only top-level facts apply.",
