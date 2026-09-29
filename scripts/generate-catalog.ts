@@ -157,6 +157,7 @@ const PROGRAM_NAMES: Record<string, string> = {
   "income-tax": "Income Tax",
   "oasdi-wage-tax": "OASDI Wage Tax",
   scretd: "Senior Citizens Real Estate Tax Deferral",
+  "us-tariff-duty": "Tariff Duty",
 };
 
 function programDisplayName(jurisdiction: string, programId: string): string {

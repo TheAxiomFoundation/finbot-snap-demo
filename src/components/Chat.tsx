@@ -122,8 +122,12 @@ export function Chat() {
       {/* The conversation card only appears once a query has been run.
           The empty state is just starters + a clean canvas; the input
           stays sticky at the bottom of the viewport. */}
+      {/* ph-no-capture: PostHog session recordings (on for this project)
+          block these elements, so the conversation, the draft in the
+          composer, and chat errors never reach a replay. SessionNotice
+          tells users so; keep the two in step. */}
       {messages.length > 0 && (
-      <div className="card">
+      <div className="card ph-no-capture">
         <div className="flex flex-col gap-3">
           {messages.map((m, idx) => {
             if (m.role === "user") {
@@ -153,7 +157,7 @@ export function Chat() {
 
             return (
               <div key={m.id} className="compare-grid">
-                <Column title="OpenAI alone" tone="neutral">
+                <Column title="OpenAI alone" caption={RAW_COLUMN_CAPTION} tone="neutral">
                   {rawForTurn === null ? <RunningPill label="running" /> : <RawBubble text={rawForTurn} />}
                 </Column>
                 <Column title="OpenAI + Axiom" tone="grounded">
@@ -166,13 +170,13 @@ export function Chat() {
               `messages`, the per-turn rendering above owns the running
               state — we only show this for the gap before that first
               stream event. In compare mode, mirror the column layout so
-              "consulting the rules engine" sits inside the right card the same
+              "working" sits inside the right card the same
               way "running" sits inside the left. */}
           {isLoading
             && !compareMode
             && messages[messages.length - 1]?.role === "user"
             && (
-              <RunningPill label="consulting the rules engine" />
+              <RunningPill label="working" />
             )}
           {isLoading
             && compareMode
@@ -182,13 +186,13 @@ export function Chat() {
               const rawForUser = rawResponses[lastUserId];
               return (
                 <div className="compare-grid">
-                  <Column title="OpenAI alone" tone="neutral">
+                  <Column title="OpenAI alone" caption={RAW_COLUMN_CAPTION} tone="neutral">
                     {typeof rawForUser === "string"
                       ? <RawBubble text={rawForUser} />
                       : <RunningPill label="running" />}
                   </Column>
                   <Column title="OpenAI + Axiom" tone="grounded">
-                    <RunningPill label="consulting the rules engine" />
+                    <RunningPill label="working" />
                   </Column>
                 </div>
               );
@@ -198,7 +202,7 @@ export function Chat() {
       )}
 
       {error && (
-        <div className="card" style={{ background: "#fee2e2", borderColor: "#fca5a5" }}>
+        <div className="card ph-no-capture" style={{ background: "#fee2e2", borderColor: "#fca5a5" }}>
           <div className="text-sm" style={{ color: "#991b1b" }}>
             <strong>Chat error:</strong> {error.message}
           </div>
@@ -219,7 +223,7 @@ export function Chat() {
           gap: 8,
         }}
       >
-      <form onSubmit={handleSubmit} className="input-pill">
+      <form onSubmit={handleSubmit} className="input-pill ph-no-capture">
         <textarea
           ref={textareaRef}
           name="prompt"
@@ -271,17 +275,26 @@ export function Chat() {
         />
         Compare side-by-side with plain AI (no axiom-rules-engine)
       </label>
+      <p className="composer-disclaimer">
+        AI-generated estimates, not official determinations.{" "}
+        <a href="#about-this-assistant">About this assistant</a>
+      </p>
       </div>
     </div>
   );
 }
 
+/** The plain-model column has no rules engine behind it; say so on every turn. */
+const RAW_COLUMN_CAPTION = "Same model, no rules engine. Shown for comparison; don't rely on its figures.";
+
 function Column({
   title,
+  caption,
   tone,
   children,
 }: {
   title: string;
+  caption?: string;
   tone: "neutral" | "grounded";
   children: React.ReactNode;
 }) {
@@ -295,7 +308,10 @@ function Column({
         gap: 10,
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
+        {caption && <div style={{ fontSize: 12, color: "var(--ink-mute)", marginTop: 2 }}>{caption}</div>}
+      </div>
       {children}
     </div>
   );

@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://axiom.org/gallery/chatbot"),
   title: "Chatbot — Axiom-grounded benefits assistant",
   description:
-    "OpenAI on top of the Axiom rules engine, with real tax and benefits calculations and citations.",
+    "An AI assistant that estimates benefits and taxes with the Axiom rules engine, which runs rules Axiom encoded from statutes, regulations, and agency guidance. Estimates, not official determinations.",
 };
 
 export const viewport: Viewport = {

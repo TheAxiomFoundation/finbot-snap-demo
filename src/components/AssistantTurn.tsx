@@ -55,7 +55,7 @@ export function AssistantTurn({
       {isStreaming && (
         hasTools
           ? <ActivityTrail invocations={toolInvocations!} settled={hasText} />
-          : !hasText && <RunningPill label="consulting the rules engine" />
+          : !hasText && <RunningPill label="working" />
       )}
       {hasTools && !isStreaming && (
         <div style={indentTools ? { marginLeft: 8 } : undefined}>

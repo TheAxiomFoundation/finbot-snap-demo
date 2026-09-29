@@ -41,7 +41,7 @@ const CASES: EvalCase[] = [
     prompt: "What's the maximum TANF benefit for a family of 3 in Maryland?",
     // computeProgram(us-md-tca, {household_size: 3}) → 773
     expect_amounts: [773],
-    expect_match: [/incomplete/i],
+    expect_match: [/incomplete|not fully encoded/i],
     expect_engine_call: true,
     check_grounding: true,
   },
@@ -85,10 +85,10 @@ const CASES: EvalCase[] = [
   {
     name: "wic-honesty",
     prompt: "How much WIC would I get for my newborn in Colorado?",
-    // Any phrasing of "WIC isn't certified/encoded/among the certified
+    // Any phrasing of "WIC isn't encoded/among the encoded
     // programs" counts; the point is refusing to invent a number.
     // Apostrophe class covers both ASCII ' and the typographic ’ models emit.
-    expect_match: [/(hasn['’]?t|has not|isn['’]?t|is not|not)[^.]{0,80}(certif|encod)/i],
+    expect_match: [/(hasn['’]?t|has not|isn['’]?t|is not|not)[^.]{0,80}(encod|cover|availab)/i],
     check_grounding: true,
   },
 ];
@@ -246,6 +246,17 @@ async function evaluate(c: EvalCase): Promise<{ pass: boolean; notes: string[] }
     if (re.test(turn.text)) {
       pass = false;
       notes.push(`reply matches forbidden ${re}`);
+    }
+  }
+  // Every case: the reply may not present results as certified, verified,
+  // validated, guaranteed, or official (the system prompt forbids it; see
+  // prompts.ts). A match only passes when a negation sits right before it
+  // ("not an official determination"), so one "not" elsewhere can't excuse it.
+  for (const m of turn.text.matchAll(/\b(certified|verified|validated|guaranteed|official (?:determination|decision|answer|amount|figure|result|estimate))\b/gi)) {
+    const before = turn.text.slice(Math.max(0, m.index! - 24), m.index);
+    if (!/(\bnot|n['’]t|\bnever)\b[^.!?]*$/i.test(before)) {
+      pass = false;
+      notes.push(`reply overclaims: "${m[0]}"`);
     }
   }
 

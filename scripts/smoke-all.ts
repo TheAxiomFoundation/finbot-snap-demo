@@ -1,8 +1,8 @@
 /**
- * Certification gate: compute every cataloged program with pure defaults.
+ * Smoke gate: compute every cataloged program with pure defaults.
  *
  * Asserts the engine accepts the generic request builder's output for all
- * programs in the pinned release — engine success, every certified output
+ * programs in the pinned release — engine success, every published output
  * present in the response, scalars finite. Run after a pin bump and before
  * deploying. Uses the local subprocess transport unless AXIOM_ENGINE_URL is
  * set, in which case it exercises the deployed engine.
@@ -24,7 +24,7 @@ async function main() {
       for (const name of program.certified_outputs) {
         const output = result.outputs.find((o) => o.name === name);
         if (!output) {
-          problems.push(`certified output ${name} missing from response`);
+          problems.push(`published output ${name} missing from response`);
           continue;
         }
         if (output.semantics === "judgment") {
