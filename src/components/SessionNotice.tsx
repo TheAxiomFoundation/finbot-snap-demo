@@ -34,9 +34,25 @@ export function SessionNotice({
         </li>
         <li>
           <strong>Answers are estimates, not determinations.</strong> They are not an application, an
-          eligibility decision, or tax advice. Only the agency that runs a program can decide whether you
-          qualify and how much you would get. The model can misread a question or make mistakes, and the
-          encoded rules can contain errors.
+          eligibility decision, or tax or legal advice, and shouldn&rsquo;t be used to decide anyone&rsquo;s
+          eligibility. The model can misread a question or make mistakes, and the encoded rules can contain
+          errors.
+        </li>
+        <li>
+          <strong>For an official answer, go to the agency.</strong> Only the agency that runs a program can
+          decide whether you qualify and how much you would get:{" "}
+          <a href="https://www.fna.usda.gov/snap/state-directory" target="_blank" rel="noreferrer">
+            SNAP offices by state
+          </a>
+          ,{" "}
+          <a href="https://www.usa.gov/benefits" target="_blank" rel="noreferrer">
+            other benefits
+          </a>
+          ,{" "}
+          <a href="https://www.irs.gov/help/let-us-help-you" target="_blank" rel="noreferrer">
+            IRS help
+          </a>
+          .
         </li>
         <li>
           <strong>It covers {coverage.total} programs:</strong> {coverageSentence(coverage)}. Axiom
@@ -62,10 +78,18 @@ export function SessionNotice({
           </details>
         </li>
         <li>
-          <strong>Your messages are sent to {MODEL_PROVIDER}.</strong> Don&rsquo;t include names, Social
-          Security numbers, or other personal details.
+          <strong>Your messages are sent to {MODEL_PROVIDER},</strong> and the household details you give
+          go to Axiom&rsquo;s rules engine to run the calculation. Don&rsquo;t include names, Social Security
+          numbers, or case or account numbers.
         </li>
       </ul>
+      <p className="session-notice-foot">
+        For adults, or with a parent&rsquo;s or guardian&rsquo;s permission. Spot a wrong answer?{" "}
+        <a href="https://axiom.org/contact" target="_blank" rel="noreferrer">
+          Tell us
+        </a>
+        .
+      </p>
     </section>
   );
 }

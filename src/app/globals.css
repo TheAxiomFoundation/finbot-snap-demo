@@ -526,7 +526,12 @@ a.cite:hover { color: #0b1220; }
   color: #075985;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+.session-notice-details a { font-size: 12.5px; }
+.session-notice-foot {
+  margin: 10px 0 0;
   font-size: 12.5px;
+  color: var(--ink-mute);
 }
 @media (max-width: 560px) {
   .session-notice { padding: 12px 14px; }

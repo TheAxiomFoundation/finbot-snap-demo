@@ -153,7 +153,7 @@ export function Chat() {
 
             return (
               <div key={m.id} className="compare-grid">
-                <Column title="OpenAI alone" tone="neutral">
+                <Column title="OpenAI alone" caption={RAW_COLUMN_CAPTION} tone="neutral">
                   {rawForTurn === null ? <RunningPill label="running" /> : <RawBubble text={rawForTurn} />}
                 </Column>
                 <Column title="OpenAI + Axiom" tone="grounded">
@@ -182,7 +182,7 @@ export function Chat() {
               const rawForUser = rawResponses[lastUserId];
               return (
                 <div className="compare-grid">
-                  <Column title="OpenAI alone" tone="neutral">
+                  <Column title="OpenAI alone" caption={RAW_COLUMN_CAPTION} tone="neutral">
                     {typeof rawForUser === "string"
                       ? <RawBubble text={rawForUser} />
                       : <RunningPill label="running" />}
@@ -280,12 +280,17 @@ export function Chat() {
   );
 }
 
+/** The plain-model column has no rules engine behind it; say so on every turn. */
+const RAW_COLUMN_CAPTION = "Same model, no rules engine. Shown for comparison; don't rely on its figures.";
+
 function Column({
   title,
+  caption,
   tone,
   children,
 }: {
   title: string;
+  caption?: string;
   tone: "neutral" | "grounded";
   children: React.ReactNode;
 }) {
@@ -299,7 +304,10 @@ function Column({
         gap: 10,
       }}
     >
-      <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
+        {caption && <div style={{ fontSize: 12, color: "var(--ink-mute)", marginTop: 2 }}>{caption}</div>}
+      </div>
       {children}
     </div>
   );
