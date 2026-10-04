@@ -251,10 +251,11 @@ async function evaluate(c: EvalCase): Promise<{ pass: boolean; notes: string[] }
   // Every case: the reply may not present results as certified, verified,
   // validated, guaranteed, or official (the system prompt forbids it; see
   // prompts.ts). A match only passes when a negation sits right before it
-  // ("not an official determination"), so one "not" elsewhere can't excuse it.
+  // ("not an official determination" or "no guaranteed amount"); an unrelated
+  // "no" elsewhere in the reply cannot excuse a claim.
   for (const m of turn.text.matchAll(/\b(certified|verified|validated|guaranteed|official (?:determination|decision|answer|amount|figure|result|estimate))\b/gi)) {
     const before = turn.text.slice(Math.max(0, m.index! - 24), m.index);
-    if (!/(\bnot|n['’]t|\bnever)\b[^.!?]*$/i.test(before)) {
+    if (!/(\bnot|n['’]t|\bnever)\b[^.!?]*$/i.test(before) && !/\bno\s+$/i.test(before)) {
       pass = false;
       notes.push(`reply overclaims: "${m[0]}"`);
     }

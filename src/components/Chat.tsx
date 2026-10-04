@@ -23,9 +23,6 @@ export function Chat() {
   } = useChat({
     api: "/gallery/chatbot/api/chat",
     maxSteps: 12,
-    onError(err) {
-      console.error("[finbot] chat error:", err);
-    },
   });
 
   const [compareMode, setCompareMode] = useState(false);
