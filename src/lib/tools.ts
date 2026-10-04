@@ -1,7 +1,8 @@
 /**
- * AI SDK tool definitions — five generic, catalog-driven tools. The model
- * only emits dollar amounts and eligibility verdicts that flow through these
- * tools; see `prompts.ts` for the system contract that enforces it.
+ * AI SDK tool definitions — five generic, catalog-driven tools. The system
+ * prompt (`prompts.ts`) instructs the model to take every dollar amount and
+ * eligibility verdict from these tools; that is a prompt-level contract with
+ * no runtime check (`bun run eval:llm` measures it).
  *
  * Unknown program slugs, input names, and output names come back as
  * structured errors with nearest-match suggestions instead of thrown
@@ -112,7 +113,7 @@ function timed<A, R>(name: string, execute: (args: A) => Promise<R>): (args: A) 
 export const tools = {
   list_programs: tool({
     description:
-      "Search encoded output names (thresholds, deductions, credits) across all certified programs via `search`. The system-prompt coverage digest already lists every program with its primary output — do NOT call this to confirm a program exists or to restate coverage; call it only when you genuinely need the output-name search.",
+      "Search encoded output names (thresholds, deductions, credits) across all encoded programs via `search`. The system-prompt coverage digest already lists every program with its primary output — do NOT call this to confirm a program exists or to restate coverage; call it only when you genuinely need the output-name search.",
     parameters: z.object({
       jurisdiction: z
         .string()
@@ -133,7 +134,7 @@ export const tools = {
           display_name: p.display_name,
           default_period: defaultPeriodFor(p),
           primary_output: p.primary_output,
-          certified_outputs: p.certified_outputs,
+          published_outputs: p.certified_outputs,
           acknowledged_incomplete: p.acknowledged_incomplete,
         }));
       const matches = search ? searchOutputs(search, { jurisdiction }) : null;
@@ -149,7 +150,7 @@ export const tools = {
             entity: m.output.entity,
             semantics: m.output.semantics,
             unit: m.output.unit,
-            certified: m.output.certified,
+            published_output: m.output.certified,
           })),
         }),
       };
@@ -158,7 +159,7 @@ export const tools = {
 
   describe_program: tool({
     description:
-      "Describe one program's computable surface: its entities, member relations, certified outputs, and input slots (name:dtype, defaults applied when omitted). Call this ONCE, without inputs_search, before the first compute for a program — most programs fit in one response. Only call again with `inputs_search` if the response reports omitted slots and you need one it didn't show.",
+      "Describe one program's computable surface: its entities, member relations, published outputs, and input slots (name:dtype, defaults applied when omitted). Call this ONCE, without inputs_search, before the first compute for a program — most programs fit in one response. Only call again with `inputs_search` if the response reports omitted slots and you need one it didn't show.",
     parameters: z.object({
       program: z.string().describe("Program slug from list_programs, e.g. 'us-co-snap'."),
       inputs_search: z
@@ -175,7 +176,7 @@ export const tools = {
 
   compute: tool({
     description:
-      "Run a certified program against a scenario and return its primary output plus all certified outputs, with citations. Facts are input-slot overrides on top of documented defaults; everything else stays defaulted. If the result flags acknowledged_incomplete outputs, tell the user that part of the rule chain is not fully encoded yet.",
+      "Run an encoded program against a scenario and return its primary output plus all published outputs, with citations. Facts are input-slot overrides on top of documented defaults; everything else stays defaulted. If the result flags acknowledged_incomplete outputs, tell the user that part of the rule chain is not fully encoded yet.",
     parameters: z.object({
       program: z.string().describe("Program slug from list_programs, e.g. 'us-ny-snap'."),
       period: PeriodSchema,
@@ -220,7 +221,7 @@ export const tools = {
               ...result,
               extra_outputs_errors: extraErrors,
               extra_outputs_note:
-                "Unknown extra_outputs names were SKIPPED (suggestions listed) — every other output above is complete and correct. Re-request a skipped output (once, via a suggested name) only if it is essential to the user's question.",
+                "Unknown extra_outputs names were SKIPPED (suggestions listed) — every other output above was computed normally. Re-request a skipped output (once, via a suggested name) only if it is essential to the user's question.",
             };
       } catch (err) {
         try {
@@ -271,10 +272,10 @@ export const tools = {
             requires: meta.requires,
             ...(meta.requires_partial && { requires_partial: true }),
           }),
-          certified: meta.certified,
+          published_output: meta.certified,
           acknowledged_incomplete: meta.acknowledged_incomplete,
           incomplete_note: meta.acknowledged_incomplete
-            ? `Output ${meta.name} is flagged acknowledged_incomplete by the rulespec authors (parts of the rule chain are known to be unfinished). Flag this to the user.`
+            ? `Flagged in the program spec as not fully encoded: ${meta.name}.`
             : null,
           source: meta.source,
           url: meta.id ? legalIdToUrl(meta.id) : null,

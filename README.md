@@ -1,8 +1,14 @@
 # Chatbot demo
 
-Live demo: OpenAI side-by-side comparison grounded in the [Axiom rules engine](https://github.com/TheAxiomFoundation/axiom-rules-engine). The app is fully **catalog-driven**: it can answer questions and run calculations for every program certified in the pinned [rulespec-us](https://github.com/TheAxiomFoundation/rulespec-us) `program-artifacts` release — currently 32 programs across 23 US jurisdictions (SNAP, TANF, federal individual income tax, state income tax, payroll, and more).
+Live demo at [axiom.org/chatbot](https://axiom.org/chatbot): an OpenAI model (GPT-5.5 by default) that answers benefit and tax questions by calling the [Axiom rules engine](https://github.com/TheAxiomFoundation/axiom-rules-engine), with an optional side-by-side against the same model without tools. The app is fully **catalog-driven**: it can answer questions and run calculations for every program in the pinned [rulespec-us](https://github.com/TheAxiomFoundation/rulespec-us) `program-artifacts` release (SNAP, TANF, federal and state income tax, payroll tax, and more; `/programs` lists them).
 
-No model-recall numbers on the grounded side: every dollar amount comes from an `axiom-rules-engine` compute against sha256-verified compiled artifacts.
+The grounded side's system prompt requires every dollar amount to come from an `axiom-rules-engine` compute against sha256-verified compiled artifacts, never from model recall. That is an instruction, not a runtime guarantee; `bun run eval:llm` checks that the figures in a reply appear in that turn's tool results.
+
+## AI disclosure
+
+Every session starts under a notice (`src/components/SessionNotice.tsx`) that says an AI model writes the replies and names it; that answers are estimates rather than applications, eligibility decisions, or tax or legal advice; where to get an official answer; which programs the assistant covers and how many are flagged incomplete; and where data goes (messages to OpenAI, household facts to the rules engine on Modal, this app's error logs in `src/lib/tools.ts`, Google Analytics and PostHog). PostHog session recording is on for this project, so the conversation, composer, and chat errors carry `ph-no-capture` (the recorder's block class). Console recording is explicitly disabled in `src/instrumentation-client.ts`, and chat errors are not logged to the browser console, so these details never reach a replay; keep that in step with the notice. The model name comes from `FINBOT_MODEL` (via `src/lib/model-label.ts`) and the coverage line from the generated catalog (`src/lib/coverage.ts`), so both follow a model or release-pin change without copy edits. A one-line reminder sits under the message box. The system prompt tells the model the same things and forbids calling its answers certified, official, verified, or guaranteed.
+
+Don't describe these rules as "certified" in this app unless they are in Axiom's certification ledger (api.axiom.org `/v1/ready`, which reported the ledger empty on 2026-09-28). The release manifest only lists each program's `outputs`. The catalog's `certified` / `certified_outputs` fields are legacy internal names for "listed in the manifest's outputs"; user- and model-facing text calls them published outputs.
 
 ## How it works
 
@@ -17,7 +23,7 @@ artifacts.lock.json ──▶ scripts/fetch-artifacts.ts ──▶ engine/artifa
 - **`scripts/generate-catalog.ts`** walks every compiled artifact's IR to derive, per program: all queryable outputs (with legal ids and units), every input slot the rules reach (grouped by entity, with inferred dtypes and defaults), relations with related-entity inference, and `acknowledged_incomplete` flags from the program specs. No per-program code anywhere.
 - **`src/lib/request-builder.ts`** turns catalog metadata + user facts into a complete engine request (defaults for every unspecified slot, one member instance per household member, relation tuples, queries grouped by period grain).
 - **`src/lib/tools.ts`** exposes five generic tools to the LLM: `list_programs`, `describe_program`, `compute`, `lookup_value`, `fetch_citation`. Unknown slot/output names return structured errors with nearest-match suggestions so the model self-corrects.
-- **`/programs`** is a static coverage browser generated from the catalog — certified outputs, incomplete flags, input slots, and links to the spec at the pinned corpus sha.
+- **`/programs`** is a static coverage browser generated from the catalog — published outputs, incomplete flags, input slots, and links to the spec at the pinned corpus sha.
 
 ## Stack
 
@@ -65,8 +71,8 @@ New programs in the release show up in the chat and on `/programs` with no code 
 
 ## What the demo will not do
 
-- No fallback when the release does not certify a program: the model says Axiom has not encoded it instead of guessing.
-- Outputs flagged `acknowledged_incomplete` by the rulespec authors are computed but explicitly flagged in the UI and in the model's answers.
+- No fallback when the release does not include a program: the model says Axiom has not encoded it instead of guessing.
+- Outputs flagged `acknowledged_incomplete` in the program specs are computed but flagged in the tool cards, and the model is instructed to say so in its answer.
 - US only.
 
 ## Verification
@@ -85,10 +91,10 @@ bun run eval:llm            # end-to-end LLM answers vs engine/oracle ground tru
 
 ## Deployment
 
-Two services on PolicyEngine accounts:
+Two services:
 
-- **Modal** hosts the `axiom-rules-engine` binary + all release artifacts (`modal_app.py`, pin read from `artifacts.lock.json`).
-- **Vercel** hosts the Next.js app, calling Modal via `AXIOM_ENGINE_URL`.
+- **Modal** (PolicyEngine workspace) hosts the `axiom-rules-engine` binary + all release artifacts (`modal_app.py`, pin read from `artifacts.lock.json`).
+- **Vercel** (`axiom-foundation` team) hosts the Next.js app, calling Modal via `AXIOM_ENGINE_URL`.
 
 Local dev works without either service because the engine adapter falls back to the local Rust binary when `AXIOM_ENGINE_URL` is unset.
 

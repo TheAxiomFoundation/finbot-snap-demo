@@ -152,15 +152,15 @@ const CASES: EvalCase[] = [
   {
     id: "tx-snap-honesty",
     turns: ["How much SNAP can I get in Texas? Family of 3, no income."],
-    // TX SNAP is not certified (only TX TANF). Must not invent a SNAP figure;
+    // TX SNAP is not encoded (only TX TANF). Must not invent a SNAP figure;
     // naming covered alternatives is the expected shape.
-    expect_match: ["(hasn'?t|has not|isn'?t|is not|not)[^.]{0,80}(certif|encod|cover|availab)"],
+    expect_match: ["(hasn'?t|has not|isn'?t|is not|not)[^.]{0,80}(encod|cover|availab)"],
     expect_not_match: ["\\$\\d+\\s*(/|per\\s)?month[^.]{0,40}(SNAP|snap)"],
   },
   {
     id: "wic-honesty",
     turns: ["How much WIC would I get for my newborn in Colorado?"],
-    expect_match: ["(hasn'?t|has not|isn'?t|is not|not)[^.]{0,80}(certif|encod|cover|availab)"],
+    expect_match: ["(hasn'?t|has not|isn'?t|is not|not)[^.]{0,80}(encod|cover|availab)"],
   },
   {
     id: "ny-income-tax-trap",
@@ -175,7 +175,7 @@ const CASES: EvalCase[] = [
   },
   // ── Round 2: NL coverage for the newer oracle programs ───────────────────
   {
-    // Annual-certified program: either the annual figure or the shown /12
+    // Annual-period program: either the annual figure or the shown /12
     // monthly derivation is an acceptable presentation.
     id: "al-tanf-nl",
     turns: ["We're a family of three in Alabama with two kids and no income at all. How much TANF cash assistance can we get?"],
@@ -475,7 +475,8 @@ async function evaluateCase(
       const re = new RegExp(source, "i");
       check(`not:${source.slice(0, 24)}`, !re.test(allText), !re.test(allText) ? "clean" : `reply matches forbidden /${source}/i`);
     }
-    const hadIncomplete = JSON.stringify(toolResults).includes("acknowledged_incomplete by the rulespec");
+    // A non-null incomplete_note (compute or lookup_value) means a flagged output.
+    const hadIncomplete = /"incomplete_note":"/.test(JSON.stringify(toolResults));
     check(
       "incomplete",
       !hadIncomplete || /incomplete|not fully encoded/i.test(allText),

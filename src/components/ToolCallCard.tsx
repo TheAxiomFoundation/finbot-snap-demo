@@ -93,7 +93,7 @@ function IncompleteBadge() {
   return (
     <span
       className="badge badge-incomplete"
-      title="The rulespec authors flag this output as not fully encoded yet."
+      title="The program spec flags this output as not fully encoded yet."
     >
       incomplete
     </span>
@@ -213,7 +213,7 @@ function ProgramListCard({ result }: { result: any }) {
       <div className="tool-headline">
         <span className="value">{programs.length}</span>
         <span className="caption">
-          certified program{programs.length === 1 ? "" : "s"} · {jurisdictions} jurisdiction{jurisdictions === 1 ? "" : "s"} · {result.release}
+          encoded program{programs.length === 1 ? "" : "s"} · {jurisdictions} jurisdiction{jurisdictions === 1 ? "" : "s"} · {result.release}
         </span>
       </div>
       {matches.length > 0 && (
@@ -267,9 +267,9 @@ function DescribeCard({ result }: { result: any }) {
           <span className="k">primary output</span>
           <span className="v">{result.primary_output}</span>
         </div>
-        {result.certified_outputs?.filter((n: string) => n !== result.primary_output).map((name: string) => (
+        {result.published_outputs?.filter((n: string) => n !== result.primary_output).map((name: string) => (
           <div key={name} className="tool-row">
-            <span className="k">certified</span>
+            <span className="k">output</span>
             <span className="v">{name}</span>
           </div>
         ))}
@@ -327,8 +327,8 @@ function CitationCard({ result }: { result: any }) {
       ) : (
         <div className="tool-foot">
           {result.resolution === "not_found"
-            ? "axiom-corpus has no document at this path yet. The legal source URL above still works."
-            : "axiom-corpus returned this document but no body text. Click through to view the source."}
+            ? "The Axiom corpus has no text for this legal id yet."
+            : "The Axiom corpus has this document but no body text."}
         </div>
       )}
     </div>

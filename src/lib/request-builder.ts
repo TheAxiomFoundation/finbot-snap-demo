@@ -242,7 +242,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     if (slotsByName.get(name)?.aux) {
       const siblings = nearestNames(name, certifiedSlotNames, 3);
       notes.push(
-        `WARNING: fact "${name}" targets an auxiliary slot that does NOT feed the certified outputs — the headline ignores it.` +
+        `WARNING: fact "${name}" targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
           (siblings.length ? ` Did you mean: ${siblings.join(", ")}?` : "")
       );
     }
@@ -506,7 +506,8 @@ export interface ShapedOutput {
   unit: string | null;
   semantics: string;
   entity: string;
-  certified: boolean;
+  /** One of the program's outputs listed in the release manifest. */
+  published_output: boolean;
   acknowledged_incomplete: boolean;
   legal_id: string | null;
   /** Attached when a judgment came back not_holds: the facts (with values)
@@ -561,7 +562,7 @@ export function shapeResult(
       unit: output.unit,
       semantics: output.semantics,
       entity: output.entity,
-      certified: output.certified,
+      published_output: output.certified,
       acknowledged_incomplete: output.acknowledged_incomplete,
       legal_id: output.id,
       ...(failedJudgment && output.requires && {
@@ -608,7 +609,7 @@ export function shapeResult(
     applied: built.applied,
     citations: citationsFor(mainOutputs),
     incomplete_note: incomplete.length
-      ? `Outputs flagged acknowledged_incomplete by the rulespec authors (parts of the rule chain are known to be unfinished): ${incomplete.join(", ")}. Flag this to the user.`
+      ? `Flagged in the program spec as not fully encoded: ${incomplete.join(", ")}.`
       : null,
   };
 }

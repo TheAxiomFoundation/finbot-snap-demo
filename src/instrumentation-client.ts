@@ -14,5 +14,7 @@ if (typeof window !== "undefined" && !window.__posthogInitialized) {
     person_profiles: "identified_only",
     respect_dnt: true,
     capture_pageview: "history_change",
+    // Console events bypass ph-no-capture and can contain tool arguments.
+    enable_recording_console_log: false,
   });
 }
