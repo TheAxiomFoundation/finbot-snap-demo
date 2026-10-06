@@ -11,3 +11,4 @@ engine/artifacts/
 .vercel
 tsconfig.tsbuildinfo
 __pycache__/
+.env*.local
