@@ -37,3 +37,44 @@ jobs:
         # src/lib/generated/catalog.json makes the build hermetic — no
         # artifact fetch or Rust toolchain needed here.
         run: bun run build
+
+  engine:
+    # Engine-backed checks: the BBCE defaults, the assistant's blocked gates,
+    # California's exclusions and the SNAP invariants only show up when the
+    # real rules engine runs. Builds the pinned engine from source.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read the pinned engine ref
+        id: pin
+        run: echo "ref=$(jq -r .engine.ref artifacts.lock.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: TheAxiomFoundation/axiom-rules-engine
+          ref: ${{ steps.pin.outputs.ref }}
+          path: engine-src
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine-src
+      - name: Build the engine
+        run: cargo build --release --manifest-path engine-src/Cargo.toml
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Fetch pinned artifacts
+        run: bun run artifacts:fetch
+      - name: Engine-backed suites
+        env:
+          REQUIRE_ENGINE: "1"
+          AXIOM_RULES_ENGINE_BINARY: ${{ github.workspace }}/engine-src/target/release/axiom-rules-engine
+          AXIOM_ARTIFACTS_DIR: ${{ github.workspace }}/engine/artifacts
+        run: |
+          bun run test:smoke
+          bun run test:regression
+          bun run test:oracle
+          bun run test:properties
+          bun run test:exclusions
+          bun run test:gates

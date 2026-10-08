@@ -18,6 +18,7 @@ import { legalIdToUrl } from "./legal-links";
 import {
   UnknownInputError,
   UnknownOutputError,
+  NotSettableInputError,
   buildRequest,
   computeProgram,
   defaultPeriodFor,
@@ -72,7 +73,16 @@ function isErr(x: unknown): x is { error: string } {
 }
 
 /** Convert builder errors into data the model can act on. */
-function asToolError(err: unknown): { error: string; suggestions?: string[]; hint?: string } {
+function asToolError(err: unknown): { error: string; kind?: string; slot?: string; path?: string; suggestions?: string[]; hint?: string } {
+  if (err instanceof NotSettableInputError) {
+    return {
+      error: err.message,
+      kind: err.kind,
+      slot: err.slot,
+      path: err.path,
+      hint: "Remove this fact and disclose the encoding limitation. Do not retry by setting an eligibility gate or routing it through members[].facts.",
+    };
+  }
   if (err instanceof UnknownInputError) {
     return {
       error: err.message,

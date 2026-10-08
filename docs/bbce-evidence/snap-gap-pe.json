@@ -1,0 +1,485 @@
+{
+  "pe_version": "1.822.5",
+  "rows": [
+    {
+      "state": "CA",
+      "period": "2026-09",
+      "annual_heating_expense": 0,
+      "values": {
+        "snap": [
+          278.0
+        ],
+        "is_snap_eligible": [
+          1.0
+        ],
+        "snap_max_allotment": [
+          785.0
+        ],
+        "snap_gross_income": [
+          3300.0
+        ],
+        "snap_earned_income_deduction": [
+          660.0
+        ],
+        "snap_standard_deduction": [
+          209.0
+        ],
+        "snap_utility_allowance": [
+          663.0
+        ],
+        "snap_net_income_pre_shelter": [
+          2431.0
+        ],
+        "snap_excess_shelter_expense_deduction": [
+          744.0
+        ],
+        "snap_net_income": [
+          1687.0
+        ],
+        "snap_expected_contribution": [
+          507.0
+        ],
+        "snap_normal_allotment": [
+          278.0
+        ],
+        "snap_unit_size": [
+          3.0
+        ],
+        "tanf": [
+          0.0
+        ],
+        "ssi": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "snap_unearned_income": [
+          0.0
+        ],
+        "snap_dependent_care_deduction": [
+          0.0
+        ]
+      }
+    },
+    {
+      "state": "CA",
+      "period": "2026-09",
+      "annual_heating_expense": 2400,
+      "values": {
+        "snap": [
+          278.0
+        ],
+        "is_snap_eligible": [
+          1.0
+        ],
+        "snap_max_allotment": [
+          785.0
+        ],
+        "snap_gross_income": [
+          3300.0
+        ],
+        "snap_earned_income_deduction": [
+          660.0
+        ],
+        "snap_standard_deduction": [
+          209.0
+        ],
+        "snap_utility_allowance": [
+          663.0
+        ],
+        "snap_net_income_pre_shelter": [
+          2431.0
+        ],
+        "snap_excess_shelter_expense_deduction": [
+          744.0
+        ],
+        "snap_net_income": [
+          1687.0
+        ],
+        "snap_expected_contribution": [
+          507.0
+        ],
+        "snap_normal_allotment": [
+          278.0
+        ],
+        "snap_unit_size": [
+          3.0
+        ],
+        "tanf": [
+          0.0
+        ],
+        "ssi": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "snap_unearned_income": [
+          0.0
+        ],
+        "snap_dependent_care_deduction": [
+          0.0
+        ]
+      }
+    },
+    {
+      "state": "CA",
+      "period": "2026-10",
+      "annual_heating_expense": 0,
+      "values": {
+        "snap": [
+          316.7216796875
+        ],
+        "is_snap_eligible": [
+          1.0
+        ],
+        "snap_max_allotment": [
+          812.7216796875
+        ],
+        "snap_gross_income": [
+          3300.0
+        ],
+        "snap_earned_income_deduction": [
+          660.0
+        ],
+        "snap_standard_deduction": [
+          216.38067626953125
+        ],
+        "snap_utility_allowance": [
+          663.0
+        ],
+        "snap_net_income_pre_shelter": [
+          2423.619384765625
+        ],
+        "snap_excess_shelter_expense_deduction": [
+          770.2738037109375
+        ],
+        "snap_net_income": [
+          1653.0
+        ],
+        "snap_expected_contribution": [
+          496.0
+        ],
+        "snap_normal_allotment": [
+          316.7216796875
+        ],
+        "snap_unit_size": [
+          3.0
+        ],
+        "tanf": [
+          0.0
+        ],
+        "ssi": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "snap_unearned_income": [
+          0.0
+        ],
+        "snap_dependent_care_deduction": [
+          0.0
+        ]
+      }
+    },
+    {
+      "state": "CA",
+      "period": "2026-10",
+      "annual_heating_expense": 2400,
+      "values": {
+        "snap": [
+          316.7216796875
+        ],
+        "is_snap_eligible": [
+          1.0
+        ],
+        "snap_max_allotment": [
+          812.7216796875
+        ],
+        "snap_gross_income": [
+          3300.0
+        ],
+        "snap_earned_income_deduction": [
+          660.0
+        ],
+        "snap_standard_deduction": [
+          216.38067626953125
+        ],
+        "snap_utility_allowance": [
+          663.0
+        ],
+        "snap_net_income_pre_shelter": [
+          2423.619384765625
+        ],
+        "snap_excess_shelter_expense_deduction": [
+          770.2738037109375
+        ],
+        "snap_net_income": [
+          1653.0
+        ],
+        "snap_expected_contribution": [
+          496.0
+        ],
+        "snap_normal_allotment": [
+          316.7216796875
+        ],
+        "snap_unit_size": [
+          3.0
+        ],
+        "tanf": [
+          0.0
+        ],
+        "ssi": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "snap_unearned_income": [
+          0.0
+        ],
+        "snap_dependent_care_deduction": [
+          0.0
+        ]
+      }
+    },
+    {
+      "state": "CO",
+      "period": "2026-09",
+      "annual_heating_expense": 0,
+      "values": {
+        "snap": [
+          278.0
+        ],
+        "is_snap_eligible": [
+          1.0
+        ],
+        "snap_max_allotment": [
+          785.0
+        ],
+        "snap_gross_income": [
+          3300.0
+        ],
+        "snap_earned_income_deduction": [
+          660.0
+        ],
+        "snap_standard_deduction": [
+          209.0
+        ],
+        "snap_utility_allowance": [
+          594.0
+        ],
+        "snap_net_income_pre_shelter": [
+          2431.0
+        ],
+        "snap_excess_shelter_expense_deduction": [
+          744.0
+        ],
+        "snap_net_income": [
+          1687.0
+        ],
+        "snap_expected_contribution": [
+          507.0
+        ],
+        "snap_normal_allotment": [
+          278.0
+        ],
+        "snap_unit_size": [
+          3.0
+        ],
+        "tanf": [
+          0.0
+        ],
+        "ssi": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "snap_unearned_income": [
+          0.0
+        ],
+        "snap_dependent_care_deduction": [
+          0.0
+        ]
+      }
+    },
+    {
+      "state": "CO",
+      "period": "2026-09",
+      "annual_heating_expense": 2400,
+      "values": {
+        "snap": [
+          278.0
+        ],
+        "is_snap_eligible": [
+          1.0
+        ],
+        "snap_max_allotment": [
+          785.0
+        ],
+        "snap_gross_income": [
+          3300.0
+        ],
+        "snap_earned_income_deduction": [
+          660.0
+        ],
+        "snap_standard_deduction": [
+          209.0
+        ],
+        "snap_utility_allowance": [
+          594.0
+        ],
+        "snap_net_income_pre_shelter": [
+          2431.0
+        ],
+        "snap_excess_shelter_expense_deduction": [
+          744.0
+        ],
+        "snap_net_income": [
+          1687.0
+        ],
+        "snap_expected_contribution": [
+          507.0
+        ],
+        "snap_normal_allotment": [
+          278.0
+        ],
+        "snap_unit_size": [
+          3.0
+        ],
+        "tanf": [
+          0.0
+        ],
+        "ssi": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "snap_unearned_income": [
+          0.0
+        ],
+        "snap_dependent_care_deduction": [
+          0.0
+        ]
+      }
+    },
+    {
+      "state": "CO",
+      "period": "2026-10",
+      "annual_heating_expense": 0,
+      "values": {
+        "snap": [
+          316.7216796875
+        ],
+        "is_snap_eligible": [
+          1.0
+        ],
+        "snap_max_allotment": [
+          812.7216796875
+        ],
+        "snap_gross_income": [
+          3300.0
+        ],
+        "snap_earned_income_deduction": [
+          660.0
+        ],
+        "snap_standard_deduction": [
+          216.38067626953125
+        ],
+        "snap_utility_allowance": [
+          594.0
+        ],
+        "snap_net_income_pre_shelter": [
+          2423.619384765625
+        ],
+        "snap_excess_shelter_expense_deduction": [
+          770.2738037109375
+        ],
+        "snap_net_income": [
+          1653.0
+        ],
+        "snap_expected_contribution": [
+          496.0
+        ],
+        "snap_normal_allotment": [
+          316.7216796875
+        ],
+        "snap_unit_size": [
+          3.0
+        ],
+        "tanf": [
+          0.0
+        ],
+        "ssi": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "snap_unearned_income": [
+          0.0
+        ],
+        "snap_dependent_care_deduction": [
+          0.0
+        ]
+      }
+    },
+    {
+      "state": "CO",
+      "period": "2026-10",
+      "annual_heating_expense": 2400,
+      "values": {
+        "snap": [
+          316.7216796875
+        ],
+        "is_snap_eligible": [
+          1.0
+        ],
+        "snap_max_allotment": [
+          812.7216796875
+        ],
+        "snap_gross_income": [
+          3300.0
+        ],
+        "snap_earned_income_deduction": [
+          660.0
+        ],
+        "snap_standard_deduction": [
+          216.38067626953125
+        ],
+        "snap_utility_allowance": [
+          594.0
+        ],
+        "snap_net_income_pre_shelter": [
+          2423.619384765625
+        ],
+        "snap_excess_shelter_expense_deduction": [
+          770.2738037109375
+        ],
+        "snap_net_income": [
+          1653.0
+        ],
+        "snap_expected_contribution": [
+          496.0
+        ],
+        "snap_normal_allotment": [
+          316.7216796875
+        ],
+        "snap_unit_size": [
+          3.0
+        ],
+        "tanf": [
+          0.0
+        ],
+        "ssi": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "snap_unearned_income": [
+          0.0
+        ],
+        "snap_dependent_care_deduction": [
+          0.0
+        ]
+      }
+    }
+  ]
+}

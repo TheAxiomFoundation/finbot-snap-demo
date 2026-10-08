@@ -26,6 +26,7 @@ import assert from "node:assert/strict";
 
 import { getProgram } from "../src/lib/catalog";
 import { computeProgram } from "../src/lib/request-builder";
+import { runBbceRegressions } from "./bbce-regression";
 
 function value(result: Awaited<ReturnType<typeof computeProgram>>, name: string) {
   const output = result.outputs.find((o) => o.name === name);
@@ -101,6 +102,8 @@ async function main() {
   await coSnapFixture();
   await fiitCtcMembers();
   await mdTcaLookup();
+  const failures = await runBbceRegressions("regression");
+  assert.equal(failures, 0, "BBCE eligibility/starter regressions failed");
   console.log("\nregression tests passed");
 }
 

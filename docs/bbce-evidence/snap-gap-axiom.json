@@ -1,0 +1,384 @@
+{
+  "rows": [
+    {
+      "program": "us-ca-snap",
+      "period": "2026-09",
+      "heating": "default",
+      "diagnostic_gate": {
+        "household_was_issued_pub_275": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_gross_monthly_earned_income": 3300
+      },
+      "values": {
+        "snap_benefit": 231,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1846,
+        "snap_net_income_for_allotment": 1846,
+        "snap_standard_utility_allowance": 0,
+        "snap_total_allowable_shelter_expenses": 1800,
+        "snap_excess_shelter_deduction": 585,
+        "snap_allotment_before_minimum": 231,
+        "snap_regular_month_allotment": 231,
+        "snap_net_monthly_income": 1846,
+        "snap_excess_shelter_deduction_for_net_income": 585
+      }
+    },
+    {
+      "program": "us-ca-snap",
+      "period": "2026-09",
+      "heating": false,
+      "diagnostic_gate": {
+        "household_was_issued_pub_275": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_gross_monthly_earned_income": 3300,
+        "household_has_heating_and_cooling_costs_separate_from_rent_or_mortgage": false
+      },
+      "values": {
+        "snap_benefit": 231,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1846,
+        "snap_net_income_for_allotment": 1846,
+        "snap_standard_utility_allowance": 0,
+        "snap_total_allowable_shelter_expenses": 1800,
+        "snap_excess_shelter_deduction": 585,
+        "snap_allotment_before_minimum": 231,
+        "snap_regular_month_allotment": 231,
+        "snap_net_monthly_income": 1846,
+        "snap_excess_shelter_deduction_for_net_income": 585
+      }
+    },
+    {
+      "program": "us-ca-snap",
+      "period": "2026-09",
+      "heating": true,
+      "diagnostic_gate": {
+        "household_was_issued_pub_275": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_gross_monthly_earned_income": 3300,
+        "household_has_heating_and_cooling_costs_separate_from_rent_or_mortgage": true
+      },
+      "values": {
+        "snap_benefit": 278,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1687,
+        "snap_net_income_for_allotment": 1687,
+        "snap_standard_utility_allowance": 663,
+        "snap_total_allowable_shelter_expenses": 2463,
+        "snap_excess_shelter_deduction": 744,
+        "snap_allotment_before_minimum": 278,
+        "snap_regular_month_allotment": 278,
+        "snap_net_monthly_income": 1687,
+        "snap_excess_shelter_deduction_for_net_income": 744
+      }
+    },
+    {
+      "program": "us-ca-snap",
+      "period": "2026-10",
+      "heating": "default",
+      "diagnostic_gate": {
+        "household_was_issued_pub_275": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_gross_monthly_earned_income": 3300
+      },
+      "values": {
+        "snap_benefit": 231,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1846,
+        "snap_net_income_for_allotment": 1846,
+        "snap_standard_utility_allowance": 0,
+        "snap_total_allowable_shelter_expenses": 1800,
+        "snap_excess_shelter_deduction": 585,
+        "snap_allotment_before_minimum": 231,
+        "snap_regular_month_allotment": 231,
+        "snap_net_monthly_income": 1846,
+        "snap_excess_shelter_deduction_for_net_income": 585
+      }
+    },
+    {
+      "program": "us-ca-snap",
+      "period": "2026-10",
+      "heating": false,
+      "diagnostic_gate": {
+        "household_was_issued_pub_275": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_gross_monthly_earned_income": 3300,
+        "household_has_heating_and_cooling_costs_separate_from_rent_or_mortgage": false
+      },
+      "values": {
+        "snap_benefit": 231,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1846,
+        "snap_net_income_for_allotment": 1846,
+        "snap_standard_utility_allowance": 0,
+        "snap_total_allowable_shelter_expenses": 1800,
+        "snap_excess_shelter_deduction": 585,
+        "snap_allotment_before_minimum": 231,
+        "snap_regular_month_allotment": 231,
+        "snap_net_monthly_income": 1846,
+        "snap_excess_shelter_deduction_for_net_income": 585
+      }
+    },
+    {
+      "program": "us-ca-snap",
+      "period": "2026-10",
+      "heating": true,
+      "diagnostic_gate": {
+        "household_was_issued_pub_275": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_gross_monthly_earned_income": 3300,
+        "household_has_heating_and_cooling_costs_separate_from_rent_or_mortgage": true
+      },
+      "values": {
+        "snap_benefit": 278,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1687,
+        "snap_net_income_for_allotment": 1687,
+        "snap_standard_utility_allowance": 663,
+        "snap_total_allowable_shelter_expenses": 2463,
+        "snap_excess_shelter_deduction": 744,
+        "snap_allotment_before_minimum": 278,
+        "snap_regular_month_allotment": 278,
+        "snap_net_monthly_income": 1687,
+        "snap_excess_shelter_deduction_for_net_income": 744
+      }
+    },
+    {
+      "program": "us-co-snap",
+      "period": "2026-09",
+      "heating": "default",
+      "diagnostic_gate": {
+        "snap_expanded_categorical_eligible": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_countable_earned_income": 3300
+      },
+      "values": {
+        "snap_benefit": 278,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1687,
+        "snap_net_income_for_allotment": 1687,
+        "snap_standard_utility_allowance": 594,
+        "snap_total_allowable_shelter_expenses": 2394,
+        "snap_excess_shelter_deduction": 744,
+        "snap_allotment_before_minimum": 278,
+        "snap_regular_month_allotment": 278,
+        "snap_net_monthly_income": 1687,
+        "snap_excess_shelter_deduction_for_net_income": 744
+      }
+    },
+    {
+      "program": "us-co-snap",
+      "period": "2026-09",
+      "heating": false,
+      "diagnostic_gate": {
+        "snap_expanded_categorical_eligible": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_countable_earned_income": 3300,
+        "household_incurred_or_anticipated_heating_or_cooling_costs_separate_from_rent_or_mortgage": false
+      },
+      "values": {
+        "snap_benefit": 231,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1846,
+        "snap_net_income_for_allotment": 1846,
+        "snap_standard_utility_allowance": 0,
+        "snap_total_allowable_shelter_expenses": 1800,
+        "snap_excess_shelter_deduction": 585,
+        "snap_allotment_before_minimum": 231,
+        "snap_regular_month_allotment": 231,
+        "snap_net_monthly_income": 1846,
+        "snap_excess_shelter_deduction_for_net_income": 585
+      }
+    },
+    {
+      "program": "us-co-snap",
+      "period": "2026-09",
+      "heating": true,
+      "diagnostic_gate": {
+        "snap_expanded_categorical_eligible": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_countable_earned_income": 3300,
+        "household_incurred_or_anticipated_heating_or_cooling_costs_separate_from_rent_or_mortgage": true
+      },
+      "values": {
+        "snap_benefit": 278,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1687,
+        "snap_net_income_for_allotment": 1687,
+        "snap_standard_utility_allowance": 594,
+        "snap_total_allowable_shelter_expenses": 2394,
+        "snap_excess_shelter_deduction": 744,
+        "snap_allotment_before_minimum": 278,
+        "snap_regular_month_allotment": 278,
+        "snap_net_monthly_income": 1687,
+        "snap_excess_shelter_deduction_for_net_income": 744
+      }
+    },
+    {
+      "program": "us-co-snap",
+      "period": "2026-10",
+      "heating": "default",
+      "diagnostic_gate": {
+        "snap_expanded_categorical_eligible": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_countable_earned_income": 3300
+      },
+      "values": {
+        "snap_benefit": 278,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1687,
+        "snap_net_income_for_allotment": 1687,
+        "snap_standard_utility_allowance": 594,
+        "snap_total_allowable_shelter_expenses": 2394,
+        "snap_excess_shelter_deduction": 744,
+        "snap_allotment_before_minimum": 278,
+        "snap_regular_month_allotment": 278,
+        "snap_net_monthly_income": 1687,
+        "snap_excess_shelter_deduction_for_net_income": 744
+      }
+    },
+    {
+      "program": "us-co-snap",
+      "period": "2026-10",
+      "heating": false,
+      "diagnostic_gate": {
+        "snap_expanded_categorical_eligible": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_countable_earned_income": 3300,
+        "household_incurred_or_anticipated_heating_or_cooling_costs_separate_from_rent_or_mortgage": false
+      },
+      "values": {
+        "snap_benefit": 231,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1846,
+        "snap_net_income_for_allotment": 1846,
+        "snap_standard_utility_allowance": 0,
+        "snap_total_allowable_shelter_expenses": 1800,
+        "snap_excess_shelter_deduction": 585,
+        "snap_allotment_before_minimum": 231,
+        "snap_regular_month_allotment": 231,
+        "snap_net_monthly_income": 1846,
+        "snap_excess_shelter_deduction_for_net_income": 585
+      }
+    },
+    {
+      "program": "us-co-snap",
+      "period": "2026-10",
+      "heating": true,
+      "diagnostic_gate": {
+        "snap_expanded_categorical_eligible": true
+      },
+      "facts": {
+        "household_size": 3,
+        "household_shelter_costs_incurred": 1800,
+        "snap_countable_earned_income": 3300,
+        "household_incurred_or_anticipated_heating_or_cooling_costs_separate_from_rent_or_mortgage": true
+      },
+      "values": {
+        "snap_benefit": 278,
+        "snap_eligible": "holds",
+        "snap_maximum_allotment": 785,
+        "snap_standard_deduction": 209,
+        "snap_total_gross_income": 3300,
+        "snap_earned_income_deduction": 660,
+        "snap_net_income_pre_shelter": 2431,
+        "snap_net_income": 1687,
+        "snap_net_income_for_allotment": 1687,
+        "snap_standard_utility_allowance": 594,
+        "snap_total_allowable_shelter_expenses": 2394,
+        "snap_excess_shelter_deduction": 744,
+        "snap_allotment_before_minimum": 278,
+        "snap_regular_month_allotment": 278,
+        "snap_net_monthly_income": 1687,
+        "snap_excess_shelter_deduction_for_net_income": 744
+      }
+    }
+  ]
+}

@@ -4,14 +4,16 @@ import Link from "next/link";
 
 import { Chat } from "@/components/Chat";
 import { SessionNotice } from "@/components/SessionNotice";
-import type { CoverageSummary } from "@/lib/coverage";
+import type { CoverageSummary, ProgramCoverageStatuses } from "@/lib/coverage";
 
 export function FinBotPage({
   modelLabel,
   coverage,
+  programCoverage,
 }: {
   modelLabel: string;
   coverage: CoverageSummary;
+  programCoverage: ProgramCoverageStatuses;
 }) {
   return (
     <>
@@ -67,7 +69,7 @@ export function FinBotPage({
 
         <SessionNotice modelLabel={modelLabel} coverage={coverage} />
 
-        <Chat />
+        <Chat programCoverage={programCoverage} />
       </main>
     </>
   );

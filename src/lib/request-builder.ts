@@ -31,6 +31,7 @@ import {
 } from "./engine";
 import type { CatalogInputSlot, CatalogOutput, CatalogProgram } from "./catalog";
 import { legalIdToUrl } from "./legal-links";
+import { programDisclosures } from "./catalog-overlay";
 
 export type Facts = Record<string, FactScalar>;
 
@@ -79,6 +80,46 @@ export class UnknownOutputError extends Error {
       `unknown output "${output}" for ${programSlug}` +
         (suggestions.length ? `; closest outputs: ${suggestions.join(", ")}` : "")
     );
+  }
+}
+
+export const ASSISTANT_UNSETTABLE_INPUTS: Record<string, Record<string, { state: string; reason?: string }>> = {
+  "us-ma-snap": { snap_household_is_categorically_eligible: { state: "Massachusetts" } },
+  "us-al-snap": { household_is_categorically_eligible: { state: "Alabama" } },
+  "us-tn-snap": { household_is_categorically_eligible: { state: "Tennessee" } },
+  "us-az-snap": { na_budgetary_unit_is_eligible: { state: "Arizona", reason: "does not test eligibility yet" } },
+  "us-ca-snap": {
+    snap_categorically_eligible_for_resource_exemption: {
+      state: "California",
+      reason: "takes categorical eligibility as an unchecked input (it would apply at any income)",
+    },
+  },
+  "us-ga-snap": {
+    member_authorized_to_receive_tanf_community_outreach_services: {
+      state: "Georgia",
+      reason: "treats TANF community outreach services as categorical eligibility at any income",
+    },
+    member_receives_tanf_community_outreach_services: {
+      state: "Georgia",
+      reason: "treats TANF community outreach services as categorical eligibility at any income",
+    },
+  },
+  "us-co-snap": {
+    snap_basic_categorical_eligible: {
+      state: "Colorado",
+      reason: "does not yet apply categorical eligibility exclusions",
+    },
+    snap_expanded_categorical_eligible: {
+      state: "Colorado",
+      reason: "does not yet apply categorical eligibility exclusions",
+    },
+  },
+};
+
+export class NotSettableInputError extends Error {
+  readonly kind = "not_settable_input";
+  constructor(readonly slot: string, readonly path: string, state: string, reason?: string) {
+    super(`not settable by the assistant: Axiom's ${state} SNAP encoding ${reason ?? "does not yet determine categorical eligibility from income"}`);
   }
 }
 
@@ -189,7 +230,12 @@ export interface BuiltRequest {
      *  not overridden by caller facts. Present only when non-empty, so a
      *  question that never touches those rules carries no disclosure noise. */
     overlay_defaults_in_effect?: Facts;
+    /** Factual companion slots derived from supplied income, not eligibility. */
+    derived_facts?: Facts;
+    /** Instructions and diagnostics for the model; not shown to users. */
     notes: string[];
+    /** User-facing limitations of this program's encoding, shown on the tool card. */
+    disclosures: string[];
   };
 }
 
@@ -200,6 +246,22 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   const facts = { ...(options.facts ?? {}) };
   const notes: string[] = [];
   const resolved = resolvePeriod(program, options.period);
+
+  // These are free eligibility judgments, not household observations. Reject
+  // both values and both fact paths so a retry cannot turn a denial into an
+  // over-award or silently override an assumed-eligibility calculation.
+  const validateSettable = (supplied: Facts, path: string) => {
+    for (const name of Object.keys(supplied)) {
+      const blocked = ASSISTANT_UNSETTABLE_INPUTS[program.slug]?.[name];
+      if (blocked) throw new NotSettableInputError(name, `${path}.${name}`, blocked.state, blocked.reason);
+    }
+  };
+  validateSettable(options.facts ?? {}, "facts");
+  for (const [index, member] of (options.members ?? []).entries()) {
+    validateSettable(member.facts ?? {}, `members[${index}].facts`);
+  }
+
+  const disclosures = programDisclosures(program);
 
   // -- Validate fact names against the slot universe -------------------------
   const slotsByName = new Map<string, CatalogInputSlot>();
@@ -230,6 +292,20 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         throw new UnknownInputError(name, suggestSlots(name), program.slug);
       }
     }
+  }
+
+  const derivedFacts: Facts = {};
+  if (program.slug === "us-ny-snap") {
+    // New York's 150% path takes this factual companion input. Its actual
+    // eligibility threshold remains entirely in the compiled rules engine.
+    const earnedSlot = "snap_gross_monthly_earned_income";
+    const earned = Number(facts[earnedSlot] ?? slotsByName.get(earnedSlot)?.default ?? 0);
+    const hasEarned = earned > 0;
+    const slot = "household_has_earned_income_budgeted_for_snap";
+    facts[slot] = hasEarned;
+    derivedFacts[slot] = hasEarned;
+    notes.push(`Derived ${slot}=${hasEarned} from ${earnedSlot}=${earned}; disclose this in Assumptions.`);
+    disclosures.push(`New York: the household's earned-income input was set from the earnings given (${hasEarned ? "has" : "no"} earned income).`);
   }
 
   // Facts landing on auxiliary slots (not reachable from any certified
@@ -469,6 +545,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       period: resolved.label,
       member_count: memberCount,
       facts_applied: facts,
+      ...(Object.keys(derivedFacts).length > 0 && { derived_facts: derivedFacts }),
       defaulted_slots: defaultedSlots,
       ...(defaultedIncomeSlots.size > 0 && {
         defaulted_income_slots: [...defaultedIncomeSlots],
@@ -491,6 +568,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         return Object.keys(inEffect).length > 0 ? { overlay_defaults_in_effect: inEffect } : {};
       })(),
       notes,
+      disclosures,
     },
   };
 }

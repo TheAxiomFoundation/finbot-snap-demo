@@ -463,48 +463,27 @@ a.cite:hover { color: #0b1220; }
   font-weight: 500;
 }
 
-/* Session notice — the AI disclosure every conversation starts under.
-   Quiet enough to sit above the starters, plain enough to read in full:
-   ink text on white, one amber rule marking it as a notice. */
+/* Compact session disclosure, with the supporting copy behind Details. */
 .session-notice {
-  background: white;
-  border: 1px solid var(--hairline);
-  border-left: 3px solid var(--accent);
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin: 0 0 20px;
-  font-size: 13.5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 0 4px;
+  margin: 0 0 16px;
+  font-size: 12px;
   line-height: 1.55;
-  color: var(--ink-soft);
+  color: var(--ink-mute);
   /* Clear the sticky topbar when the composer's "About this assistant"
      link jumps here. */
   scroll-margin-top: 88px;
 }
-.session-notice-title {
-  font-size: 14.5px;
-  font-weight: 600;
-  color: var(--ink);
-  margin: 0 0 8px;
-}
-.session-notice-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.session-notice-list strong {
-  color: var(--ink);
-  font-weight: 600;
-}
-.session-notice-details {
-  margin-top: 6px;
-}
+.session-notice-line { margin: 0; }
+.session-notice-details[open] { flex-basis: 100%; }
 .session-notice-details summary {
   cursor: pointer;
   color: var(--ink-mute);
-  font-size: 12.5px;
+  font-size: 12px;
   text-decoration: underline;
   text-underline-offset: 3px;
   width: fit-content;
@@ -515,32 +494,19 @@ a.cite:hover { color: #0b1220; }
   outline: 2px solid #06b6d4;
   outline-offset: 2px;
 }
-.session-notice-details dl {
-  margin: 8px 0;
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 4px 14px;
-  font-size: 12.5px;
-}
-.session-notice-details dl > div { display: contents; }
-.session-notice-details dt { color: var(--ink); font-weight: 500; }
-.session-notice-details dd { margin: 0; }
+.session-notice-body { max-width: 760px; }
+.session-notice-body p { margin: 8px 0; }
 .session-notice a {
   color: #075985;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.session-notice-details a { font-size: 12.5px; }
-.session-notice-flagged { color: var(--ink-mute); }
-.session-notice-foot {
-  margin: 10px 0 0;
-  font-size: 12.5px;
+.tool-coverage-status {
+  margin: 5px 0 8px;
+  font-size: 11px;
+  line-height: 1.45;
   color: var(--ink-mute);
-}
-@media (max-width: 560px) {
-  .session-notice { padding: 12px 14px; }
-  .session-notice-details dl { grid-template-columns: 1fr; gap: 2px; }
-  .session-notice-details dd { margin-bottom: 6px; }
+  overflow-wrap: anywhere;
 }
 
 /* One-line reminder under the composer, so the disclosure stays in view

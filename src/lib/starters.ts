@@ -1,22 +1,18 @@
-/** Pre-written starter prompts. Three defaults spanning program types
- *  (a TANF lookup, a SNAP calc, a CTC calc), each phrased the way a real
- *  person asks and chosen because the plain-model answer visibly diverges
- *  from the engine's: stale $727 vs $773 (MD TANF), a hedged guess vs an
- *  exact encoded monthly SNAP amount (NY, oracle case ny-snap-family3),
- *  and TCJA-sunset guesses ($1,000–2,000/child) vs the current-law $4,400
- *  (CTC). The federal EITC starter was dropped: `eitc` is listed under
- *  us-fiit's acknowledged_incomplete outputs in the catalog, same
- *  as `ctc_after_advance_payments` — but NY SNAP carries no incomplete
- *  flags (CO SNAP flags snap_eligible; no SNAP headline output is
- *  flagged), so it replaces EITC here as a question the pinned release
- *  actually backs end to end. The CTC question asks about the credit
- *  rather than total income tax because tax needs taxable income, which
- *  the pinned release takes as an input (26 USC 63 not yet encoded —
- *  rulespec-us#953); widen back to "income tax and child tax credit" once
- *  that lands, and reconsider re-adding EITC once rulespec-us marks it
- *  complete. */
+/** BBCE candidates. The California starter is the Aspen page's CA-1 chip:
+ *  $3,400/month for three people is about 150% of the poverty line under both
+ *  the 2025 and 2026 HHS guidelines, between 130% and California's 200% limit. The real-engine
+ *  regressions pin the California household; consumer ChatGPT needs human
+ *  pretesting before it is presented as a reliable plain-model failure.
+ *  Colorado is deferred: its categorical input bypasses an encoded IPV bar,
+ *  so it cannot safely become an automatic default. */
+export const BBCE_STARTERS: readonly string[] = [
+  "I'm a single mom in Fresno, California with two kids (8 and 5). I make $3,400 a month before taxes, pay $1,500 rent, and pay about $120 a month for utilities, including heat. Can we get CalFresh, and how much would we get each month?",
+];
+
+/** The credit question asks about CTC because the pinned federal program
+ *  takes taxable income as an input (26 USC 63 is not yet encoded). */
 export const STARTERS: readonly string[] = [
   "What's the maximum TANF benefit for a family of 3 in Maryland?",
-  "I'm a single parent in New York with two kids (8 and 5). I earn $2,078 a month, my rent is $1,300, and I pay heating separately from rent. What SNAP would we get?",
+  ...BBCE_STARTERS,
   "We're a married couple filing jointly making $95,000 with two kids, ages 8 and 5. How much child tax credit do we get in 2026?",
 ];

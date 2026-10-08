@@ -19240,7 +19240,8 @@
      {
       "name": "household_was_issued_pub_275",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "household_will_receive_income_from_new_source_after_application",

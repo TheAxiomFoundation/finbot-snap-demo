@@ -5,6 +5,7 @@
  * model gets the slot surface without spending an LLM round-trip on it.
  */
 import type { CatalogProgram } from "./catalog";
+import { programDisclosures } from "./catalog-overlay";
 import { defaultPeriodFor } from "./request-builder";
 
 /** Compact one-token slot description:
@@ -72,6 +73,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
     primary_output: program.primary_output,
     published_outputs: program.certified_outputs,
     acknowledged_incomplete: program.acknowledged_incomplete,
+    disclosures: programDisclosures(program),
     total_outputs: program.outputs.length,
     inputs,
     ...(Object.keys(defaultOverrides).length > 0 && {
