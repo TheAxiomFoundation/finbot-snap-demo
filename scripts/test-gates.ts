@@ -129,7 +129,9 @@ async function main() {
       }
     }
   }
-  // Every blocked input that is a bool the scan flips must have been seen blocked.
+  // Every listed input that is a bool the scan flips must have been seen
+  // blocked. This takes its expectations from ASSISTANT_UNSETTABLE_INPUTS, so
+  // it can't notice an entry being removed; bbce-inputs.test.ts pins the list.
   for (const [slug, inputs] of Object.entries(ASSISTANT_UNSETTABLE_INPUTS)) {
     const program = getCatalog().programs.find((p) => p.slug === slug);
     for (const input of Object.keys(inputs)) {
