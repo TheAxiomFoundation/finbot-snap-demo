@@ -3,9 +3,12 @@ import type { ToolInvocation } from "ai";
 
 import { legalIdToUrl } from "@/lib/legal-links";
 import { formatValue } from "@/lib/money";
+import type { ProgramCoverageStatuses } from "@/lib/coverage";
 
 interface Props {
   invocation: ToolInvocation;
+  programCoverage?: ProgramCoverageStatuses;
+  hiddenNotes?: readonly string[];
 }
 
 /** One-line summary of what distinguishes this call from siblings of the
@@ -24,11 +27,13 @@ function argSummary(inv: ToolInvocation): string | null {
   return parts.length ? parts.join(" · ") : null;
 }
 
-export function ToolCallCard({ invocation }: Props) {
+export function ToolCallCard({ invocation, programCoverage = {}, hiddenNotes = [] }: Props) {
   const status = invocation.state;
   const result = "result" in invocation ? invocation.result : undefined;
   const hasError = status === "result" && result && typeof result === "object" && "error" in result;
   const summary = argSummary(invocation);
+  const slug = invocation.args?.program ?? result?.program ?? result?.slug;
+  const coverageStatus = typeof slug === "string" ? programCoverage[slug] : undefined;
 
   return (
     <div className="tool-card">
@@ -47,13 +52,15 @@ export function ToolCallCard({ invocation }: Props) {
         />
       </div>
 
+      {coverageStatus && <div className="tool-coverage-status">{coverageStatus}</div>}
+
       {hasError && <ErrorSummary result={result} />}
       {!hasError && status === "result" && result != null && (
         <>
-          {invocation.toolName === "compute" && <ComputeCard result={result} />}
-          {invocation.toolName === "list_programs" && <ProgramListCard result={result} />}
-          {invocation.toolName === "describe_program" && <DescribeCard result={result} />}
-          {invocation.toolName === "lookup_value" && <LookupCard result={result} />}
+          {invocation.toolName === "compute" && <ComputeCard result={result} hiddenNotes={hiddenNotes} />}
+          {invocation.toolName === "list_programs" && <ProgramListCard result={result} programCoverage={programCoverage} />}
+          {invocation.toolName === "describe_program" && <DescribeCard result={result} hiddenNotes={hiddenNotes} />}
+          {invocation.toolName === "lookup_value" && <LookupCard result={result} hiddenNotes={hiddenNotes} />}
           {invocation.toolName === "fetch_citation" && <CitationCard result={result} />}
         </>
       )}
@@ -141,7 +148,7 @@ function FactChips({ facts }: { facts?: Record<string, unknown> }) {
   );
 }
 
-function ComputeCard({ result }: { result: any }) {
+function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readonly string[] }) {
   const outputs: any[] = result.outputs ?? [];
   const primary = outputs.find((o: any) => o.name === result.primary_output) ?? outputs[0];
   const rest = outputs.filter((o: any) => o !== primary && o.value !== null);
@@ -194,6 +201,7 @@ function ComputeCard({ result }: { result: any }) {
         </div>
       )}
       {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}
+      <AppliedNotes notes={applied.notes} hiddenNotes={hiddenNotes} />
       <FactChips facts={applied.facts_applied} />
       <div className="tool-foot">
         {result.member_count > 0 && <>{result.member_count} member{result.member_count === 1 ? "" : "s"} · </>}
@@ -204,7 +212,13 @@ function ComputeCard({ result }: { result: any }) {
   );
 }
 
-function ProgramListCard({ result }: { result: any }) {
+function AppliedNotes({ notes, hiddenNotes }: { notes?: unknown; hiddenNotes: readonly string[] }) {
+  if (!Array.isArray(notes)) return null;
+  const unique = [...new Set(notes.filter((note): note is string => typeof note === "string" && !hiddenNotes.includes(note)))];
+  return <>{unique.map((note) => <div key={note} className="tool-note">{note}</div>)}</>;
+}
+
+function ProgramListCard({ result, programCoverage }: { result: any; programCoverage: ProgramCoverageStatuses }) {
   const programs: any[] = result.programs ?? [];
   const matches: any[] = result.search_matches ?? [];
   const jurisdictions = new Set(programs.map((p: any) => p.jurisdiction)).size;
@@ -234,7 +248,7 @@ function ProgramListCard({ result }: { result: any }) {
         <div style={{ marginTop: 6 }}>
           {programs.map((p: any) => (
             <div key={p.slug} className="tool-row">
-              <span className="k">{p.display_name}</span>
+              <span className="k">{p.display_name}{programCoverage[p.slug] && <span className="tool-coverage-status" style={{ display: "block" }}>{programCoverage[p.slug]}</span>}</span>
               <span className="v" style={{ color: "#6b7280" }}>{p.slug}</span>
             </div>
           ))}
@@ -244,7 +258,7 @@ function ProgramListCard({ result }: { result: any }) {
   );
 }
 
-function DescribeCard({ result }: { result: any }) {
+function DescribeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readonly string[] }) {
   const inputs = result.inputs ?? {};
   const slotTotal = Object.values(inputs).reduce(
     (n: number, g: any) => n + (g.slots?.length ?? 0) + (g.omitted ?? 0),
@@ -262,6 +276,7 @@ function DescribeCard({ result }: { result: any }) {
         </span>
         {result.acknowledged_incomplete?.length > 0 && <IncompleteBadge />}
       </div>
+      <AppliedNotes notes={result.disclosures} hiddenNotes={hiddenNotes} />
       <div className="tool-rows">
         <div className="tool-row">
           <span className="k">primary output</span>
@@ -291,7 +306,7 @@ function DescribeCard({ result }: { result: any }) {
   );
 }
 
-function LookupCard({ result }: { result: any }) {
+function LookupCard({ result, hiddenNotes }: { result: any; hiddenNotes: readonly string[] }) {
   return (
     <div>
       <div className="tool-headline">
@@ -301,6 +316,7 @@ function LookupCard({ result }: { result: any }) {
         {result.acknowledged_incomplete && <IncompleteBadge />}
       </div>
       {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}
+      <AppliedNotes notes={result.applied?.notes} hiddenNotes={hiddenNotes} />
       <FactChips facts={result.applied?.facts_applied} />
       <div className="tool-foot">
         {result.source && <>{result.source}</>}

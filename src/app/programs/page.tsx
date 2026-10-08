@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getCatalog } from "@/lib/catalog";
+import { programDisclosures } from "@/lib/catalog-overlay";
+import { jurisdictionCoverageStatus, programCoverageStatus } from "@/lib/coverage";
 
 export const metadata: Metadata = {
   title: "Encoded programs — Axiom rules engine",
@@ -55,6 +57,9 @@ export default function ProgramsPage() {
             <h2 className="mono" style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 10 }}>
               {jurisdiction} · {programs.length} program{programs.length === 1 ? "" : "s"}
             </h2>
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "-4px 0 10px" }}>
+              {jurisdictionCoverageStatus(programs)}
+            </p>
             <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
               {programs.map((program) => (
                 <div key={program.slug} className="card" style={{ padding: 14 }}>
@@ -64,6 +69,10 @@ export default function ProgramsPage() {
                     </Link>
                     <span className="mono" style={{ fontSize: 11, color: "#6b7280" }}>{program.evaluation_period}</span>
                   </div>
+                  <div className="tool-coverage-status">{programCoverageStatus(program)}</div>
+                  {programDisclosures(program).map((note) => (
+                    <p key={note} className="tool-coverage-status">{note}</p>
+                  ))}
                   <div className="mono" style={{ fontSize: 11, color: "#6b7280", margin: "4px 0 8px" }}>
                     {program.slug} · {program.counts.derived} rules · {program.counts.parameters} parameters
                   </div>

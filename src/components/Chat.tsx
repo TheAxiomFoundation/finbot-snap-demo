@@ -3,13 +3,15 @@ import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef, useState } from "react";
 
 import { INPUT_PLACEHOLDER } from "@/lib/copy";
+import { parseChatLaunch } from "@/lib/chat-launch";
+import type { ProgramCoverageStatuses } from "@/lib/coverage";
 import { STARTERS } from "@/lib/starters";
 
 import { AssistantTurn } from "./AssistantTurn";
 import { MarkdownText } from "./MarkdownText";
 import { RunningPill } from "./RunningPill";
 
-export function Chat() {
+export function Chat({ programCoverage = {} }: { programCoverage?: ProgramCoverageStatuses } = {}) {
   const {
     messages,
     input,
@@ -31,6 +33,23 @@ export function Chat() {
    *  request was made (compare mode was off when the user submitted). */
   const [rawResponses, setRawResponses] = useState<Record<string, string | null>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const launchApplied = useRef(false);
+
+  useEffect(() => {
+    if (launchApplied.current) return;
+    launchApplied.current = true;
+    const launch = window.__finbotChatLaunch ?? parseChatLaunch(window.location.search);
+    // Consume the saved launch so returning from /programs cannot resubmit it.
+    delete window.__finbotChatLaunch;
+    if (launch.compare) setCompareMode(true);
+    if (!launch.question) return;
+    if (launch.autoSubmit) {
+      setInput("");
+      void append({ role: "user", content: launch.question });
+    } else {
+      setInput(launch.question);
+    }
+  }, [append, setInput]);
 
   // Resize the textarea whenever `input` changes — including programmatic
   // updates from the starter buttons.
@@ -147,6 +166,7 @@ export function Chat() {
                 text={m.content}
                 indentTools
                 isStreaming={isStreaming}
+                programCoverage={programCoverage}
               />
             );
 

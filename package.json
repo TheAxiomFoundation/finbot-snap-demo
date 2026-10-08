@@ -15,6 +15,7 @@
     "eval:llm": "tsx scripts/eval-llm.ts",
     "eval:oracle": "tsx eval/oracle-eval.ts",
     "test:regression": "tsx scripts/test-regression.ts",
+    "test:properties": "tsx scripts/test-properties.ts",
     "test:legal-links": "tsx scripts/test-legal-links.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

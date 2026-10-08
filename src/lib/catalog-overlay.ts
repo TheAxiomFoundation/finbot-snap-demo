@@ -21,6 +21,8 @@ export interface ProgramOverlay {
    *  administrative facts. Never household-specific facts. Each entry should
    *  say why. Disclosed in describe_program and on /programs. */
   default_overrides?: Record<string, boolean | number | string>;
+  /** Limitations disclosed once on the relevant program's tool result. */
+  notes?: string[];
 }
 
 /** Defaults applied to ANY program that has the slot (before per-program
@@ -63,6 +65,38 @@ export const GLOBAL_DEFAULT_OVERRIDES: Record<string, boolean | number | string>
 };
 
 export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
+  "us-ca-snap": {
+    default_overrides: {
+      // USDA FNS BBCE chart, June 2026: California confers BBCE on all
+      // households through a pamphlet (PUB 275), subject to its 200% limit.
+      // The compiled MCE path retains its member and household exclusions.
+      // https://fns-prod.azureedge.us/sites/default/files/resource-files/BBCE-States-Chart-June2026.pdf
+      household_was_issued_pub_275: true,
+    },
+  },
+  "us-co-snap": {
+    // USDA FNS BBCE chart, June 2026, lists an application notice for all
+    // Colorado households at 200%. Do not default the corresponding flag:
+    // this artifact's income path ignores expanded_categorical_eligibility_barred
+    // (10 CCR 2506-1 4.206(C)(2)(c)), including an active SNAP IPV exclusion.
+    // https://fns-prod.azureedge.us/sites/default/files/resource-files/BBCE-States-Chart-June2026.pdf
+    notes: ["Colorado SNAP's BBCE path does not yet apply categorical eligibility exclusions; its BBCE flag is unavailable in this assistant."],
+  },
+  "us-az-snap": {
+    notes: ["Arizona SNAP amounts assume the household is eligible."],
+  },
+  "us-ma-snap": {
+    notes: ["Massachusetts SNAP's encoding does not yet determine BBCE eligibility from income."],
+  },
+  "us-fl-snap": {
+    notes: ["Florida SNAP's encoding does not yet determine BBCE eligibility from income."],
+  },
+  "us-al-snap": {
+    notes: ["Alabama SNAP's encoding does not yet determine BBCE eligibility from income."],
+  },
+  "us-tn-snap": {
+    notes: ["Tennessee SNAP's encoding does not yet determine BBCE eligibility from income."],
+  },
   "us-fiit": {
     // Manifest order puts breakdown components after the headline figure and
     // the `_tax`-suffix heuristic would land on alternative_minimum_tax.
@@ -81,3 +115,13 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
     },
   },
 };
+
+/** Shared copy for program pages, describe_program, and computation cards. */
+export function programDisclosures(program: { slug: string; program_id: string }): string[] {
+  return [
+    ...(CATALOG_OVERLAY[program.slug]?.notes ?? []),
+    ...(program.program_id === "snap"
+      ? ["SNAP figures use FY2026 standards; FY2027 standards took effect October 1, 2026 and are not encoded yet."]
+      : []),
+  ];
+}

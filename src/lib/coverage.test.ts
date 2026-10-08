@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { getCatalog } from "./catalog";
-import { coverageSentence, incompleteSentence, summarizeCoverage } from "./coverage";
+import { coverageSentence, incompleteSentence, jurisdictionCoverageStatus, programCoverageStatus, programCoverageStatuses, summarizeCoverage } from "./coverage";
 
 const program = fc.record({
   slug: fc.string({ minLength: 1, maxLength: 12 }),
@@ -20,6 +20,27 @@ const program = fc.record({
 });
 
 describe("summarizeCoverage invariants", () => {
+  it("labels every program with exactly its catalog flags", () => {
+    fc.assert(fc.property(program, (p) => {
+      const status = programCoverageStatus(p);
+      expect(status).toMatch(/^Encoded · /);
+      if (p.acknowledged_incomplete.length) {
+        expect(status).toBe(`Encoded · results flagged incomplete: ${p.acknowledged_incomplete.join(", ")}`);
+      } else {
+        expect(status).toBe("Encoded · no results flagged incomplete in this release");
+      }
+    }));
+  });
+
+  it("reports jurisdiction flags from the programs in that jurisdiction", () => {
+    fc.assert(fc.property(fc.array(program, { maxLength: 60 }), (programs) => {
+      const status = jurisdictionCoverageStatus(programs);
+      const flagged = programs.filter((p) => p.acknowledged_incomplete.length).length;
+      expect(status).toBe(flagged
+        ? `${flagged} of ${programs.length} encoded programs have results flagged incomplete`
+        : "No results flagged incomplete in this release; encodings may still have gaps");
+    }));
+  });
   it("partitions every program into exactly one group", () => {
     fc.assert(
       fc.property(fc.array(program, { maxLength: 60 }), (programs) => {
@@ -97,6 +118,9 @@ describe("summarizeCoverage on the pinned catalog", () => {
 
   it("covers the whole catalog", () => {
     expect(summary.total).toBe(catalog.programs.length);
+    const statuses = programCoverageStatuses(catalog.programs);
+    expect(Object.keys(statuses)).toHaveLength(catalog.programs.length);
+    for (const p of catalog.programs) expect(statuses[p.slug]).toBe(programCoverageStatus(p));
   });
 
   it("reads as one sentence with an Oxford comma", () => {

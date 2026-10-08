@@ -343,11 +343,15 @@ function ensureCorpusCheckout(lock: { repo: string; corpus_sha: string }): strin
  *  scalars and full YAML parsing of ~10k files is needlessly slow. */
 function collectCorpusPaths(corpusDir: string): Record<string, string> {
   const corpusPaths: Record<string, string> = {};
-  const jurisdictions = readdirSync(corpusDir).filter((name) =>
+  const jurisdictions = readdirSync(corpusDir).sort().filter((name) =>
     /^us(-[a-z]{2})?$/.test(name) && statSync(path.join(corpusDir, name)).isDirectory()
   );
   const walk = (dir: string, visit: (file: string) => void) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    // Directory order differs across filesystems. Keep the citation map's
+    // serialization stable so catalog freshness checks work on macOS/Linux.
+    const entries = readdirSync(dir, { withFileTypes: true })
+      .sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    for (const entry of entries) {
       const p = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(p, visit);
       else if (entry.name.endsWith(".yaml") && !entry.name.endsWith(".test.yaml")) visit(p);

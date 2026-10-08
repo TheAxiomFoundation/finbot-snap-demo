@@ -1,5 +1,7 @@
 import posthog from "posthog-js";
 
+import { prepareChatLaunch } from "./lib/chat-launch";
+
 declare global {
   interface Window {
     __posthogInitialized?: boolean;
@@ -7,6 +9,9 @@ declare global {
 }
 
 if (typeof window !== "undefined" && !window.__posthogInitialized) {
+  // A prefilled question is chat content. Remove it from the address before
+  // PostHog pageviews/replay and the later Google Analytics scripts start.
+  prepareChatLaunch(window);
   window.__posthogInitialized = true;
   posthog.init("phc_mrEaBroaYTRUrdkfhJYBGMpafKXWEdUyw5VPQnheh37m", {
     api_host: "https://us.i.posthog.com",

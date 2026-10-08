@@ -11,6 +11,26 @@ type CoverageProgram = Pick<
   "slug" | "jurisdiction" | "program_id" | "primary_output" | "acknowledged_incomplete"
 >;
 
+/** Compact, server-built labels keep the full catalog out of the chat bundle. */
+export type ProgramCoverageStatuses = Record<string, string>;
+
+export function programCoverageStatus(program: Pick<CoverageProgram, "acknowledged_incomplete">): string {
+  return program.acknowledged_incomplete.length > 0
+    ? `Encoded · results flagged incomplete: ${program.acknowledged_incomplete.join(", ")}`
+    : "Encoded · no results flagged incomplete in this release";
+}
+
+export function programCoverageStatuses(programs: readonly CoverageProgram[]): ProgramCoverageStatuses {
+  return Object.fromEntries(programs.map((program) => [program.slug, programCoverageStatus(program)]));
+}
+
+export function jurisdictionCoverageStatus(programs: readonly CoverageProgram[]): string {
+  const flagged = programs.filter((p) => p.acknowledged_incomplete.length > 0).length;
+  return flagged > 0
+    ? `${flagged} of ${programs.length} encoded programs have results flagged incomplete`
+    : "No results flagged incomplete in this release; encodings may still have gaps";
+}
+
 export interface CoverageGroup {
   key: "snap" | "cash" | "federal-income-tax" | "state-income-tax" | "other";
   /** Short phrase for the one-line summary, e.g. "SNAP in 11 states". */

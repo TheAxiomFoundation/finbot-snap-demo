@@ -1,6 +1,7 @@
 "use client";
 import type { ToolInvocation } from "ai";
 import { useState } from "react";
+import type { ProgramCoverageStatuses } from "@/lib/coverage";
 
 import { ActivityTrail } from "./ActivityTrail";
 import { MarkdownText } from "./MarkdownText";
@@ -23,6 +24,7 @@ export interface AssistantTurnProps {
   /** True while this turn's answer is still streaming in. The Sources footer
    *  is suppressed until streaming completes so it doesn't pop in mid-bubble. */
   isStreaming?: boolean;
+  programCoverage?: ProgramCoverageStatuses;
 }
 
 export function AssistantTurn({
@@ -31,10 +33,12 @@ export function AssistantTurn({
   indentTools = false,
   fluid = false,
   isStreaming = false,
+  programCoverage = {},
 }: AssistantTurnProps) {
   const [expanded, setExpanded] = useState(false);
   const hasTools = !!toolInvocations && toolInvocations.length > 0;
   const hasText = !!text && text.trim().length > 0;
+  const seenNotes = new Set<string>();
   // While streaming, an assistant message can land before its first tool
   // call or text arrives — render the same pill the chat surface showed so
   // the handoff doesn't blink blank (returning null here caused a visible
@@ -79,9 +83,17 @@ export function AssistantTurn({
           </button>
           {expanded && (
             <div className="flex flex-col gap-2" style={{ marginTop: 6 }}>
-              {toolInvocations!.map((inv) => (
-                <ToolCallCard key={inv.toolCallId} invocation={inv} />
-              ))}
+              {toolInvocations!.map((inv) => {
+                const result = "result" in inv ? inv.result : undefined;
+                const notes = result?.applied?.notes ?? result?.disclosures;
+                const hiddenNotes: string[] = [];
+                const uniqueNotes = Array.isArray(notes) ? new Set(notes.filter((note): note is string => typeof note === "string")) : [];
+                for (const note of uniqueNotes) {
+                  if (seenNotes.has(note)) hiddenNotes.push(note);
+                  seenNotes.add(note);
+                }
+                return <ToolCallCard key={inv.toolCallId} invocation={inv} programCoverage={programCoverage} hiddenNotes={hiddenNotes} />;
+              })}
             </div>
           )}
         </div>
