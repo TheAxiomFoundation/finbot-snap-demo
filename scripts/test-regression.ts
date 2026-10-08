@@ -19,14 +19,23 @@
  *    section 55 wrapper, so the regular-tax figure is the pinned one.
  * 3. us-md-tca — TANF-family lookup: household of 3 → $773/month maximum
  *    benefit per the FIA IM 26-13 Allowable TCA Monthly Payment schedule.
+ * 4. us-al-snap — elderly/disabled households skip the gross income test but
+ *    must still pass the net test (7 CFR 273.9(a)(2); AL DHR POE 900). One
+ *    person, FY2026 standards: $209 standard deduction, $35 medical threshold,
+ *    $1,305 net limit, $298 maximum, $24 minimum. $4,004 earned (307% of the
+ *    2025 guideline) nets $2,995 → not eligible; $1,174 earned (90%) with $300
+ *    medical nets $466 → eligible, $158. $1,600 unearned nets $1,391 → not
+ *    eligible, and $300 medical takes it to $1,126 → eligible at the $24
+ *    minimum, so the medical deduction alone decides the net test.
  *
  * Run: bun run test:regression   (requires local engine or AXIOM_ENGINE_URL)
  */
 import assert from "node:assert/strict";
 
 import { getProgram } from "../src/lib/catalog";
-import { computeProgram } from "../src/lib/request-builder";
+import { computeProgram, type Facts } from "../src/lib/request-builder";
 import { runBbceRegressions } from "./bbce-regression";
+import { SNAP_TEST_PERIOD } from "./snap-scenarios";
 
 function value(result: Awaited<ReturnType<typeof computeProgram>>, name: string) {
   const output = result.outputs.find((o) => o.name === name);
@@ -98,10 +107,37 @@ async function mdTcaLookup() {
   console.log("ok   us-md-tca: $773 maximum for household of 3");
 }
 
+async function alSnapElderlyDisabledNetTest() {
+  const program = getProgram("us-al-snap");
+  assert.ok(program, "us-al-snap not in catalog");
+  const elderlyOrDisabled = { facts: { member_is_us_citizen: true, member_age: 70, snap_member_is_elderly_or_disabled: true } };
+  const cases: Array<{ label: string; facts: Facts; net: number; eligible: string; benefit: number }> = [
+    { label: "307% earned, no deductions", facts: { snap_gross_monthly_earned_income: 4004 }, net: 2995, eligible: "not_holds", benefit: 0 },
+    { label: "90% earned, $300 medical", facts: { snap_gross_monthly_earned_income: 1174, household_entitled_to_excess_medical_deduction: true, snap_total_medical_expenses: 300 }, net: 466, eligible: "holds", benefit: 158 },
+    { label: "$1,600 unearned, no medical", facts: { snap_total_monthly_unearned_income: 1600 }, net: 1391, eligible: "not_holds", benefit: 0 },
+    { label: "$1,600 unearned, $300 medical", facts: { snap_total_monthly_unearned_income: 1600, household_entitled_to_excess_medical_deduction: true, snap_total_medical_expenses: 300 }, net: 1126, eligible: "holds", benefit: 24 },
+  ];
+  for (const c of cases) {
+    const result = await computeProgram({
+      program,
+      period: SNAP_TEST_PERIOD,
+      facts: { household_size: 1, ...c.facts },
+      members: [elderlyOrDisabled],
+      extraOutputs: ["snap_standard_gross_income_eligible", "snap_net_monthly_income"],
+    });
+    assert.equal(value(result, "snap_standard_gross_income_eligible"), "holds", `${c.label}: gross test exempt`);
+    assert.equal(value(result, "snap_net_monthly_income"), c.net, `${c.label}: net income`);
+    assert.equal(value(result, "snap_eligible"), c.eligible, `${c.label}: eligibility`);
+    assert.equal(value(result, "snap_benefit"), c.benefit, `${c.label}: benefit`);
+    console.log(`ok   us-al-snap elderly/disabled, ${c.label}: net $${c.net}, ${c.eligible}, $${c.benefit}`);
+  }
+}
+
 async function main() {
   await coSnapFixture();
   await fiitCtcMembers();
   await mdTcaLookup();
+  await alSnapElderlyDisabledNetTest();
   const failures = await runBbceRegressions("regression");
   assert.equal(failures, 0, "BBCE eligibility/starter regressions failed");
   console.log("\nregression tests passed");
