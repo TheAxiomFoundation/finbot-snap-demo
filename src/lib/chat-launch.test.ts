@@ -107,7 +107,7 @@ function chatHarness(search: string, savedLaunch?: ReturnType<typeof parseChatLa
     },
     "react/jsx-runtime": jsxRuntime,
     "@/lib/copy": {}, "@/lib/starters": { STARTERS: [] },
-    "@/lib/chat-launch": { parseChatLaunch },
+    "@/lib/chat-launch": { isFramed, parseChatLaunch },
     "./AssistantTurn": { AssistantTurn: () => null },
     "./MarkdownText": { MarkdownText: () => null }, "./RunningPill": { RunningPill: () => null },
   };

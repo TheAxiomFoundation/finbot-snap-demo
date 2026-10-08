@@ -10,8 +10,9 @@
  * (AXIOM_ENGINE_URL, or AXIOM_RULES_ENGINE_BINARY + AXIOM_ARTIFACTS_DIR).
  */
 import { getCatalog } from "../src/lib/catalog";
+import { ASSISTANT_UNSETTABLE_INPUTS } from "../src/lib/request-builder";
 import { tools } from "../src/lib/tools";
-import { checkpoint, CHECKPOINT_DIR, engineAvailable } from "./snap-scenarios";
+import { checkpoint, CHECKPOINT_DIR, skipWithoutEngine } from "./snap-scenarios";
 
 const PERIOD = "2026-09";
 const EARNED = Math.ceil((15650 / 12) * 3.07);
@@ -33,20 +34,17 @@ const RECEIPT_ALLOWLIST: Record<string, string[]> = {
   ],
 };
 
-/** Known encoding defects, recorded rather than hidden. */
-const KNOWN_DEFECTS: Record<string, string[]> = {
-  // Elderly/disabled households skip the gross test but must pass the net
-  // test; at 307% with no deductions this household should be ineligible.
-  "us-al-snap": ["snap_member_is_elderly_or_disabled"],
-};
+/** Known encoding defects, recorded rather than hidden. Each must still
+ *  reproduce: a listed defect that no longer awards fails the scan, so the
+ *  list can't go stale and mask a different award later. */
+const KNOWN_DEFECTS: Record<string, string[]> = {};
 /** Programs whose encoding assumes eligibility, so the baseline itself holds. */
 const ASSUMED_ELIGIBLE = new Set(["us-az-snap"]);
 
 type Row = { program: string; input: string; value: boolean; result: string; status: string };
 
 async function main() {
-  if (!engineAvailable()) {
-    console.log("SKIP test:gates: no hosted or local engine available.");
+  if (skipWithoutEngine("test:gates")) {
     checkpoint("gates", { status: "skipped" });
     return;
   }
@@ -54,6 +52,8 @@ async function main() {
   const rows: Row[] = [];
   let unexpected = 0;
   let calls = 0;
+  const reproducedDefects = new Set<string>();
+  const blockedSeen = new Set<string>();
   for (const program of getCatalog().programs.filter((p) => p.program_id === "snap")) {
     const names = new Set(Object.values(program.inputs).flat().map((s) => s.name));
     const earnedSlot = names.has("snap_gross_monthly_earned_income") ? "snap_gross_monthly_earned_income" : "snap_countable_earned_income";
@@ -67,6 +67,15 @@ async function main() {
     const baseline = outcome(await (tools.compute as any).execute({ program: program.slug, period: PERIOD, facts: base, members: [{ facts: member }] }, ctx));
     calls++;
     if (ASSUMED_ELIGIBLE.has(program.slug)) {
+      // Its flips all inherit the eligible baseline, so check its blocked inputs directly.
+      for (const input of Object.keys(ASSISTANT_UNSETTABLE_INPUTS[program.slug] ?? {})) {
+        for (const value of [true, false]) {
+          const r = await (tools.compute as any).execute({ program: program.slug, period: PERIOD, facts: { ...base, [input]: value }, members: [{ facts: member }] }, ctx);
+          calls++;
+          if (r.kind === "not_settable_input") blockedSeen.add(`${program.slug}:${input}`);
+          else { unexpected++; console.log(`FAIL ${program.slug} ${input}=${value}: not blocked`); }
+        }
+      }
       rows.push({ program: program.slug, input: "(baseline)", value: true, result: `${baseline.eligible} $${baseline.benefit}`, status: "known: eligibility assumed" });
       console.log(`known ${program.slug}: baseline at 307% → ${baseline.eligible}, $${baseline.benefit} (eligibility assumed by the encoding)`);
       continue;
@@ -87,7 +96,17 @@ async function main() {
         };
         const r = await (tools.compute as any).execute(args, ctx);
         calls++;
-        if (r.error) continue; // not_settable_input (blocked) or a builder rejection
+        if (r.error) {
+          // Only the assistant's blocked inputs may error here; anything else
+          // is a broken scan, not a pass.
+          if (r.kind !== "not_settable_input") {
+            unexpected++;
+            console.log(`FAIL ${program.slug} ${entity}.${slot.name}: unexpected ${r.kind ?? "error"}: ${String(r.error).slice(0, 120)}`);
+          } else {
+            blockedSeen.add(`${program.slug}:${slot.name}`);
+          }
+          continue;
+        }
         const o = outcome(r);
         if (!o.awarded) continue;
         const status = RECEIPT_ALLOWLIST[program.slug]?.includes(slot.name)
@@ -96,12 +115,32 @@ async function main() {
             ? "known defect"
             : "UNEXPECTED";
         if (status === "UNEXPECTED") unexpected++;
+        if (status === "known defect") reproducedDefects.add(`${program.slug}:${slot.name}`);
         rows.push({ program: program.slug, input: `${entity}.${slot.name}`, value: flipped, result: `${o.eligible} $${o.benefit}`, status });
         console.log(`${status === "UNEXPECTED" ? "FAIL" : "ok  "} ${program.slug} ${entity}.${slot.name}=${flipped} → ${o.eligible}, $${o.benefit} (${status})`);
       }
     }
   }
-  checkpoint("gates", { period: PERIOD, earned: EARNED, calls, rows, unexpected });
+  for (const [slug, inputs] of Object.entries(KNOWN_DEFECTS)) {
+    for (const input of inputs) {
+      if (!reproducedDefects.has(`${slug}:${input}`)) {
+        unexpected++;
+        console.log(`FAIL ${slug} ${input}: listed as a known defect but no longer awards; remove it from KNOWN_DEFECTS`);
+      }
+    }
+  }
+  // Every blocked input that is a bool the scan flips must have been seen blocked.
+  for (const [slug, inputs] of Object.entries(ASSISTANT_UNSETTABLE_INPUTS)) {
+    const program = getCatalog().programs.find((p) => p.slug === slug);
+    for (const input of Object.keys(inputs)) {
+      const slot = program && Object.values(program.inputs).flat().find((s) => s.name === input);
+      if (slot && !slot.aux && slot.dtype === "bool" && !blockedSeen.has(`${slug}:${input}`)) {
+        unexpected++;
+        console.log(`FAIL ${slug} ${input}: in ASSISTANT_UNSETTABLE_INPUTS but the tool path did not block it`);
+      }
+    }
+  }
+  checkpoint("gates", { period: PERIOD, earned: EARNED, calls, rows, unexpected, blocked: [...blockedSeen].sort() });
   console.log(`\ngate scan: ${calls} engine calls; ${unexpected} unexpected award(s). Checkpoint: ${CHECKPOINT_DIR}/gates.json`);
   process.exitCode = unexpected ? 1 : 0;
 }

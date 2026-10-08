@@ -80,16 +80,16 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
     // this artifact's income path ignores expanded_categorical_eligibility_barred
     // (10 CCR 2506-1 4.206(C)(2)(c)), including an active SNAP IPV exclusion.
     // https://fns-prod.azureedge.us/sites/default/files/resource-files/BBCE-States-Chart-June2026.pdf
-    notes: ["Axiom can't apply Colorado's broad-based categorical eligibility yet. A $0 for a household above 130% of the poverty line is not a determination; it may still qualify."],
+    notes: ["Axiom can't apply Colorado's broad-based categorical eligibility yet. A $0 for a household with gross income above the 130% limit but within the state's higher BBCE limit is not a determination; it may still qualify."],
   },
   "us-az-snap": {
     notes: ["Axiom's Arizona SNAP encoding doesn't test eligibility yet: every household shows as eligible, so read the amount as \"if eligible\"."],
   },
   "us-ma-snap": {
-    notes: ["Axiom can't apply Massachusetts's broad-based categorical eligibility yet. A $0 for a household above 130% of the poverty line is not a determination; it may still qualify."],
+    notes: ["Axiom can't apply Massachusetts's broad-based categorical eligibility yet. A $0 for a household with gross income above the 130% limit but within the state's higher BBCE limit is not a determination; it may still qualify."],
   },
   "us-fl-snap": {
-    notes: ["Axiom can't apply Florida's broad-based categorical eligibility yet. A $0 for a household above 130% of the poverty line is not a determination; it may still qualify."],
+    notes: ["Axiom can't apply Florida's broad-based categorical eligibility yet. A $0 for a household with gross income above the 130% limit but within the state's higher BBCE limit is not a determination; it may still qualify."],
   },
   "us-al-snap": {
     notes: ["Axiom's Alabama SNAP encoding takes categorical eligibility as an unchecked input, which this assistant can't set."],

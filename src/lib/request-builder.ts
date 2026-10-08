@@ -83,7 +83,7 @@ export class UnknownOutputError extends Error {
   }
 }
 
-const ASSISTANT_UNSETTABLE_INPUTS: Record<string, Record<string, { state: string; reason?: string }>> = {
+export const ASSISTANT_UNSETTABLE_INPUTS: Record<string, Record<string, { state: string; reason?: string }>> = {
   "us-ma-snap": { snap_household_is_categorically_eligible: { state: "Massachusetts" } },
   "us-al-snap": { household_is_categorically_eligible: { state: "Alabama" } },
   "us-tn-snap": { household_is_categorically_eligible: { state: "Tennessee" } },

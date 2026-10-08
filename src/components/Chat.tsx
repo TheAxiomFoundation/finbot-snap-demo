@@ -3,7 +3,7 @@ import { useChat } from "@ai-sdk/react";
 import { useEffect, useRef, useState } from "react";
 
 import { INPUT_PLACEHOLDER } from "@/lib/copy";
-import { parseChatLaunch } from "@/lib/chat-launch";
+import { isFramed, parseChatLaunch } from "@/lib/chat-launch";
 import type { ProgramCoverageStatuses } from "@/lib/coverage";
 import { STARTERS } from "@/lib/starters";
 
@@ -38,7 +38,7 @@ export function Chat({ programCoverage = {} }: { programCoverage?: ProgramCovera
   useEffect(() => {
     if (launchApplied.current) return;
     launchApplied.current = true;
-    const launch = window.__finbotChatLaunch ?? parseChatLaunch(window.location.search);
+    const launch = window.__finbotChatLaunch ?? parseChatLaunch(window.location.search, isFramed(window));
     // Consume the saved launch so returning from /programs cannot resubmit it.
     delete window.__finbotChatLaunch;
     if (launch.compare) setCompareMode(true);

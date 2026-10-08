@@ -8,7 +8,7 @@
 import { getProgram } from "../src/lib/catalog";
 import { runCompiled } from "../src/lib/engine";
 import { buildRequest, shapeResult } from "../src/lib/request-builder";
-import { checkpoint, CHECKPOINT_DIR, engineAvailable } from "./snap-scenarios";
+import { checkpoint, CHECKPOINT_DIR, skipWithoutEngine } from "./snap-scenarios";
 
 const PERIOD = "2026-09";
 const EARNED = Math.ceil((15650 / 12) * 1.45);
@@ -26,8 +26,7 @@ const CASES: Array<{ label: string; household?: Record<string, boolean>; member?
 ];
 
 async function main() {
-  if (!engineAvailable()) {
-    console.log("SKIP test:exclusions: no hosted or local engine available.");
+  if (skipWithoutEngine("test:exclusions")) {
     checkpoint("exclusions", { status: "skipped" });
     return;
   }

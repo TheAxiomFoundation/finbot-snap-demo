@@ -13,6 +13,17 @@ export function checkpoint(name: string, data: unknown): void {
   writeFileSync(path.join(CHECKPOINT_DIR, `${name}.json`), `${JSON.stringify(data, null, 2)}\n`);
 }
 
+/** In CI (REQUIRE_ENGINE=1) a missing engine is a failure, never a silent skip. */
+export function skipWithoutEngine(name: string): boolean {
+  if (engineAvailable()) return false;
+  if (process.env.REQUIRE_ENGINE === "1") {
+    console.error(`FAIL ${name}: REQUIRE_ENGINE=1 but no hosted or local engine is available.`);
+    process.exit(1);
+  }
+  console.log(`SKIP ${name}: no hosted or local engine available.`);
+  return true;
+}
+
 export function engineAvailable(): boolean {
   if (process.env.AXIOM_ENGINE_URL) return true;
   const binary = process.env.AXIOM_RULES_ENGINE_BINARY ?? path.resolve("engine/axiom-rules-engine/target/release/axiom-rules-engine");

@@ -8,7 +8,7 @@ import { getCatalog } from "../src/lib/catalog";
 import { fact, runCompiled } from "../src/lib/engine";
 import { buildRequest, computeProgram, shapeResult } from "../src/lib/request-builder";
 import {
-  checkpoint, CHECKPOINT_DIR, encodedFplMonthly, engineAvailable,
+  checkpoint, CHECKPOINT_DIR, encodedFplMonthly, engineAvailable, skipWithoutEngine,
   numericOutput, output, SNAP_TEST_PERIOD, snapProgram, snapScenario,
 } from "./snap-scenarios";
 
@@ -91,8 +91,7 @@ async function probeIntendedI1Violations() {
 }
 
 async function main() {
-  if (!engineAvailable()) {
-    console.log("SKIP test:properties: set AXIOM_ENGINE_URL, or provide a local executable AXIOM_RULES_ENGINE_BINARY and AXIOM_ARTIFACTS_DIR with compiled artifacts.");
+  if (skipWithoutEngine("test:properties")) {
     checkpoint("properties", { status: "skipped", reason: "No hosted or local engine available" });
     return;
   }

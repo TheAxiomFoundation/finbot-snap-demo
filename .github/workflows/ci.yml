@@ -68,6 +68,7 @@ jobs:
         run: bun run artifacts:fetch
       - name: Engine-backed suites
         env:
+          REQUIRE_ENGINE: "1"
           AXIOM_RULES_ENGINE_BINARY: ${{ github.workspace }}/engine-src/target/release/axiom-rules-engine
           AXIOM_ARTIFACTS_DIR: ${{ github.workspace }}/engine/artifacts
         run: |

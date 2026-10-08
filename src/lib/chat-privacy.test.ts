@@ -43,7 +43,7 @@ function chatErrorHandler(console: ReturnType<typeof recordingConsole>) {
   const { Chat } = loadSource<{ Chat: () => unknown }>("components/Chat.tsx", {
     "@ai-sdk/react": { useChat(value: typeof options) { options = value; throw stop; } },
     "react": {}, "react/jsx-runtime": {},
-    "@/lib/copy": {}, "@/lib/starters": {}, "@/lib/chat-launch": {},
+    "@/lib/copy": {}, "@/lib/starters": {}, "@/lib/chat-launch": { isFramed: () => false },
     "./AssistantTurn": {}, "./MarkdownText": {}, "./RunningPill": {},
   }, console);
   expect(() => Chat()).toThrow(stop);
