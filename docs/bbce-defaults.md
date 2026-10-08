@@ -37,7 +37,7 @@ Core member-scope CO noncitizen, student, SSN refusal, general work noncomplianc
 
 The existing ABAWD artifact uses >3 countable months, so 3-month probes held and 4-month probes failed; this artifact boundary is not fixed by input plumbing.
 
-New York factual earned-income companion verified for 1 and 3 people, 2026-10: 145% with earnings holds; 160% with earnings denies; a dependent-care or elderly path at 160% holds. Derived companion appears in applied.derived_facts and notes for Assumptions.
+New York's earned-income companion input was checked for 1 and 3 people, 2026-10: 145% with earnings holds; 160% with earnings denies; a dependent-care or elderly path at 160% holds. Derived companion appears in applied.derived_facts and notes for Assumptions.
 
 ## Dollar gap against PolicyEngine, traced
 
@@ -48,7 +48,7 @@ The earlier comparison (3 people, $3,300 a month in earnings, $1,800 shelter) sh
 | Axiom CA, Sep 2026, no heating/cooling cost (CA default) | $0 | $585 | $1,846 | $231 |
 | Axiom CA, Sep 2026, heating/cooling cost | $663 | $744 (cap) | $1,687 | $278 |
 | PolicyEngine 1.822.5 CA, Sep 2026 (either heating input) | $663 | $744 (cap) | $1,687 | $278 |
-| Axiom CO, Sep 2026, default (heating/cooling cost assumed) | $594 | $744 (cap) | $1,687 | $278 |
+| Axiom CO, Sep 2026, heating/cooling default true; BBCE input forced on for the trace (the chatbot itself returns $0 for Colorado) | $594 | $744 (cap) | $1,687 | $278 |
 | PolicyEngine 1.822.5 CA or CO, Oct 2026 | $663 / $594 | $770.30 | $1,653 | $316.72 |
 
 1. **Utility allowance.** Axiom applies California's allowance only when the household has heating or cooling costs separate from rent; California's input defaults to false, Colorado's to true. PolicyEngine 1.822.5 applied the allowance regardless of the heating input. With the same heating fact, the two agree to the dollar.

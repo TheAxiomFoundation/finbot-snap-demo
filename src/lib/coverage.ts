@@ -17,7 +17,7 @@ export type ProgramCoverageStatuses = Record<string, string>;
 export function programCoverageStatus(program: Pick<CoverageProgram, "acknowledged_incomplete">): string {
   return program.acknowledged_incomplete.length > 0
     ? `Encoded · results flagged incomplete: ${program.acknowledged_incomplete.join(", ")}`
-    : "Encoded · no results flagged incomplete in this release";
+    : "Encoded · no results flagged incomplete in this release; encodings may still have gaps";
 }
 
 export function programCoverageStatuses(programs: readonly CoverageProgram[]): ProgramCoverageStatuses {

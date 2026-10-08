@@ -85,7 +85,7 @@ export function AssistantTurn({
             <div className="flex flex-col gap-2" style={{ marginTop: 6 }}>
               {toolInvocations!.map((inv) => {
                 const result = "result" in inv ? inv.result : undefined;
-                const notes = result?.applied?.notes ?? result?.disclosures;
+                const notes = result?.applied?.disclosures ?? result?.disclosures;
                 const hiddenNotes: string[] = [];
                 const uniqueNotes = Array.isArray(notes) ? new Set(notes.filter((note): note is string => typeof note === "string")) : [];
                 for (const note of uniqueNotes) {

@@ -87,7 +87,23 @@ const ASSISTANT_UNSETTABLE_INPUTS: Record<string, Record<string, { state: string
   "us-ma-snap": { snap_household_is_categorically_eligible: { state: "Massachusetts" } },
   "us-al-snap": { household_is_categorically_eligible: { state: "Alabama" } },
   "us-tn-snap": { household_is_categorically_eligible: { state: "Tennessee" } },
-  "us-az-snap": { na_budgetary_unit_is_eligible: { state: "Arizona" } },
+  "us-az-snap": { na_budgetary_unit_is_eligible: { state: "Arizona", reason: "does not test eligibility yet" } },
+  "us-ca-snap": {
+    snap_categorically_eligible_for_resource_exemption: {
+      state: "California",
+      reason: "takes categorical eligibility as an unchecked input (it would apply at any income)",
+    },
+  },
+  "us-ga-snap": {
+    member_authorized_to_receive_tanf_community_outreach_services: {
+      state: "Georgia",
+      reason: "treats TANF community outreach services as categorical eligibility at any income",
+    },
+    member_receives_tanf_community_outreach_services: {
+      state: "Georgia",
+      reason: "treats TANF community outreach services as categorical eligibility at any income",
+    },
+  },
   "us-co-snap": {
     snap_basic_categorical_eligible: {
       state: "Colorado",
@@ -216,7 +232,10 @@ export interface BuiltRequest {
     overlay_defaults_in_effect?: Facts;
     /** Factual companion slots derived from supplied income, not eligibility. */
     derived_facts?: Facts;
+    /** Instructions and diagnostics for the model; not shown to users. */
     notes: string[];
+    /** User-facing limitations of this program's encoding, shown on the tool card. */
+    disclosures: string[];
   };
 }
 
@@ -242,7 +261,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     validateSettable(member.facts ?? {}, `members[${index}].facts`);
   }
 
-  notes.push(...programDisclosures(program));
+  const disclosures = programDisclosures(program);
 
   // -- Validate fact names against the slot universe -------------------------
   const slotsByName = new Map<string, CatalogInputSlot>();
@@ -286,6 +305,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     facts[slot] = hasEarned;
     derivedFacts[slot] = hasEarned;
     notes.push(`Derived ${slot}=${hasEarned} from ${earnedSlot}=${earned}; disclose this in Assumptions.`);
+    disclosures.push(`New York: the household's earned-income input was set from the earnings given (${hasEarned ? "has" : "no"} earned income).`);
   }
 
   // Facts landing on auxiliary slots (not reachable from any certified
@@ -548,6 +568,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         return Object.keys(inEffect).length > 0 ? { overlay_defaults_in_effect: inEffect } : {};
       })(),
       notes,
+      disclosures,
     },
   };
 }

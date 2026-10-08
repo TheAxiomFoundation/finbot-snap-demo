@@ -201,7 +201,7 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
         </div>
       )}
       {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}
-      <AppliedNotes notes={applied.notes} hiddenNotes={hiddenNotes} />
+      <AppliedNotes notes={applied.disclosures} hiddenNotes={hiddenNotes} />
       <FactChips facts={applied.facts_applied} />
       <div className="tool-foot">
         {result.member_count > 0 && <>{result.member_count} member{result.member_count === 1 ? "" : "s"} · </>}
@@ -316,7 +316,7 @@ function LookupCard({ result, hiddenNotes }: { result: any; hiddenNotes: readonl
         {result.acknowledged_incomplete && <IncompleteBadge />}
       </div>
       {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}
-      <AppliedNotes notes={result.applied?.notes} hiddenNotes={hiddenNotes} />
+      <AppliedNotes notes={result.applied?.disclosures} hiddenNotes={hiddenNotes} />
       <FactChips facts={result.applied?.facts_applied} />
       <div className="tool-foot">
         {result.source && <>{result.source}</>}

@@ -18,7 +18,9 @@ export function SessionNotice({
   return (
     <section id="about-this-assistant" className="session-notice" aria-label="About this assistant">
       <p className="session-notice-line">
-        AI replies from {MODEL_PROVIDER}&rsquo;s {modelLabel}. Estimates from encoded rules that may be incomplete.
+        Replies come from an AI ({MODEL_PROVIDER}&rsquo;s {modelLabel}), not a person or a government agency.
+        Answers are estimates from encoded rules that may be incomplete. Don&rsquo;t include names, Social
+        Security numbers, or case or account numbers.
       </p>
       <details className="session-notice-details">
         <summary>Details</summary>
@@ -35,16 +37,16 @@ export function SessionNotice({
             <Link href="/programs">See coverage by state and program</Link>.
           </p>
           <p>
-            Messages go to {MODEL_PROVIDER}; calculation inputs go to Axiom&rsquo;s engine on Modal
-            and may appear in server error logs. Google Analytics measures page views, scrolling,
+            Messages go to {MODEL_PROVIDER}, which may keep them for a time; calculation inputs go to
+            Axiom&rsquo;s engine on Modal and may appear in server error logs. Google Analytics measures page views, scrolling,
             time on the page and outbound links. PostHog measures page use and records sessions,
             with the conversation, draft messages and chat errors masked; console recording is
             disabled. Prefilled question text is removed from the page URL before analytics starts.
             Initial link URLs can appear in hosting logs.
-            Don&rsquo;t include names, Social Security numbers, or case or account numbers.
           </p>
           <p>
-            Spot a wrong answer? <ExternalLink href="https://axiom.org/contact">Tell us</ExternalLink>.
+            For adults, or with a parent&rsquo;s or guardian&rsquo;s permission. Spot a wrong answer?{" "}
+            <ExternalLink href="https://axiom.org/contact">Tell us</ExternalLink>.
           </p>
         </div>
       </details>

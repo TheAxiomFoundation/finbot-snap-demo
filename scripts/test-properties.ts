@@ -67,9 +67,10 @@ async function probeIntendedI1Violations() {
   ]) {
     const program = snapProgram(state);
     const earned = Math.ceil(fpl.get(1)! * 3.07);
-    // Artifact probe only: build the allowed request, then toggle the blocked
-    // gate in the raw engine dataset to demonstrate why assistant access is
-    // forbidden. This is deliberately outside the model's tool interface.
+    // Artifact probe only, outside the model's tool interface: set the gate
+    // true in the raw engine dataset. For MA, AL and TN this shows why the
+    // assistant may not set it. Arizona's gate already defaults to true, so its
+    // row records an over-award at default inputs that blocking cannot fix.
     const built = buildRequest({ program, period: SNAP_TEST_PERIOD,
       ...snapScenario(program, 1, earned), mode: "explain" });
     const input = built.request.dataset.inputs.find((i) => i.entity === program.primary_entity && i.name.endsWith(`#input.${gate}`));
@@ -80,7 +81,10 @@ async function probeIntendedI1Violations() {
     const eligible = output(result, "snap_eligible");
     const benefit = numericOutput(result, "snap_benefit");
     intendedViolations.push({ state: state.toUpperCase(), gate, gateValue: true, size: 1, earned,
-      percent: 307, eligible, benefit, status: eligible === "holds" ? "intended I1 violation" : "not reproduced" });
+      percent: 307, eligible, benefit,
+      status: eligible !== "holds" ? "not reproduced"
+        : state === "az" ? "intended I1 violation: Arizona assumes eligibility at default inputs"
+        : "intended I1 violation: unconditional gate the assistant can't set" });
     console.log(`known I1 exclusion ${state.toUpperCase()}: ${gate}=true at 307% → ${eligible}, $${benefit}`);
     save();
   }

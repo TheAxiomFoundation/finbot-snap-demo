@@ -80,22 +80,22 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
     // this artifact's income path ignores expanded_categorical_eligibility_barred
     // (10 CCR 2506-1 4.206(C)(2)(c)), including an active SNAP IPV exclusion.
     // https://fns-prod.azureedge.us/sites/default/files/resource-files/BBCE-States-Chart-June2026.pdf
-    notes: ["Colorado SNAP's BBCE path does not yet apply categorical eligibility exclusions; its BBCE flag is unavailable in this assistant."],
+    notes: ["Axiom can't apply Colorado's broad-based categorical eligibility yet. A $0 for a household above 130% of the poverty line is not a determination; it may still qualify."],
   },
   "us-az-snap": {
-    notes: ["Arizona SNAP amounts assume the household is eligible."],
+    notes: ["Axiom's Arizona SNAP encoding doesn't test eligibility yet: every household shows as eligible, so read the amount as \"if eligible\"."],
   },
   "us-ma-snap": {
-    notes: ["Massachusetts SNAP's encoding does not yet determine BBCE eligibility from income."],
+    notes: ["Axiom can't apply Massachusetts's broad-based categorical eligibility yet. A $0 for a household above 130% of the poverty line is not a determination; it may still qualify."],
   },
   "us-fl-snap": {
-    notes: ["Florida SNAP's encoding does not yet determine BBCE eligibility from income."],
+    notes: ["Axiom can't apply Florida's broad-based categorical eligibility yet. A $0 for a household above 130% of the poverty line is not a determination; it may still qualify."],
   },
   "us-al-snap": {
-    notes: ["Alabama SNAP's encoding does not yet determine BBCE eligibility from income."],
+    notes: ["Axiom's Alabama SNAP encoding takes categorical eligibility as an unchecked input, which this assistant can't set."],
   },
   "us-tn-snap": {
-    notes: ["Tennessee SNAP's encoding does not yet determine BBCE eligibility from income."],
+    notes: ["Axiom's Tennessee SNAP encoding takes categorical eligibility as an unchecked input, which this assistant can't set."],
   },
   "us-fiit": {
     // Manifest order puts breakdown components after the headline figure and

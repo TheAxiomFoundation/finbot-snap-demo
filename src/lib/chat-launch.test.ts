@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 import { describe, expect, it, vi } from "vitest";
 
-import { MAX_LINK_QUESTION_LENGTH, parseChatLaunch, prepareChatLaunch, withoutQuestionParam } from "./chat-launch";
+import { isFramed, MAX_LINK_QUESTION_LENGTH, parseChatLaunch, prepareChatLaunch, withoutQuestionParam } from "./chat-launch";
 
 // Compile once during setup; each behavior test only executes the component.
 const chatFilename = path.resolve(__dirname, "../components/Chat.tsx");
@@ -22,6 +22,9 @@ describe("chat link parameters", () => {
       compare: true, question: "Can I get SNAP?", autoSubmit: false,
     });
     expect(parseChatLaunch("?q=hello&go=1").autoSubmit).toBe(true);
+    // Inside another site's frame, go=1 only prefills: no model call without a click.
+    expect(parseChatLaunch("?q=hello&go=1", true).autoSubmit).toBe(false);
+    expect(parseChatLaunch("?q=hello&go=1", true).question).toBe("hello");
     expect(parseChatLaunch("?go=1").autoSubmit).toBe(false);
     expect(parseChatLaunch("?q=%20%00&go=1").autoSubmit).toBe(false);
     expect(parseChatLaunch("?q=hello&go=true&compare=true")).toEqual({
@@ -159,5 +162,18 @@ describe("Chat startup from links", () => {
     expect(html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
     expect(html).not.toContain("<script>");
     expect(html).not.toContain("<img");
+  });
+});
+
+describe("isFramed", () => {
+  it("detects frames, including a cross-origin top that throws", () => {
+    const win = {} as { self: unknown; top: unknown };
+    win.self = win;
+    win.top = win;
+    expect(isFramed(win)).toBe(false);
+    expect(isFramed({ self: {}, top: {} })).toBe(true);
+    const crossOrigin = { self: {} } as { self: unknown; top?: unknown };
+    Object.defineProperty(crossOrigin, "top", { get() { throw new Error("SecurityError"); } });
+    expect(isFramed(crossOrigin)).toBe(true);
   });
 });

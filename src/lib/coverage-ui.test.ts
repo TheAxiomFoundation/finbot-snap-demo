@@ -67,19 +67,21 @@ describe("catalog coverage in tool cards", () => {
     const note = "SNAP figures use FY2026 standards.";
     const invocation: ToolInvocation = {
       state: "result", toolCallId: "compute", toolName: "compute", args: { program: "us-ca-snap" },
-      result: { applied: { notes: [note, note, "<script>alert(1)</script>"] }, outputs: [] },
+      result: { applied: { disclosures: [note, note, "<script>alert(1)</script>"], notes: ["Set snap_x_for_household_size=3 to match members[]"] }, outputs: [] },
     };
     const html = renderToStaticMarkup(ToolCallCard({ invocation, programCoverage: statuses }));
     expect(html.split(note)).toHaveLength(2);
     expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
     expect(html).not.toContain("<script>");
+    // Model-facing instructions in applied.notes never reach the card.
+    expect(html).not.toContain("to match members[]");
   });
 
   it("shows a repeated program disclosure once per assistant turn, retaining changed assumptions", () => {
     const note = "SNAP figures use FY2026 standards.";
     const invocations: ToolInvocation[] = [1, 2].map((n) => ({
       state: "result", toolCallId: `compute-${n}`, toolName: "compute", args: { program: "us-ny-snap" },
-      result: { applied: { notes: [note, ...(n === 1 ? [note] : []), `Earned income assumption ${n}`] }, outputs: [] },
+      result: { applied: { disclosures: [note, ...(n === 1 ? [note] : []), `Earned income assumption ${n}`] }, outputs: [] },
     }));
     const html = renderToStaticMarkup(AssistantTurn({ toolInvocations: invocations, programCoverage: statuses }));
     expect(html.split(note)).toHaveLength(2);
@@ -97,8 +99,14 @@ describe("compact session notice", () => {
 
   it("keeps the AI and estimate disclosure visible and analytics details collapsed", () => {
     const html = renderToStaticMarkup(SessionNotice({ modelLabel: "GPT-5.5", coverage: summarizeCoverage(getCatalog().programs) }));
-    expect(html).toContain("AI replies from OpenAI");
-    expect(html).toContain("Estimates from encoded rules that may be incomplete");
+    const visible = html.split("<details")[0];
+    expect(visible).toContain("Replies come from an AI (OpenAI");
+    expect(visible).toContain("not a person or a government agency");
+    expect(visible).toContain("Answers are estimates from encoded rules that may be incomplete");
+    // The personal-data warning stays outside the collapsed details.
+    expect(visible).toContain("Social Security numbers");
+    expect(html).toContain("may keep them for a time");
+    expect(html).toContain("parent&rsquo;s or guardian&rsquo;s permission".replace(/&rsquo;/g, "’"));
     expect(html).toContain("<summary>Details</summary>");
     expect(html).not.toContain("<details open");
     expect(html).toContain("Google Analytics measures page views, scrolling");

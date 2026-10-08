@@ -16,6 +16,8 @@
     "eval:oracle": "tsx eval/oracle-eval.ts",
     "test:regression": "tsx scripts/test-regression.ts",
     "test:properties": "tsx scripts/test-properties.ts",
+    "test:gates": "tsx scripts/test-gates.ts",
+    "test:exclusions": "tsx scripts/test-exclusions.ts",
     "test:legal-links": "tsx scripts/test-legal-links.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

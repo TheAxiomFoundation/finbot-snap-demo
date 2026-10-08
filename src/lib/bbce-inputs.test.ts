@@ -12,11 +12,19 @@ vi.mock("./engine", async (importOriginal) => ({
   runCompiled: vi.fn(),
 }));
 
+const DEFAULT_REASON = "does not yet determine categorical eligibility from income";
+const GA_REASON = "treats TANF community outreach services as categorical eligibility at any income";
+// Every SNAP input that, set true, makes a household at 307% FPL eligible
+// (found by flipping each non-auxiliary bool through the engine), minus the
+// legitimate benefit-receipt inputs.
 const blocked = [
-  ["us-ma-snap", "snap_household_is_categorically_eligible", "Massachusetts"],
-  ["us-al-snap", "household_is_categorically_eligible", "Alabama"],
-  ["us-tn-snap", "household_is_categorically_eligible", "Tennessee"],
-  ["us-az-snap", "na_budgetary_unit_is_eligible", "Arizona"],
+  ["us-ma-snap", "snap_household_is_categorically_eligible", "Massachusetts", DEFAULT_REASON],
+  ["us-al-snap", "household_is_categorically_eligible", "Alabama", DEFAULT_REASON],
+  ["us-tn-snap", "household_is_categorically_eligible", "Tennessee", DEFAULT_REASON],
+  ["us-az-snap", "na_budgetary_unit_is_eligible", "Arizona", "does not test eligibility yet"],
+  ["us-ca-snap", "snap_categorically_eligible_for_resource_exemption", "California", "takes categorical eligibility as an unchecked input (it would apply at any income)"],
+  ["us-ga-snap", "member_authorized_to_receive_tanf_community_outreach_services", "Georgia", GA_REASON],
+  ["us-ga-snap", "member_receives_tanf_community_outreach_services", "Georgia", GA_REASON],
 ] as const;
 
 beforeEach(() => vi.clearAllMocks());
@@ -66,18 +74,20 @@ describe("BBCE input plumbing", () => {
       const program = getProgram(`us-${state}-snap`)!;
       const built = buildRequest({ program });
       for (const note of CATALOG_OVERLAY[program.slug].notes!) {
-        expect(built.applied.notes.filter((n) => n === note)).toHaveLength(1);
+        expect(built.applied.disclosures.filter((n) => n === note)).toHaveLength(1);
+        // User-facing limitations live in disclosures, not in the model notes.
+        expect(built.applied.notes).not.toContain(note);
       }
-      expect(built.applied.notes.filter((n) => n.startsWith("SNAP figures use FY2026"))).toHaveLength(1);
+      expect(built.applied.disclosures.filter((n) => n.startsWith("SNAP figures use FY2026"))).toHaveLength(1);
     }
-    expect(buildRequest({ program: getProgram("us-fiit")! }).applied.notes.some((n) => n.includes("FY2026"))).toBe(false);
+    expect(buildRequest({ program: getProgram("us-fiit")! }).applied.disclosures.some((n) => n.includes("FY2026"))).toBe(false);
   });
 });
 
 describe("assistant eligibility-gate guards", () => {
   it("rejects every supplied value through household and member facts", () => {
     fc.assert(fc.property(fc.constantFrom(...blocked), fc.oneof(fc.boolean(), fc.integer(), fc.string()), (entry, value) => {
-      const [slug, slot, state] = entry;
+      const [slug, slot, state, reason] = entry;
       const program = getProgram(slug)!;
       for (const membersPath of [false, true]) {
         const options = membersPath ? { members: [{ facts: {} }, { facts: { [slot]: value } }] } : { facts: { [slot]: value } };
@@ -89,7 +99,7 @@ describe("assistant eligibility-gate guards", () => {
           expect(err).toMatchObject({
             kind: "not_settable_input", slot,
             path: membersPath ? `members[1].facts.${slot}` : `facts.${slot}`,
-            message: `not settable by the assistant: Axiom's ${state} SNAP encoding does not yet determine categorical eligibility from income`,
+            message: `not settable by the assistant: Axiom's ${state} SNAP encoding ${reason}`,
           });
         }
       }

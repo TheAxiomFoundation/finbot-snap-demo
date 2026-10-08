@@ -27,7 +27,7 @@ describe("summarizeCoverage invariants", () => {
       if (p.acknowledged_incomplete.length) {
         expect(status).toBe(`Encoded · results flagged incomplete: ${p.acknowledged_incomplete.join(", ")}`);
       } else {
-        expect(status).toBe("Encoded · no results flagged incomplete in this release");
+        expect(status).toBe("Encoded · no results flagged incomplete in this release; encodings may still have gaps");
       }
     }));
   });
