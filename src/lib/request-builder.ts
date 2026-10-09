@@ -239,7 +239,23 @@ export interface BuiltRequest {
   };
 }
 
-const SIZE_SLOT = /(household|family|unit)_size$/;
+// Verified headcount inputs in the served catalog: these index household,
+// family, and assistance-unit tables or directly count their members. The
+// catalog's numeric dtype alone cannot distinguish counts from dollar amounts
+// such as poverty_income_guideline_for_household_size.
+const MEMBER_COUNT_INPUTS = new Set([
+  "household_size",
+  "family_size",
+  "assistance_unit_size",
+  "filing_unit_size",
+  "fns_unit_size",
+  "tanf_household_size",
+  "tanf_family_size",
+]);
+
+export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">): boolean {
+  return MEMBER_COUNT_INPUTS.has(slot.name) && (slot.dtype === "integer" || slot.dtype === "decimal");
+}
 
 export function buildRequest(options: BuildOptions): BuiltRequest {
   const { program } = options;
@@ -332,17 +348,20 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       memberCount = options.members.length;
     } else {
       const sizeFact = Object.entries(facts).find(
-        ([name, value]) => SIZE_SLOT.test(name) && typeof value === "number" && value >= 1
+        ([name, value]) => {
+          const slot = slotsByName.get(name);
+          return slot && isMemberCountSlot(slot) && typeof value === "number" && value >= 1;
+        }
       );
       memberCount = sizeFact ? Math.min(20, Math.floor(sizeFact[1] as number)) : 1;
       if (sizeFact) notes.push(`synthesized ${memberCount} ${memberEntity} member(s) from ${sizeFact[0]}`);
     }
-    // Keep size-style inputs consistent with an explicit members list.
+    // Keep verified count inputs consistent with an explicit members list.
     if (options.members?.length) {
-      for (const name of slotsByName.keys()) {
-        if (SIZE_SLOT.test(name) && facts[name] === undefined) {
-          facts[name] = memberCount;
-          notes.push(`set ${name}=${memberCount} to match members[]`);
+      for (const slot of slotsByName.values()) {
+        if (isMemberCountSlot(slot) && facts[slot.name] === undefined) {
+          facts[slot.name] = memberCount;
+          notes.push(`set ${slot.name}=${memberCount} to match members[]`);
         }
       }
     }

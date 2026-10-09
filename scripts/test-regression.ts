@@ -42,6 +42,7 @@ import assert from "node:assert/strict";
 import { getProgram } from "../src/lib/catalog";
 import { computeProgram, type Facts } from "../src/lib/request-builder";
 import { runBbceRegressions } from "./bbce-regression";
+import { runHistoricalRegressions } from "./historical-regression";
 
 function value(result: Awaited<ReturnType<typeof computeProgram>>, name: string) {
   const output = result.outputs.find((o) => o.name === name);
@@ -184,6 +185,7 @@ async function alSnapElderlyDisabledNetTest() {
 }
 
 async function main() {
+  await runHistoricalRegressions();
   await coSnapFixture();
   await fiitCtcMembers();
   await mdTcaLookup();

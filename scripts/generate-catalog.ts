@@ -450,6 +450,13 @@ interface DerivedRule {
   source?: string | null;
   semantics?: string;
   expr?: unknown;
+  versions?: Array<{ expr?: unknown }>;
+}
+
+/** `expr` is the latest formula; older periods can read different facts and
+ *  parameters. Catalog discovery must cover the union of all formulas. */
+function ruleExpressions(rule: DerivedRule): unknown[] {
+  return [rule.expr, ...(rule.versions ?? []).map((version) => version.expr)];
 }
 
 const PRIMARY_OUTPUT_SUFFIX =
@@ -513,7 +520,7 @@ function analyzeProgram(
   const directInputEntities = new Map<string, Set<string>>(); // input name → entities whose rules use it directly
   for (const rule of rules) {
     const entity = rule.entity ?? "Household";
-    for (const { node, scope } of walkRefs(rule.expr, null, entity, new Map())) {
+    for (const { node, scope } of walkRefs(ruleExpressions(rule), null, entity, new Map())) {
       // walkRefs without relation entities keeps aggregator-inner scope at the
       // outer entity — filter those out by skipping nodes under aggregators is
       // complex; instead only record refs whose scope equals the rule entity
@@ -549,7 +556,7 @@ function analyzeProgram(
 
   for (const rule of rules) {
     const outerEntity = rule.entity ?? "Household";
-    for (const { node } of walkRefs(rule.expr, null, outerEntity, new Map())) {
+    for (const { node } of walkRefs(ruleExpressions(rule), null, outerEntity, new Map())) {
       if (!isAggregator(node)) continue;
       const relation = node.relation as string;
       if (!relationSlots.has(relation)) {
@@ -707,7 +714,7 @@ function analyzeProgram(
   const inputsByEntity = new Map<string, Set<string>>();
   for (const rule of rules) {
     const outerEntity = rule.entity ?? "Household";
-    for (const { node, parent, scope } of walkRefs(rule.expr, null, outerEntity, relationEntityMap)) {
+    for (const { node, parent, scope } of walkRefs(ruleExpressions(rule), null, outerEntity, relationEntityMap)) {
       if (node.kind !== "input") continue;
       const name = node.name as string;
       if (!dtypeCandidates.has(name)) dtypeCandidates.set(name, []);
@@ -860,7 +867,7 @@ function analyzeProgram(
     }
     for (const value of Object.values(n)) mineDecisionPoints(value);
   };
-  for (const rule of rules) mineDecisionPoints(rule.expr);
+  for (const rule of rules) mineDecisionPoints(ruleExpressions(rule));
 
   // -- Table-index default inference ----------------------------------------
   // Parameter tables are keyed 1..N (household size, day of month, …); an
@@ -901,7 +908,7 @@ function analyzeProgram(
     ruleDirectInputs.set(name, inputsSet);
     ruleDirectDerived.set(name, derivedSet);
   };
-  for (const rule of rules) collectDirect(rule.name, rule.expr);
+  for (const rule of rules) collectDirect(rule.name, ruleExpressions(rule));
 
   const reachableMemo = new Map<string, Set<string>>();
   const reachableInputs = (ruleName: string, seen = new Set<string>()): Set<string> => {
@@ -933,7 +940,7 @@ function analyzeProgram(
       if (obj.kind === "parameter_lookup" && typeof obj.parameter === "string") params.add(obj.parameter);
       Object.values(obj).forEach(visit);
     };
-    visit(rule.expr);
+    visit(ruleExpressions(rule));
     ruleDirectParams.set(rule.name, params);
   }
   const paramVersions = new Map<string, Array<{ effective_from?: string; effective_to?: string }>>();
@@ -1014,7 +1021,7 @@ function analyzeProgram(
     }
     Object.values(obj).forEach(visitLookups);
   };
-  for (const rule of rules) visitLookups(rule.expr);
+  for (const rule of rules) visitLookups(ruleExpressions(rule));
 
   const mined = new Map<string, { dtype: CatalogInputSlot["dtype"]; default: boolean | number | string }>();
   for (const fixture of fixtureCandidates) {

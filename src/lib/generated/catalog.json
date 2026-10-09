@@ -7994,8 +7994,7 @@
      {
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_has_documentary_evidence_of_ssn_application",
@@ -8049,8 +8048,7 @@
      {
       "name": "member_is_asylee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_california_indian",
@@ -8173,8 +8171,7 @@
      {
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -8208,8 +8205,7 @@
      {
       "name": "member_is_refugee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_registered_for_employment_at_certification_or_within_twelve_months",
@@ -8246,6 +8242,11 @@
       "dtype": "bool",
       "default": false,
       "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -16496,6 +16497,13 @@
       "name": "member_is_spouse_or_unmarried_dependent_child_of_qualifying_military_person",
       "dtype": "bool",
       "default": false,
+      "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false,
+      "default_source": "fixture",
       "aux": true
      },
      {
@@ -26944,8 +26952,7 @@
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
       "default": false,
-      "default_source": "fixture",
-      "aux": true
+      "default_source": "fixture"
      },
      {
       "name": "member_has_documentary_or_collateral_evidence_of_ssn_application_or_every_effort",
@@ -27002,8 +27009,7 @@
       "name": "member_is_asylee",
       "dtype": "bool",
       "default": false,
-      "default_source": "fixture",
-      "aux": true
+      "default_source": "fixture"
      },
      {
       "name": "member_is_california_indian",
@@ -27141,8 +27147,7 @@
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
       "default": false,
-      "default_source": "fixture",
-      "aux": true
+      "default_source": "fixture"
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -27178,8 +27183,7 @@
       "name": "member_is_refugee",
       "dtype": "bool",
       "default": false,
-      "default_source": "fixture",
-      "aux": true
+      "default_source": "fixture"
      },
      {
       "name": "member_is_spouse_child_parent_or_unmarried_minor_sibling_of_trafficking_victim",
@@ -27215,6 +27219,12 @@
       "name": "member_is_ssi_recipient_in_cash_out_state",
       "dtype": "bool",
       "default": false
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false,
+      "default_source": "fixture"
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -55070,8 +55080,7 @@
      {
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_has_documentary_or_collateral_evidence_of_ssn_application_or_every_effort",
@@ -55114,8 +55123,7 @@
      {
       "name": "member_is_asylee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_california_indian",
@@ -55236,8 +55244,7 @@
      {
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -55271,8 +55278,7 @@
      {
       "name": "member_is_refugee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_spouse_child_parent_or_unmarried_minor_sibling_of_trafficking_victim",
@@ -55303,6 +55309,11 @@
       "dtype": "bool",
       "default": false,
       "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -67473,8 +67484,7 @@
      {
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_has_documentary_or_collateral_evidence_of_ssn_application_or_every_effort",
@@ -67516,8 +67526,7 @@
      {
       "name": "member_is_asylee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_california_indian",
@@ -67628,8 +67637,7 @@
      {
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -67663,8 +67671,7 @@
      {
       "name": "member_is_refugee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_spouse_child_parent_or_unmarried_minor_sibling_of_trafficking_victim",
@@ -67695,6 +67702,11 @@
       "dtype": "bool",
       "default": false,
       "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -101251,8 +101263,7 @@
      {
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_has_documentary_or_collateral_evidence_of_ssn_application_or_every_effort",
@@ -101294,8 +101305,7 @@
      {
       "name": "member_is_asylee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_california_indian",
@@ -101406,8 +101416,7 @@
      {
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -101441,8 +101450,7 @@
      {
       "name": "member_is_refugee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_spouse_child_parent_or_unmarried_minor_sibling_of_trafficking_victim",
@@ -101473,6 +101481,11 @@
       "dtype": "bool",
       "default": false,
       "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -115176,8 +115189,7 @@
      {
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_has_documentary_or_collateral_evidence_of_ssn_application_or_every_effort",
@@ -115225,8 +115237,7 @@
      {
       "name": "member_is_asylee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_california_indian",
@@ -115343,8 +115354,7 @@
      {
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -115378,8 +115388,7 @@
      {
       "name": "member_is_refugee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_spouse_child_parent_or_unmarried_minor_sibling_of_trafficking_victim",
@@ -115410,6 +115419,11 @@
       "dtype": "bool",
       "default": false,
       "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -149472,8 +149486,7 @@
      {
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_has_documentary_or_collateral_evidence_of_ssn_application_or_every_effort",
@@ -149521,8 +149534,7 @@
      {
       "name": "member_is_asylee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_california_indian",
@@ -149633,8 +149645,7 @@
      {
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -149668,8 +149679,7 @@
      {
       "name": "member_is_refugee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_spouse_child_parent_or_unmarried_minor_sibling_of_trafficking_victim",
@@ -149700,6 +149710,11 @@
       "dtype": "bool",
       "default": false,
       "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -159373,8 +159388,7 @@
      {
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_has_documentary_or_collateral_evidence_of_ssn_application_or_every_effort",
@@ -159417,8 +159431,7 @@
      {
       "name": "member_is_asylee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_california_indian",
@@ -159533,8 +159546,7 @@
      {
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -159568,8 +159580,7 @@
      {
       "name": "member_is_refugee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_spouse_child_parent_or_unmarried_minor_sibling_of_trafficking_victim",
@@ -159600,6 +159611,11 @@
       "dtype": "bool",
       "default": false,
       "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -200870,8 +200886,7 @@
      {
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_has_documentary_or_collateral_evidence_of_ssn_application_or_every_effort",
@@ -200925,8 +200940,7 @@
      {
       "name": "member_is_asylee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_california_indian",
@@ -201037,8 +201051,7 @@
      {
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -201072,8 +201085,7 @@
      {
       "name": "member_is_refugee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_spouse_child_parent_or_unmarried_minor_sibling_of_trafficking_victim",
@@ -201104,6 +201116,11 @@
       "dtype": "bool",
       "default": false,
       "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -221793,8 +221810,7 @@
      {
       "name": "member_has_deportation_or_removal_withheld",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_has_documentary_or_collateral_evidence_of_ssn_application_or_every_effort",
@@ -221842,8 +221858,7 @@
      {
       "name": "member_is_asylee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_california_indian",
@@ -221978,8 +221993,7 @@
      {
       "name": "member_is_qualified_alien_subject_to_five_year_wait",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_qualified_alien_with_forty_qualifying_quarters",
@@ -222013,8 +222027,7 @@
      {
       "name": "member_is_refugee",
       "dtype": "bool",
-      "default": false,
-      "aux": true
+      "default": false
      },
      {
       "name": "member_is_sixty_years_of_age_or_over",
@@ -222057,6 +222070,11 @@
       "dtype": "bool",
       "default": false,
       "aux": true
+     },
+     {
+      "name": "member_is_trafficking_victim_or_qualifying_family_member",
+      "dtype": "bool",
+      "default": false
      },
      {
       "name": "member_is_under_age_eighteen",
@@ -236525,6 +236543,12 @@
       "aux": true
      },
      {
+      "name": "entry_loaded_and_in_transit_before_july_24_2026",
+      "dtype": "bool",
+      "default": false,
+      "aux": true
+     },
+     {
       "name": "hts_number",
       "dtype": "text",
       "default": "",
@@ -236535,6 +236559,16 @@
        "8541.42.00.10": "",
        "9506.62.40.40": ""
       }
+     },
+     {
+      "name": "is_postal_shipment",
+      "dtype": "bool",
+      "default": false
+     },
+     {
+      "name": "shipment_value",
+      "dtype": "decimal",
+      "default": 0
      }
     ],
     "CustomsViolation": [

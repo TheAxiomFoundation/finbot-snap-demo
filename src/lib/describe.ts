@@ -6,7 +6,7 @@
  */
 import type { CatalogProgram } from "./catalog";
 import { programDisclosures } from "./catalog-overlay";
-import { defaultPeriodFor } from "./request-builder";
+import { defaultPeriodFor, isMemberCountSlot } from "./request-builder";
 
 /** Compact one-token slot description:
  *  `name:dtype`, `=default` when non-zero/false, `{1=joint,2=separate}` for
@@ -60,6 +60,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
     }
   }
   const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
+  const memberCountSlots = (program.inputs[program.primary_entity] ?? []).filter(isMemberCountSlot).map((slot) => slot.name);
   return {
     slug: program.slug,
     display_name: program.display_name,
@@ -87,7 +88,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
       "Facts you don't provide take the default shown after = (false/0 when none is shown) — state the defaults you rely on.",
       "aux_hidden counts auxiliary slots not on the published-output path (they can't change the headline); pass inputs_search to see them.",
       program.member_entity
-        ? `Members: pass members[] (facts use ${program.member_entity}-scope slots), or a *_size fact to synthesize identical members.`
+        ? `Members: pass members[] (facts use ${program.member_entity}-scope slots)${memberCountSlots.length ? `, or a count fact (${memberCountSlots.join(", ")}) to synthesize identical members` : ""}.`
         : "This program has no member entity; only top-level facts apply.",
       "Any of the total_outputs encoded outputs can be read with lookup_value or compute extra_outputs.",
     ],
