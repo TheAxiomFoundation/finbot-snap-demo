@@ -1,8 +1,8 @@
 /**
  * Build-time catalog generator.
  *
- * Generalizes the old scripts/regenerate-co-snap-base.py across every program
- * in the pinned rulespec-us program-artifacts release. For each compiled
+ * Generalizes the old scripts/regenerate-co-snap-base.py across the programs
+ * finbot presents from the pinned rulespec-us release. For each compiled
  * artifact it:
  *
  *   - lists every derived rule as a queryable output (legal id when present;
@@ -39,6 +39,20 @@ const ROOT = path.resolve(path.join(import.meta.dirname ?? __dirname, ".."));
 const ARTIFACTS_DIR = path.join(ROOT, "engine", "artifacts");
 const CACHE_DIR = path.join(ROOT, ".cache");
 const OUTPUT_PATH = path.join(ROOT, "src", "lib", "generated", "catalog.json");
+
+// Programs currently presented by finbot. Release artifacts can add programs
+// independently; expand this list deliberately when adding them to the app.
+const CATALOG_PROGRAM_SLUGS = new Set([
+  "us-ak-tanf", "us-al-snap", "us-al-tanf", "us-ar-tanf",
+  "us-az-snap", "us-az-tanf", "us-ca-snap", "us-ca-tanf",
+  "us-co-snap", "us-co-tanf", "us-ct-tanf", "us-de-tanf",
+  "us-fiit", "us-fl-snap", "us-fl-tca", "us-ga-snap",
+  "us-ga-tanf", "us-il-scretd", "us-in-tanf", "us-ks-tanf",
+  "us-ma-snap", "us-md-tca", "us-me-tanf", "us-nc-snap",
+  "us-nh-income-tax", "us-ny-income-tax", "us-ny-snap", "us-ny-tanf",
+  "us-oasdi-wage-tax", "us-sc-snap", "us-tn-snap", "us-tx-tanf",
+  "us-us-tariff-duty", "us-ut-tanf",
+]);
 
 // ---------------------------------------------------------------------------
 // Types mirrored into src/lib/catalog.ts. Keep in sync.
@@ -1244,8 +1258,17 @@ async function main() {
   const corpusDir = ensureCorpusCheckout(lock);
   const warnings: string[] = [];
 
-  console.log(`==> generating catalog for ${manifest.programs.length} programs`);
-  const programs = manifest.programs
+  const selectedPrograms = manifest.programs.filter((mp) =>
+    CATALOG_PROGRAM_SLUGS.has(mp.artifact.replace(/\.compiled\.json$/, ""))
+  );
+  const availableSlugs = new Set(selectedPrograms.map((mp) => mp.artifact.replace(/\.compiled\.json$/, "")));
+  const missingSlugs = [...CATALOG_PROGRAM_SLUGS].filter((slug) => !availableSlugs.has(slug));
+  if (missingSlugs.length) {
+    throw new Error(`release is missing configured catalog programs: ${missingSlugs.join(", ")}`);
+  }
+
+  console.log(`==> generating catalog for ${selectedPrograms.length} of ${manifest.programs.length} release programs`);
+  const programs = selectedPrograms
     .map((mp) => analyzeProgram(mp, corpusDir, warnings))
     .sort((a, b) => a.slug.localeCompare(b.slug));
 
