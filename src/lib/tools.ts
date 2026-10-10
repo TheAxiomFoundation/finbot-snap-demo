@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { getCatalog, getProgram, searchOutputs, type CatalogProgram } from "./catalog";
 import { fetchCitation } from "./citations";
+import { programDisclosures } from "./catalog-overlay";
 import { describeProgramPayload } from "./describe";
 import { legalIdToUrl } from "./legal-links";
 import {
@@ -48,7 +49,7 @@ const MembersSchema = z
     })
   )
   .describe(
-    "One entry per household/tax-unit member. Member facts use member-entity slots (e.g. member_age). Top-level facts that name member-scope slots apply to EVERY listed member as a shared base (use for taxpayer-level facts like SSN-on-return); per-member facts override. Omit members to synthesize them from a *_size fact."
+    "One entry per household/tax-unit member. Member facts use member-entity slots (e.g. member_age). Top-level facts that name member-scope slots apply to EVERY listed member as a shared base (use for taxpayer-level facts like SSN-on-return); per-member facts override. Omit members to synthesize them from a recognized count input listed in describe_program."
   );
 
 const PeriodSchema = z
@@ -56,7 +57,7 @@ const PeriodSchema = z
   .regex(/^\d{4}(-\d{2})?$/)
   .optional()
   .describe(
-    "Evaluation period, YYYY-MM or YYYY. Defaults to the current month (current year for annual programs) — only pass this when the user asks about a different time."
+    "Evaluation period, YYYY-MM or YYYY, subject to encoded formula and parameter coverage. Defaults to the current month (current year for annual programs) — only pass this when the user asks about a different time. A missing formula version returns a rule-coverage limitation instead of an amount or eligibility verdict."
   );
 
 function programOr404(slug: string): CatalogProgram | { error: string; known_slugs: string[] } {
@@ -73,7 +74,27 @@ function isErr(x: unknown): x is { error: string } {
 }
 
 /** Convert builder errors into data the model can act on. */
-function asToolError(err: unknown): { error: string; kind?: string; slot?: string; path?: string; suggestions?: string[]; hint?: string } {
+function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: string) {
+  // Both local and hosted adapters preserve this engine diagnostic. Keep the
+  // missing rule visible as an encoding limitation, without shaping any value.
+  const gap = err instanceof Error
+    ? /derived `([^`]+)` has no formula version at (\d{4}-\d{2}-\d{2})/.exec(err.message)
+    : null;
+  if (gap) {
+    const [, output, atDate] = gap;
+    const period = requestedPeriod ?? defaultPeriodFor(program);
+    const disclosure = `Axiom has no rule in force for ${period} for ${output}.`;
+    return {
+      error: disclosure,
+      kind: "no_formula_version",
+      program: program.slug,
+      period,
+      output,
+      at_date: atDate,
+      applied: { disclosures: [...programDisclosures(program), disclosure] },
+      hint: "Disclose this rule-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",
+    };
+  }
   if (err instanceof NotSettableInputError) {
     return {
       error: err.message,
@@ -235,7 +256,7 @@ export const tools = {
             };
       } catch (err) {
         try {
-          return asToolError(err);
+          return asToolError(err, program, period);
         } catch {
           console.error("[finbot] compute failed:", err, "program:", slug, "facts:", facts);
           throw err;
@@ -246,7 +267,7 @@ export const tools = {
 
   lookup_value: tool({
     description:
-      "Read a single encoded output — a threshold, limit, deduction amount, or any intermediate value — by name. Routes the query to the right entity automatically. Facts still apply: size-indexed values (income limits, maximum allotments) need the relevant *_size fact.",
+      "Read a single encoded output — a threshold, limit, deduction amount, or any intermediate value — by name. Routes the query to the right entity automatically. Facts still apply: size-indexed values (income limits, maximum allotments) need the relevant count input from describe_program.",
     parameters: z.object({
       program: z.string().describe("Program slug from list_programs."),
       output: z.string().describe("Output name (or legal id) exactly as returned by describe_program or list_programs search."),
@@ -293,7 +314,7 @@ export const tools = {
         };
       } catch (err) {
         try {
-          return asToolError(err);
+          return asToolError(err, program, period);
         } catch {
           console.error("[finbot] lookup_value failed:", err, "program:", slug, "output:", output);
           throw err;

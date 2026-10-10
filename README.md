@@ -1,6 +1,6 @@
 # Chatbot demo
 
-Live demo at [axiom.org/chatbot](https://axiom.org/chatbot): an OpenAI model (GPT-5.5 by default) that answers benefit and tax questions by calling the [Axiom rules engine](https://github.com/TheAxiomFoundation/axiom-rules-engine), with an optional side-by-side against the same model without tools. The app is fully **catalog-driven**: it can answer questions and run calculations for every program in the pinned [rulespec-us](https://github.com/TheAxiomFoundation/rulespec-us) `program-artifacts` release (SNAP, TANF, federal and state income tax, payroll tax, and more; `/programs` lists them).
+Live demo at [axiom.org/chatbot](https://axiom.org/chatbot): an OpenAI model (GPT-5.5 by default) that answers benefit and tax questions by calling the [Axiom rules engine](https://github.com/TheAxiomFoundation/axiom-rules-engine), with an optional side-by-side against the same model without tools. The app is fully **catalog-driven**: it can answer questions and run calculations for a deliberate allowlist of 34 programs from the pinned [rulespec-us](https://github.com/TheAxiomFoundation/rulespec-us) `program-artifacts` release (SNAP, TANF, federal and state income tax, payroll tax, and more; `/programs` lists the served programs).
 
 The grounded side's system prompt requires every dollar amount to come from an `axiom-rules-engine` compute against sha256-verified compiled artifacts, never from model recall. That is an instruction, not a runtime guarantee; `bun run eval:llm` checks that the figures in a reply appear in that turn's tool results.
 
@@ -22,7 +22,7 @@ artifacts.lock.json ──▶ scripts/fetch-artifacts.ts ──▶ engine/artifa
                     ──▶ modal_app.py                 ──▶ Modal-hosted engine image
 ```
 
-- **`scripts/generate-catalog.ts`** walks every compiled artifact's IR to derive, per program: all queryable outputs (with legal ids and units), every input slot the rules reach (grouped by entity, with inferred dtypes and defaults), relations with related-entity inference, and `acknowledged_incomplete` flags from the program specs. No per-program code anywhere.
+- **`scripts/generate-catalog.ts`** walks the allowlisted compiled artifacts' IR to derive, per program: all queryable outputs (with legal ids and units), every input slot the rules reach (grouped by entity, with inferred dtypes and defaults), relations with related-entity inference, and `acknowledged_incomplete` flags from the program specs. No per-program code anywhere.
 - **`src/lib/request-builder.ts`** turns catalog metadata + user facts into a complete engine request (defaults for every unspecified slot, one member instance per household member, relation tuples, queries grouped by period grain).
 - **`src/lib/tools.ts`** exposes five generic tools to the LLM: `list_programs`, `describe_program`, `compute`, `lookup_value`, `fetch_citation`. Unknown slot/output names return structured errors with nearest-match suggestions so the model self-corrects.
 - **`/programs`** is a static coverage browser generated from the catalog — published outputs, incomplete flags, input slots, and links to the spec at the pinned corpus sha.
@@ -69,7 +69,7 @@ When rulespec-us publishes a new `program-artifacts-<sha>` release:
 5. `bun run test:regression && bun run typecheck && bun run build`.
 6. Commit the lock + catalog, deploy Modal (`modal deploy modal_app.py`), then Vercel.
 
-New programs in the release show up in the chat and on `/programs` with no code changes. If a heuristic picks a wrong display name or primary output for a program, override it in `src/lib/catalog-overlay.ts`.
+New programs in the release appear in the chat and on `/programs` after deliberate expansion of `CATALOG_PROGRAM_SLUGS` in `scripts/generate-catalog.ts` and catalog regeneration. If a heuristic picks a wrong display name or primary output for a program, override it in `src/lib/catalog-overlay.ts`.
 
 ## What the demo will not do
 

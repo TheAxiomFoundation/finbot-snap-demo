@@ -1,8 +1,8 @@
 /**
  * Build-time catalog generator.
  *
- * Generalizes the old scripts/regenerate-co-snap-base.py across every program
- * in the pinned rulespec-us program-artifacts release. For each compiled
+ * Generalizes the old scripts/regenerate-co-snap-base.py across the programs
+ * finbot presents from the pinned rulespec-us release. For each compiled
  * artifact it:
  *
  *   - lists every derived rule as a queryable output (legal id when present;
@@ -39,6 +39,20 @@ const ROOT = path.resolve(path.join(import.meta.dirname ?? __dirname, ".."));
 const ARTIFACTS_DIR = path.join(ROOT, "engine", "artifacts");
 const CACHE_DIR = path.join(ROOT, ".cache");
 const OUTPUT_PATH = path.join(ROOT, "src", "lib", "generated", "catalog.json");
+
+// Programs currently presented by finbot. Release artifacts can add programs
+// independently; expand this list deliberately when adding them to the app.
+const CATALOG_PROGRAM_SLUGS = new Set([
+  "us-ak-tanf", "us-al-snap", "us-al-tanf", "us-ar-tanf",
+  "us-az-snap", "us-az-tanf", "us-ca-snap", "us-ca-tanf",
+  "us-co-snap", "us-co-tanf", "us-ct-tanf", "us-de-tanf",
+  "us-fiit", "us-fl-snap", "us-fl-tca", "us-ga-snap",
+  "us-ga-tanf", "us-il-scretd", "us-in-tanf", "us-ks-tanf",
+  "us-ma-snap", "us-md-tca", "us-me-tanf", "us-nc-snap",
+  "us-nh-income-tax", "us-ny-income-tax", "us-ny-snap", "us-ny-tanf",
+  "us-oasdi-wage-tax", "us-sc-snap", "us-tn-snap", "us-tx-tanf",
+  "us-us-tariff-duty", "us-ut-tanf",
+]);
 
 // ---------------------------------------------------------------------------
 // Types mirrored into src/lib/catalog.ts. Keep in sync.
@@ -436,6 +450,13 @@ interface DerivedRule {
   source?: string | null;
   semantics?: string;
   expr?: unknown;
+  versions?: Array<{ expr?: unknown }>;
+}
+
+/** `expr` is the latest formula; older periods can read different facts and
+ *  parameters. Catalog discovery must cover the union of all formulas. */
+function ruleExpressions(rule: DerivedRule): unknown[] {
+  return [rule.expr, ...(rule.versions ?? []).map((version) => version.expr)];
 }
 
 const PRIMARY_OUTPUT_SUFFIX =
@@ -499,7 +520,7 @@ function analyzeProgram(
   const directInputEntities = new Map<string, Set<string>>(); // input name → entities whose rules use it directly
   for (const rule of rules) {
     const entity = rule.entity ?? "Household";
-    for (const { node, scope } of walkRefs(rule.expr, null, entity, new Map())) {
+    for (const { node, scope } of walkRefs(ruleExpressions(rule), null, entity, new Map())) {
       // walkRefs without relation entities keeps aggregator-inner scope at the
       // outer entity — filter those out by skipping nodes under aggregators is
       // complex; instead only record refs whose scope equals the rule entity
@@ -535,7 +556,7 @@ function analyzeProgram(
 
   for (const rule of rules) {
     const outerEntity = rule.entity ?? "Household";
-    for (const { node } of walkRefs(rule.expr, null, outerEntity, new Map())) {
+    for (const { node } of walkRefs(ruleExpressions(rule), null, outerEntity, new Map())) {
       if (!isAggregator(node)) continue;
       const relation = node.relation as string;
       if (!relationSlots.has(relation)) {
@@ -693,7 +714,7 @@ function analyzeProgram(
   const inputsByEntity = new Map<string, Set<string>>();
   for (const rule of rules) {
     const outerEntity = rule.entity ?? "Household";
-    for (const { node, parent, scope } of walkRefs(rule.expr, null, outerEntity, relationEntityMap)) {
+    for (const { node, parent, scope } of walkRefs(ruleExpressions(rule), null, outerEntity, relationEntityMap)) {
       if (node.kind !== "input") continue;
       const name = node.name as string;
       if (!dtypeCandidates.has(name)) dtypeCandidates.set(name, []);
@@ -846,7 +867,7 @@ function analyzeProgram(
     }
     for (const value of Object.values(n)) mineDecisionPoints(value);
   };
-  for (const rule of rules) mineDecisionPoints(rule.expr);
+  for (const rule of rules) mineDecisionPoints(ruleExpressions(rule));
 
   // -- Table-index default inference ----------------------------------------
   // Parameter tables are keyed 1..N (household size, day of month, …); an
@@ -887,7 +908,7 @@ function analyzeProgram(
     ruleDirectInputs.set(name, inputsSet);
     ruleDirectDerived.set(name, derivedSet);
   };
-  for (const rule of rules) collectDirect(rule.name, rule.expr);
+  for (const rule of rules) collectDirect(rule.name, ruleExpressions(rule));
 
   const reachableMemo = new Map<string, Set<string>>();
   const reachableInputs = (ruleName: string, seen = new Set<string>()): Set<string> => {
@@ -919,7 +940,7 @@ function analyzeProgram(
       if (obj.kind === "parameter_lookup" && typeof obj.parameter === "string") params.add(obj.parameter);
       Object.values(obj).forEach(visit);
     };
-    visit(rule.expr);
+    visit(ruleExpressions(rule));
     ruleDirectParams.set(rule.name, params);
   }
   const paramVersions = new Map<string, Array<{ effective_from?: string; effective_to?: string }>>();
@@ -1000,7 +1021,7 @@ function analyzeProgram(
     }
     Object.values(obj).forEach(visitLookups);
   };
-  for (const rule of rules) visitLookups(rule.expr);
+  for (const rule of rules) visitLookups(ruleExpressions(rule));
 
   const mined = new Map<string, { dtype: CatalogInputSlot["dtype"]; default: boolean | number | string }>();
   for (const fixture of fixtureCandidates) {
@@ -1244,8 +1265,17 @@ async function main() {
   const corpusDir = ensureCorpusCheckout(lock);
   const warnings: string[] = [];
 
-  console.log(`==> generating catalog for ${manifest.programs.length} programs`);
-  const programs = manifest.programs
+  const selectedPrograms = manifest.programs.filter((mp) =>
+    CATALOG_PROGRAM_SLUGS.has(mp.artifact.replace(/\.compiled\.json$/, ""))
+  );
+  const availableSlugs = new Set(selectedPrograms.map((mp) => mp.artifact.replace(/\.compiled\.json$/, "")));
+  const missingSlugs = [...CATALOG_PROGRAM_SLUGS].filter((slug) => !availableSlugs.has(slug));
+  if (missingSlugs.length) {
+    throw new Error(`release is missing configured catalog programs: ${missingSlugs.join(", ")}`);
+  }
+
+  console.log(`==> generating catalog for ${selectedPrograms.length} of ${manifest.programs.length} release programs`);
+  const programs = selectedPrograms
     .map((mp) => analyzeProgram(mp, corpusDir, warnings))
     .sort((a, b) => a.slug.localeCompare(b.slug));
 

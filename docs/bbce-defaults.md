@@ -39,6 +39,19 @@ The existing ABAWD artifact uses >3 countable months, so 3-month probes held and
 
 New York's earned-income companion input was checked for 1 and 3 people, 2026-10: 145% with earnings holds; 160% with earnings denies; a dependent-care or elderly path at 160% holds. Derived companion appears in applied.derived_facts and notes for Assumptions.
 
+## Florida assistance-group size fix
+
+Release `program-artifacts-16a667719019` (engine `98af0dce`, v0.1.2) derives `assistance_group_size` from `household_size` instead of exposing a separate input defaulting to 1. Florida's Appendix A-1 outputs now use the household's size. For `household_size=3`, the encoded FY2026 table gives:
+
+| Florida A-1 output | Previous release, size defaulted to 1 | New release, size 3 |
+|---|---:|---:|
+| Monthly 200% gross income limit | $2,610 | $4,442 |
+| Monthly 130% gross income limit | $1,696 | $2,888 |
+| Monthly 100% net income limit | $1,305 | $2,221 |
+| Maximum food assistance benefit | $298 | $785 |
+
+Florida BBCE remains unencoded (rulespec-us#1183, bug 1). The size fix does not add Florida's BBCE path to `snap_eligible` or `snap_benefit`: the income composition still uses `snap_standard_income_eligible`. Keep the Florida disclosure because a $0 for a household above the federal 130% gross income limit but within the state's higher BBCE limit is not a determination; it may still qualify.
+
 ## Dollar gap against PolicyEngine, traced
 
 The earlier comparison (3 people, $3,300 a month in earnings, $1,800 shelter) showed Axiom $231 or $278 against PolicyEngine $261.70 or $316.70. The trace (`scripts/trace-snap-gap.ts`, `scripts/trace-pe-gap.py`; outputs in `docs/bbce-evidence/`) finds two input differences and no rule disagreement:
