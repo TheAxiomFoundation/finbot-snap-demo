@@ -30,6 +30,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 
+import { classifyAnnualParameter, groupAnnualUpdates, type AnnualParameter } from "../src/lib/annual-updates";
+import type { CatalogAnnualUpdate } from "../src/lib/catalog";
 import { CATALOG_OVERLAY, GLOBAL_DEFAULT_OVERRIDES } from "../src/lib/catalog-overlay";
 
 /** Global override keys that matched at least one slot across all programs. */
@@ -78,6 +80,8 @@ interface CatalogOutput {
    *  descended; `requires_partial` marks truncation. */
   requires?: Array<{ slot: string; value: boolean | number | string }>;
   requires_partial?: boolean;
+  /** Earliest due date among annually reissued parameters this rule reaches. */
+  annual_update_due?: string;
 }
 
 interface CatalogInputSlot {
@@ -137,6 +141,8 @@ interface CatalogProgram {
   /** Input slots grouped by entity scope. */
   inputs: Record<string, CatalogInputSlot[]>;
   counts: { derived: number; parameters: number; relations: number };
+  /** Annually reissued parameters, grouped by when their next version is due. */
+  annual_updates?: CatalogAnnualUpdate[];
 }
 
 // ---------------------------------------------------------------------------
@@ -992,6 +998,44 @@ function analyzeProgram(
     );
   }
 
+  // -- Annual updates ---------------------------------------------------------
+  // Parameters reissued every year (SNAP's October 1 cost-of-living
+  // adjustment, Maine's TANF grant table). Record when each one's next
+  // version falls due, so the runtime can flag a period past that date
+  // instead of silently evaluating last year's values with this year's label.
+  const annualParams = new Map<string, AnnualParameter>();
+  for (const param of program.parameters as Array<{
+    name: string;
+    id?: string | null;
+    versions?: Array<{ effective_from?: string | null }>;
+  }>) {
+    const annual = classifyAnnualParameter(param);
+    if (annual) annualParams.set(param.name, annual);
+  }
+  const annualUpdateDue = (ruleName: string): string | undefined => {
+    let due: string | undefined;
+    for (const param of reachableParams(ruleName)) {
+      const annual = annualParams.get(param);
+      if (annual && (!due || annual.due < due)) due = annual.due;
+    }
+    return due;
+  };
+  const usedAnnualParams = new Set<string>();
+  for (const params of ruleDirectParams.values()) {
+    for (const param of params) if (annualParams.has(param)) usedAnnualParams.add(param);
+  }
+  const annualUpdates = groupAnnualUpdates(
+    [...usedAnnualParams].map((name) => ({ name, ...annualParams.get(name)! }))
+  );
+  const today = new Date().toISOString().slice(0, 10);
+  for (const update of annualUpdates) {
+    if (update.due <= today) {
+      warn(
+        `${update.parameters.length} annually reissued parameter(s) were due ${update.due} (latest version ${update.last_effective_from}) — the pinned release doesn't carry the new values; computes from ${update.due} disclose it`
+      );
+    }
+  }
+
   const minKeyDefaults = new Map<string, number>();
   const visitLookups = (n: unknown) => {
     if (Array.isArray(n)) { n.forEach(visitLookups); return; }
@@ -1217,6 +1261,8 @@ function analyzeProgram(
         if (partial) output.requires_partial = true;
       }
     }
+    const due = annualUpdateDue(rule.name);
+    if (due) output.annual_update_due = due;
     return output;
   });
 
@@ -1244,6 +1290,7 @@ function analyzeProgram(
     outputs,
     inputs,
     counts: manifestProgram.counts,
+    ...(annualUpdates.length > 0 && { annual_updates: annualUpdates }),
   };
 }
 
@@ -1327,6 +1374,15 @@ async function main() {
         `  ${p.slug.padEnd(20)} enum:[${enums.map((s) => s.name).join(", ")}] eq:[${eqGated
           .map((s) => `${s.name}=${s.eq_hints!.join("|")}`)
           .join(", ")}] variant:[${variants.map((s) => s.name).slice(0, 6).join(", ")}${variants.length > 6 ? ` +${variants.length - 6}` : ""}] overlay:[${overlaid.map((s) => s.name).join(", ")}]`
+      );
+    }
+  }
+
+  console.log("\nannual updates (annually reissued parameters → next version due):");
+  for (const p of programs) {
+    for (const u of p.annual_updates ?? []) {
+      console.log(
+        `  ${p.slug.padEnd(20)} due ${u.due} (latest ${u.last_effective_from}${u.fiscal_year ? `, FY${u.fiscal_year}` : ""}) ${u.basis} · ${u.parameters.length} parameter(s)`
       );
     }
   }

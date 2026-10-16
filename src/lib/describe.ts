@@ -4,6 +4,7 @@
  * the pre-fetch injects this exact payload into the system prompt so the
  * model gets the slot surface without spending an LLM round-trip on it.
  */
+import { annualUpdateNoticesAt, periodStartDate } from "./annual-updates";
 import type { CatalogProgram } from "./catalog";
 import { programDisclosures } from "./catalog-overlay";
 import { defaultPeriodFor, isMemberCountSlot } from "./request-builder";
@@ -74,7 +75,10 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
     primary_output: program.primary_output,
     published_outputs: program.certified_outputs,
     acknowledged_incomplete: program.acknowledged_incomplete,
-    disclosures: programDisclosures(program),
+    disclosures: [
+      ...programDisclosures(program),
+      ...annualUpdateNoticesAt(program, periodStartDate(defaultPeriodFor(program))),
+    ],
     total_outputs: program.outputs.length,
     inputs,
     ...(Object.keys(defaultOverrides).length > 0 && {

@@ -2824,7 +2824,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -2836,7 +2837,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -2848,7 +2850,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_limit_categorical_exemption_applies",
@@ -2878,7 +2881,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -2890,7 +2894,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_maximum_allotment",
@@ -2902,7 +2907,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -2914,7 +2920,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_gross_income",
@@ -2962,7 +2969,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -2974,7 +2982,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -2986,7 +2995,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -2998,7 +3008,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -3010,7 +3021,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -3022,7 +3034,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -3034,7 +3047,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -3046,7 +3060,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -3058,7 +3073,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -3070,7 +3086,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -3082,7 +3099,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -3094,7 +3112,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -3106,7 +3125,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -3118,7 +3138,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -3288,7 +3309,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -3300,7 +3322,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "statutory_household_resource_limit_base_amount",
@@ -3360,7 +3383,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -3372,7 +3396,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -3384,7 +3409,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -3396,7 +3422,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -3408,7 +3435,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_member_abawd_fulfilling_work_requirement",
@@ -4644,7 +4672,8 @@
      "period": "Month",
      "source": "AL DHR POE Chapter 9, Section 900",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "medical_deduction",
@@ -5957,7 +5986,8 @@
      "period": "Month",
      "source": "us:statutes/7/2014",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_contains_elderly_or_disabled_member",
@@ -5981,7 +6011,8 @@
      "period": "Month",
      "source": "axiom-programs/us-al/snap/fy-2026 income-standard input alias",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_meets_gross_income_eligibility_standard",
@@ -5993,7 +6024,8 @@
      "period": "Month",
      "source": "axiom-programs/us-al/snap/fy-2026 income-standard input alias",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_eligible",
@@ -6005,7 +6037,8 @@
      "period": "Month",
      "source": "axiom-programs/us-al/snap/fy-2026 income-standard composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_countable_earned_income",
@@ -6077,7 +6110,8 @@
      "period": "Month",
      "source": "axiom-programs/us-al/snap/fy-2026 shelter deduction composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_benefit",
@@ -6089,7 +6123,8 @@
      "period": "Month",
      "source": "axiom-programs/us-al/snap/fy-2026 benefit composition",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -9599,7 +9634,35 @@
     "derived": 343,
     "parameters": 172,
     "relations": 2
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-al-tanf",
@@ -10293,7 +10356,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -10305,7 +10369,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_has_elderly_or_disabled_member",
@@ -10329,7 +10394,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -10341,7 +10407,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -10353,7 +10420,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -10365,7 +10433,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -10377,7 +10446,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -10389,7 +10459,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_duplicate_participation_exception_applies",
@@ -12753,7 +12824,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -12765,7 +12837,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -12777,7 +12850,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -12789,7 +12863,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -12801,7 +12876,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -12813,7 +12889,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -12825,7 +12902,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -12837,7 +12915,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_member_abawd_fulfilling_work_requirement",
@@ -13134,7 +13213,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii) via federal SNAP state-plan composition support",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_limit_categorical_exemption_applies",
@@ -13164,7 +13244,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -13176,7 +13257,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -13188,7 +13270,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -13200,7 +13283,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -13212,7 +13296,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -13308,7 +13393,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -13320,7 +13406,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_for_allotment",
@@ -13332,7 +13419,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -13344,7 +13432,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -13356,7 +13445,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -13368,7 +13458,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -13380,7 +13471,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "dependent_care_expense_recipient_qualifies",
@@ -13893,7 +13985,8 @@
      "period": "Month",
      "source": "FAA5 NA Eligibility and Benefit Determination, block 9",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "benefit_amount_after_allotment_test",
@@ -13905,7 +13998,8 @@
      "period": "Month",
      "source": "FAA5 NA Eligibility and Benefit Determination, block 9",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "eligible_no_pay_status_for_initial_month_proration",
@@ -14268,7 +14362,8 @@
      "period": "Month",
      "source": "Arizona Nutrition Assistance FY 2026 benefit calculation composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_allowable_shelter_expenses",
@@ -14292,7 +14387,8 @@
      "period": "Month",
      "source": "Arizona Nutrition Assistance FY 2026 benefit calculation composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_eligible",
@@ -14322,7 +14418,8 @@
      "period": "Month",
      "source": "FAA5 NA Eligibility and Benefit Determination, block 9",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "na_gross_income_for_income_test",
@@ -17466,7 +17563,35 @@
     "derived": 278,
     "parameters": 98,
     "relations": 3
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-az-tanf",
@@ -18210,7 +18335,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -18222,7 +18348,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_has_elderly_or_disabled_member",
@@ -18246,7 +18373,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -18258,7 +18386,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -18270,7 +18399,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -18282,7 +18412,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -18294,7 +18425,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -18306,7 +18438,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_duplicate_participation_exception_applies",
@@ -20670,7 +20803,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -20682,7 +20816,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -20694,7 +20829,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -20706,7 +20842,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -20718,7 +20855,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -20730,7 +20868,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -20742,7 +20881,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -20754,7 +20894,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_member_abawd_fulfilling_work_requirement",
@@ -21051,7 +21192,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii) via federal SNAP state-plan composition support",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_categorical_pa_or_ssi_status",
@@ -21135,7 +21277,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -21147,7 +21290,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -21159,7 +21303,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -21171,7 +21316,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -21183,7 +21329,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -21353,7 +21500,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -21365,7 +21513,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "statutory_household_resource_limit_base_amount",
@@ -21425,7 +21574,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -21437,7 +21587,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -21449,7 +21600,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -21461,7 +21613,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -21473,7 +21626,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "application_process_completed",
@@ -22624,7 +22778,8 @@
      "period": "Month",
      "source": "ACL 14-56E, corrected inclusive MCE gross-income limit",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "calfresh_wic_18901_3_drug_felony_opt_out_applies",
@@ -22793,7 +22948,8 @@
      "period": "Month",
      "source": "WIC 18901.5 and ACLs 14-56 and 15-42",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_utility_allowance_eligible",
@@ -22859,7 +23015,8 @@
      "period": "Month",
      "source": "California CalFresh FY 2026 benefit calculation composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_eligible",
@@ -22878,7 +23035,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "shelter_costs",
@@ -22902,7 +23060,8 @@
      "period": "Month",
      "source": "California CalFresh categorical eligibility composition bridge",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "calfresh_mce_resource_eligibility_test_waived",
@@ -22914,7 +23073,8 @@
      "period": "Month",
      "source": "ACL 14-56, MCE resource exemption",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "calfresh_mce_net_income_eligibility_test_waived",
@@ -22926,7 +23086,8 @@
      "period": "Month",
      "source": "7 CFR 273.2(j)(2)(xi) and ACL 15-42",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "calfresh_categorical_zero_benefit_denial_applies",
@@ -22938,7 +23099,8 @@
      "period": "Month",
      "source": "ACL 14-63, categorical zero-benefit denial",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "cwd_may_use_fiscal_month_for_certification_and_issuance",
@@ -29517,7 +29679,35 @@
     "derived": 422,
     "parameters": 118,
     "relations": 3
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-ca-tanf",
@@ -30227,7 +30417,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -30239,7 +30430,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_has_elderly_or_disabled_member",
@@ -30263,7 +30455,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -30275,7 +30468,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -30287,7 +30481,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -30299,7 +30494,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -30311,7 +30507,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -30323,7 +30520,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_duplicate_participation_exception_applies",
@@ -32594,7 +32792,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -32606,7 +32805,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -32618,7 +32818,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -32630,7 +32831,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -32642,7 +32844,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -32654,7 +32857,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -32666,7 +32870,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -32678,7 +32883,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_earned_income_subject_to_deduction",
@@ -32714,7 +32920,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -32726,7 +32933,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_for_allotment",
@@ -32738,7 +32946,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -32750,7 +32959,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -32762,7 +32972,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -32774,7 +32985,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -32786,7 +32998,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_member_general_work_requirement_exempt",
@@ -33191,7 +33404,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.403.2(B)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_boarder_cost_of_doing_business",
@@ -33203,7 +33417,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.403.2(B)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_boarder_net_self_employment_income",
@@ -33215,7 +33430,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.403.2(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_earned_income_including_boarder_net_income",
@@ -33227,7 +33443,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.403.2(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_shelter_costs_excluding_boarder_direct_third_party_payments",
@@ -34066,7 +34283,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.401.1",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -34078,7 +34296,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -34090,7 +34309,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -34102,7 +34322,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -34174,7 +34395,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.401(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "passes_net_income_test",
@@ -34186,7 +34408,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.401(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_eligible",
@@ -34198,7 +34421,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.401(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "co_resident_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -34210,7 +34434,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.401(A)(4)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_elderly_disabled_separate_household_allowed",
@@ -34229,7 +34454,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_liquid_resource_value",
@@ -34587,7 +34813,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -34599,7 +34826,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_categorically_eligible_for_resource_exemption",
@@ -34713,7 +34941,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.408.2(B)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_transfer_disqualification_months",
@@ -34725,7 +34954,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.408.2(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_countable_liquid_resources",
@@ -35145,7 +35375,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.407.3(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_entitled_to_excess_medical_deduction",
@@ -35169,7 +35400,8 @@
      "period": "Month",
      "source": "Colorado SNAP federal surface bridge",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_allowable_shelter_expenses",
@@ -35181,7 +35413,8 @@
      "period": "Month",
      "source": "Colorado SNAP federal surface bridge",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "dependent_care_deduction",
@@ -35986,7 +36219,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.207.3(B)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_initial_month_proration_start_date",
@@ -36084,7 +36318,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.207.2(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_initial_month_allotment_after_minimum_issuance",
@@ -36096,7 +36331,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.207.2 and 7 CFR 273.10(e)(2)(ii)(B)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment",
@@ -36108,7 +36344,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 sections 4.207.2 and 4.207.3(B)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_maximum_allotment_for_household_size",
@@ -36120,7 +36357,8 @@
      "period": "Month",
      "source": "Colorado SNAP federal surface bridge",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_maximum_allotment_for_one_person_household",
@@ -36132,7 +36370,8 @@
      "period": "Month",
      "source": "Colorado SNAP federal surface bridge",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_initial_month",
@@ -36174,7 +36413,8 @@
      "period": "Month",
      "source": "Colorado SNAP FY 2026 benefit calculation composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "other_countable_self_employment_earned_income",
@@ -36284,7 +36524,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_monthly_earned_income",
@@ -36392,7 +36633,8 @@
      "period": "Month",
      "source": "Colorado SNAP federal surface bridge",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "voluntary_withdrawal_or_termination_notice_timely",
@@ -39646,7 +39888,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.205.32",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "ineligible_second_period_application_denial_and_notice_provided",
@@ -39745,7 +39988,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.206(C)(2)(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "expanded_categorical_eligibility_household",
@@ -39768,7 +40012,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "expanded_categorical_eligibility_deemed_income_and_resource_requirements_met",
@@ -39791,7 +40036,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "expanded_categorical_eligibility_factor_verification_required",
@@ -39814,7 +40060,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "standard_eligibility_review_required",
@@ -39826,7 +40073,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.206(C)(3)(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "standard_net_income_limit_met",
@@ -39838,7 +40086,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.206(C)(3)(b)(1)-(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "standard_gross_income_limit_met",
@@ -39850,7 +40099,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.206(C)(3)(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "standard_income_criteria_met",
@@ -39862,7 +40112,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.206(C)(3)(b)(1)-(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "other_pa_information_requests_do_not_affect_snap_determination",
@@ -42433,7 +42684,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.305.2(E)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "indigent_non_citizen",
@@ -42445,7 +42697,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.305.2(E)(4)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "sponsor_deeming_applies",
@@ -42472,7 +42725,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "sponsor_deemed_unearned_income",
@@ -42484,7 +42738,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.305.2(C), (D)(2), (D)(3), (D)(4)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "sponsor_deemed_resources",
@@ -42496,7 +42751,8 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.305.2(C), (D)(1), (D)(6)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "sponsored_non_citizen_ineligible_while_verification_missing",
@@ -45813,7 +46069,8 @@
      "period": "Month",
      "source": "axiom-programs/us-co/snap/fy-2026 benefit composition",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -57927,7 +58184,37 @@
     "derived": 881,
     "parameters": 290,
     "relations": 4
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us-co:policies/cdhs/snap/fy-2026-benefit-calculation",
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_allotment_table_max_household_size",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-co-tanf",
@@ -65054,7 +65341,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -65066,7 +65354,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -65078,7 +65367,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_limit_categorical_exemption_applies",
@@ -65108,7 +65398,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -65120,7 +65411,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_maximum_allotment",
@@ -65132,7 +65424,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -65144,7 +65437,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_gross_income",
@@ -65192,7 +65486,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -65204,7 +65499,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -65216,7 +65512,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -65228,7 +65525,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -65240,7 +65538,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -65252,7 +65551,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -65264,7 +65564,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -65276,7 +65577,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -65288,7 +65590,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -65300,7 +65603,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -65312,7 +65616,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -65324,7 +65629,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -65336,7 +65642,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -65348,7 +65655,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -65712,7 +66020,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -65724,7 +66033,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_standard_poverty_line_with_territory_cap",
@@ -65748,7 +66058,8 @@
      "period": "Month",
      "source": "7 USC 2014(c)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_fails_gross_income_standard",
@@ -65772,7 +66083,8 @@
      "period": "Month",
      "source": "7 USC 2014(c)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "irregular_income_excluded_from_snap_income",
@@ -66310,7 +66622,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -66322,7 +66635,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -66334,7 +66648,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -66346,7 +66661,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -66358,7 +66674,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_utility_allowance_state_value",
@@ -66586,7 +66903,8 @@
      "period": "Month",
      "source": "us:statutes/7/2014",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_eligible",
@@ -66598,7 +66916,8 @@
      "period": "Month",
      "source": "axiom-programs/us-fl/snap/fy-2026 income-standard composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_countable_earned_income",
@@ -66670,7 +66989,8 @@
      "period": "Month",
      "source": "axiom-programs/us-fl/snap/fy-2026 shelter deduction composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_benefit",
@@ -66682,7 +67002,8 @@
      "period": "Month",
      "source": "axiom-programs/us-fl/snap/fy-2026 benefit composition",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -68681,7 +69002,35 @@
     "derived": 251,
     "parameters": 136,
     "relations": 3
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-fl-tca",
@@ -97857,7 +98206,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -97869,7 +98219,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -97881,7 +98232,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_limit_categorical_exemption_applies",
@@ -97911,7 +98263,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -97923,7 +98276,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_maximum_allotment",
@@ -97935,7 +98289,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -97947,7 +98302,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_gross_income",
@@ -97995,7 +98351,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -98007,7 +98364,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -98019,7 +98377,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -98031,7 +98390,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -98043,7 +98403,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -98055,7 +98416,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -98067,7 +98429,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -98079,7 +98442,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -98091,7 +98455,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -98103,7 +98468,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -98115,7 +98481,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -98127,7 +98494,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -98139,7 +98507,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -98151,7 +98520,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -98515,7 +98885,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -98527,7 +98898,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_standard_poverty_line_with_territory_cap",
@@ -98551,7 +98923,8 @@
      "period": "Month",
      "source": "7 USC 2014(c)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_fails_gross_income_standard",
@@ -98575,7 +98948,8 @@
      "period": "Month",
      "source": "7 USC 2014(c)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "irregular_income_excluded_from_snap_income",
@@ -99113,7 +99487,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -99125,7 +99500,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -99137,7 +99513,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -99149,7 +99526,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -99161,7 +99539,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "assistance_unit_member_receives_tanf_wsp_or_ssi",
@@ -99839,7 +100218,8 @@
      "period": "Month",
      "source": "us:statutes/7/2014",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_eligible",
@@ -99851,7 +100231,8 @@
      "period": "Month",
      "source": "axiom-programs/us-ga/snap/fy-2026 income-standard composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_countable_earned_income",
@@ -99935,7 +100316,8 @@
      "period": "Month",
      "source": "axiom-programs/us-ga/snap/fy-2026 benefit composition",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -102480,7 +102862,35 @@
     "derived": 281,
     "parameters": 130,
     "relations": 5
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-ga-tanf",
@@ -106388,7 +106798,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -106400,7 +106811,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -106412,7 +106824,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_limit_categorical_exemption_applies",
@@ -106442,7 +106855,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -106454,7 +106868,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_maximum_allotment",
@@ -106466,7 +106881,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -106478,7 +106894,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_gross_income",
@@ -106526,7 +106943,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -106538,7 +106956,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -106550,7 +106969,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -106562,7 +106982,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -106574,7 +106995,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -106586,7 +107008,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -106598,7 +107021,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -106610,7 +107034,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -106622,7 +107047,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -106634,7 +107060,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -106646,7 +107073,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -106658,7 +107086,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -106670,7 +107099,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -106682,7 +107112,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -106852,7 +107283,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -106864,7 +107296,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "statutory_household_resource_limit_base_amount",
@@ -106924,7 +107357,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -106936,7 +107370,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -106948,7 +107383,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -106960,7 +107396,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -106972,7 +107409,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_member_abawd_fulfilling_work_requirement",
@@ -111961,7 +112399,8 @@
      "period": "Month",
      "source": "us:statutes/7/2014",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_is_categorically_eligible",
@@ -112027,7 +112466,8 @@
      "period": "Month",
      "source": "axiom-programs/us-ma/snap/fy-2026 categorical income composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_countable_earned_income",
@@ -112111,7 +112551,8 @@
      "period": "Month",
      "source": "axiom-programs/us-ma/snap/fy-2026 shelter deduction composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_benefit",
@@ -112123,7 +112564,8 @@
      "period": "Month",
      "source": "axiom-programs/us-ma/snap/fy-2026 benefit composition",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -117070,7 +117512,35 @@
     "derived": 469,
     "parameters": 145,
     "relations": 2
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-md-tca",
@@ -117175,7 +117645,8 @@
      "period": "Month",
      "source": "TANF Rule 125A, Adult Included SON and special need housing addition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "adult_included_maximum_grant",
@@ -117187,7 +117658,8 @@
      "period": "Month",
      "source": "TANF Rule 125A, Adult Included Max Grant and special need housing addition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "child_only_standard_of_need",
@@ -117199,7 +117671,8 @@
      "period": "Month",
      "source": "TANF Rule 125A, Child Only SON and special need housing addition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "child_only_maximum_grant",
@@ -117211,7 +117684,8 @@
      "period": "Month",
      "source": "TANF Rule 125A, Child Only Max Grant and special need housing addition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "me_tanf_adult_included_standard_of_need",
@@ -117223,7 +117697,8 @@
      "period": "Month",
      "source": "axiom-programs/us-me/tanf/fy-2026 adult-included standard-of-need bridge",
      "certified": true,
-     "acknowledged_incomplete": true
+     "acknowledged_incomplete": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "me_tanf_adult_included_maximum_grant",
@@ -117235,7 +117710,8 @@
      "period": "Month",
      "source": "axiom-programs/us-me/tanf/fy-2026 adult-included maximum-grant bridge",
      "certified": true,
-     "acknowledged_incomplete": true
+     "acknowledged_incomplete": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "me_tanf_child_only_standard_of_need",
@@ -117247,7 +117723,8 @@
      "period": "Month",
      "source": "axiom-programs/us-me/tanf/fy-2026 child-only standard-of-need bridge",
      "certified": true,
-     "acknowledged_incomplete": true
+     "acknowledged_incomplete": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "me_tanf_child_only_maximum_grant",
@@ -117259,7 +117736,8 @@
      "period": "Month",
      "source": "axiom-programs/us-me/tanf/fy-2026 child-only maximum-grant bridge",
      "certified": true,
-     "acknowledged_incomplete": true
+     "acknowledged_incomplete": true,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -117281,7 +117759,27 @@
     "derived": 8,
     "parameters": 10,
     "relations": 0
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "annual_versions",
+     "sources": [
+      "us-me:regulations/dhhs/ofi/chapter-331/tanf-rule-125a/maximum-benefit-and-standard-of-need"
+     ],
+     "parameters": [
+      "adult_included_maximum_grant_add_member",
+      "adult_included_maximum_grant_base",
+      "adult_included_standard_of_need_add_member",
+      "adult_included_standard_of_need_base",
+      "child_only_maximum_grant_add_member",
+      "child_only_maximum_grant_base",
+      "child_only_standard_of_need_add_member",
+      "child_only_standard_of_need_base"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-nc-snap",
@@ -119685,7 +120183,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -119697,7 +120196,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -119709,7 +120209,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_limit_categorical_exemption_applies",
@@ -119739,7 +120240,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -119751,7 +120253,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_maximum_allotment",
@@ -119763,7 +120266,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -119775,7 +120279,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_gross_income",
@@ -119823,7 +120328,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -119835,7 +120341,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -119847,7 +120354,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -119859,7 +120367,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -119871,7 +120380,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -119883,7 +120393,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -119895,7 +120406,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -119907,7 +120419,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -119919,7 +120432,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -119931,7 +120445,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -119943,7 +120458,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -119955,7 +120471,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -119967,7 +120484,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -119979,7 +120497,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -120149,7 +120668,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -120161,7 +120681,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "statutory_household_resource_limit_base_amount",
@@ -120221,7 +120742,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -120233,7 +120755,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -120245,7 +120768,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -120257,7 +120781,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -120269,7 +120794,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_member_abawd_fulfilling_work_requirement",
@@ -122558,7 +123084,8 @@
      "period": "Month",
      "source": "FNS 220 Categorical Eligibility, Section 220 Change",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "fns_application_should_be_pended_until_deadline",
@@ -122581,7 +123108,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "fns_application_pending_deadline_day",
@@ -122593,7 +123121,8 @@
      "period": "Month",
      "source": "FNS 220 Categorical Eligibility, Section 220 Change",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "wffa_or_ssi_approval_reasonably_anticipated",
@@ -122636,7 +123165,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "categorically_eligible_after_program_approval",
@@ -138271,7 +138801,8 @@
      "period": "Month",
      "source": "us:statutes/7/2014",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_gross_income",
@@ -138295,7 +138826,8 @@
      "period": "Month",
      "source": "axiom-programs/us-nc/snap/fy-2026 categorical income input alias",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_eligible",
@@ -138307,7 +138839,8 @@
      "period": "Month",
      "source": "axiom-programs/us-nc/snap/fy-2026 categorical income composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_countable_earned_income",
@@ -138379,7 +138912,8 @@
      "period": "Month",
      "source": "axiom-programs/us-nc/snap/fy-2026 shelter deduction composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_benefit",
@@ -138391,7 +138925,8 @@
      "period": "Month",
      "source": "axiom-programs/us-nc/snap/fy-2026 benefit composition",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -153889,7 +154424,35 @@
     "derived": 1210,
     "parameters": 280,
     "relations": 4
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-nh-income-tax",
@@ -154157,7 +154720,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -154169,7 +154733,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_has_elderly_or_disabled_member",
@@ -154193,7 +154758,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -154205,7 +154771,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -154217,7 +154784,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -154229,7 +154797,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -154241,7 +154810,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -154253,7 +154823,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_duplicate_participation_exception_applies",
@@ -156617,7 +157188,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -156629,7 +157201,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -156641,7 +157214,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -156653,7 +157227,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -156665,7 +157240,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -156677,7 +157253,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -156689,7 +157266,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -156701,7 +157279,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_member_abawd_fulfilling_work_requirement",
@@ -156998,7 +157577,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii) via federal SNAP state-plan composition support",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_limit_categorical_exemption_applies",
@@ -157010,7 +157590,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_financial_resources_within_limit",
@@ -157022,7 +157603,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -157034,7 +157616,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -157046,7 +157629,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -157058,7 +157642,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -157070,7 +157655,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -157240,7 +157826,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -157252,7 +157839,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "statutory_household_resource_limit_base_amount",
@@ -157312,7 +157900,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -157324,7 +157913,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -157336,7 +157926,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -157348,7 +157939,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -157360,7 +157952,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_categorical_pa_or_ssi_status",
@@ -157541,7 +158134,8 @@
      "period": "Month",
      "source": "7 USC 2014(c)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_fails_gross_income_standard",
@@ -157565,7 +158159,8 @@
      "period": "Month",
      "source": "7 USC 2014(c)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "intentional_program_violation_determination",
@@ -158117,7 +158712,8 @@
      "period": "Month",
      "source": "18 NYCRR 387.12(f)(3)(vi)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "initial_month_of_certification",
@@ -158184,7 +158780,8 @@
      "period": "Month",
      "source": "us-ny/regulation/18-nycrr/387/14/a/5(b)-(c)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "ny_snap_categorical_gross_income_limit_150_percent_fpl",
@@ -158196,7 +158793,8 @@
      "period": "Month",
      "source": "us-ny/regulation/18-nycrr/387/14/a/5(d)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "ny_snap_categorical_gross_income_limit_130_percent_fpl",
@@ -158208,7 +158806,8 @@
      "period": "Month",
      "source": "us-ny/regulation/18-nycrr/387/14/a/5(e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "ny_snap_elderly_disabled_200_percent_categorical_path_satisfied",
@@ -158220,7 +158819,8 @@
      "period": "Month",
      "source": "us-ny/regulation/18-nycrr/387/14/a/5(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "ny_snap_dependent_care_200_percent_categorical_path_satisfied",
@@ -158239,7 +158839,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "ny_snap_earned_income_150_percent_categorical_path_satisfied",
@@ -158258,7 +158859,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "ny_snap_residual_130_percent_categorical_path_satisfied",
@@ -158270,7 +158872,8 @@
      "period": "Month",
      "source": "us-ny/regulation/18-nycrr/387/14/a/5(e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "ny_snap_categorically_eligible",
@@ -158282,7 +158885,8 @@
      "period": "Month",
      "source": "us-ny/regulation/18-nycrr/387/14/a/5(i)-(iii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_categorically_eligible_for_resource_exemption",
@@ -158294,7 +158898,8 @@
      "period": "Month",
      "source": "us-ny/regulation/18-nycrr/387/14/a/5(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_limit_exemption_for_categorically_eligible_household",
@@ -158306,7 +158911,8 @@
      "period": "Month",
      "source": "us-ny/regulation/18-nycrr/387/14/a/5(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "shelter_costs",
@@ -158330,7 +158936,8 @@
      "period": "Month",
      "source": "New York SNAP FY 2026 benefit calculation composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_allowable_shelter_expenses",
@@ -158342,7 +158949,8 @@
      "period": "Month",
      "source": "New York SNAP FY 2026 benefit calculation composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction",
@@ -158354,7 +158962,8 @@
      "period": "Month",
      "source": "New York SNAP FY 2026 benefit calculation composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_eligible",
@@ -158373,7 +158982,8 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_claimed_homeless_shelter_deduction",
@@ -158397,7 +159007,8 @@
      "period": "Month",
      "source": "us-ny:regulations/18-nycrr/387/14/a/5",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -160625,7 +161236,35 @@
     "derived": 266,
     "parameters": 123,
     "relations": 4
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-ny-tanf",
@@ -164194,7 +164833,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -164206,7 +164846,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -164218,7 +164859,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_limit_categorical_exemption_applies",
@@ -164248,7 +164890,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -164260,7 +164903,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_maximum_allotment",
@@ -164272,7 +164916,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -164284,7 +164929,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_gross_income",
@@ -164332,7 +164978,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -164344,7 +164991,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -164356,7 +165004,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -164368,7 +165017,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -164380,7 +165030,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -164392,7 +165043,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -164404,7 +165056,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -164416,7 +165069,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -164428,7 +165082,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -164440,7 +165095,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -164452,7 +165108,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -164464,7 +165121,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -164476,7 +165134,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -164488,7 +165147,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -164658,7 +165318,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -164670,7 +165331,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "statutory_household_resource_limit_base_amount",
@@ -164730,7 +165392,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -164742,7 +165405,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -164754,7 +165418,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -164766,7 +165431,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -164778,7 +165444,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_member_abawd_fulfilling_work_requirement",
@@ -187382,7 +188049,8 @@
      "period": "Month",
      "source": "us:statutes/7/2014",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_eligible",
@@ -187394,7 +188062,8 @@
      "period": "Month",
      "source": "axiom-programs/us-sc/snap/fy-2026 categorical income composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_countable_earned_income",
@@ -187466,7 +188135,8 @@
      "period": "Month",
      "source": "axiom-programs/us-sc/snap/fy-2026 shelter deduction composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_benefit",
@@ -187478,7 +188148,8 @@
      "period": "Month",
      "source": "axiom-programs/us-sc/snap/fy-2026 benefit composition",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -205627,7 +206298,35 @@
     "derived": 1425,
     "parameters": 441,
     "relations": 3
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-tn-snap",
@@ -208022,7 +208721,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_deduction",
@@ -208034,7 +208734,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_asset_limit",
@@ -208046,7 +208747,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_limit_categorical_exemption_applies",
@@ -208076,7 +208778,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_resource_eligible",
@@ -208088,7 +208791,8 @@
      "period": "Month",
      "source": "7 CFR 273.8(a), 7 CFR 273.8(b)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_maximum_allotment",
@@ -208100,7 +208804,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_one_person_thrifty_food_plan_cost",
@@ -208112,7 +208817,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 maximum allotments and deductions",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_total_gross_income",
@@ -208160,7 +208866,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(G)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_before_shelter",
@@ -208172,7 +208879,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(A)-(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_cost",
@@ -208184,7 +208892,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(H)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_excess_shelter_deduction_for_net_income",
@@ -208196,7 +208905,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)(I)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_monthly_income",
@@ -208208,7 +208918,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(1)(i)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_benefit",
@@ -208220,7 +208931,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(C)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_calculated_monthly_allotment_before_minimums",
@@ -208232,7 +208944,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_monthly_allotment",
@@ -208244,7 +208957,8 @@
      "period": "Month",
      "source": "7 CFR 273.10(e)(2)(ii)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income_limit_100_percent_fpl_48_states_dc",
@@ -208256,7 +208970,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_130_percent_fpl_48_states_dc",
@@ -208268,7 +208983,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_gross_income_limit_165_percent_fpl_48_states_dc",
@@ -208280,7 +208996,8 @@
      "period": "Month",
      "source": "USDA SNAP FY 2026 income eligibility standards",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_gross_income_eligible",
@@ -208292,7 +209009,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_net_income_eligible",
@@ -208304,7 +209022,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_standard_income_eligible",
@@ -208316,7 +209035,8 @@
      "period": "Month",
      "source": "7 CFR 273.9(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_full_excess_shelter_deduction_applies",
@@ -208486,7 +209206,8 @@
      "period": "Month",
      "source": "7 USC 2014(e)(6)(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_net_income",
@@ -208498,7 +209219,8 @@
      "period": "Month",
      "source": "7 USC 2014(d) and (e)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "statutory_household_resource_limit_base_amount",
@@ -208558,7 +209280,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"income, as determined in accordance with section 2014(d) and (e)\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_household_food_contribution",
@@ -208570,7 +209293,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"an amount equal to 30 per centum of the household's income\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_allotment_before_minimum",
@@ -208582,7 +209306,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), \"cost ... of the thrifty food plan reduced ... rounded to the nearest lower whole dollar\"",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_minimum_monthly_allotment",
@@ -208594,7 +209319,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), proviso for households of one and two persons",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_regular_month_allotment",
@@ -208606,7 +209332,8 @@
      "period": "Month",
      "source": "7 USC 2017(a), allotment authorized for households certified as eligible",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_member_abawd_fulfilling_work_requirement",
@@ -211400,7 +212127,8 @@
      "period": "Month",
      "source": "SNAP Income Policy 24.14, Policy A",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "gross_monthly_income_standard_applies",
@@ -211424,7 +212152,8 @@
      "period": "Month",
      "source": "SNAP Income Policy 24.14, Policy A",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_net_monthly_income_requirement_satisfied",
@@ -216375,7 +217104,8 @@
      "period": "Month",
      "source": "us:statutes/7/2014",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "household_is_elderly_or_disabled",
@@ -216411,7 +217141,8 @@
      "period": "Month",
      "source": "axiom-programs/us-tn/snap/fy-2026 income-standard input alias",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "gross_monthly_income",
@@ -216435,7 +217166,8 @@
      "period": "Month",
      "source": "axiom-programs/us-tn/snap/fy-2026 income-standard input alias",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_income_eligible",
@@ -216447,7 +217179,8 @@
      "period": "Month",
      "source": "axiom-programs/us-tn/snap/fy-2026 income-standard composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_countable_earned_income",
@@ -216519,7 +217252,8 @@
      "period": "Month",
      "source": "axiom-programs/us-tn/snap/fy-2026 shelter deduction composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     },
     {
      "name": "snap_benefit",
@@ -216531,7 +217265,8 @@
      "period": "Month",
      "source": "axiom-programs/us-tn/snap/fy-2026 benefit composition",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "annual_update_due": "2026-10-01"
     }
    ],
    "inputs": {
@@ -224057,7 +224792,35 @@
     "derived": 615,
     "parameters": 233,
     "relations": 3
-   }
+   },
+   "annual_updates": [
+    {
+     "due": "2026-10-01",
+     "last_effective_from": "2025-10-01",
+     "basis": "fiscal_year_source",
+     "fiscal_year": 2026,
+     "sources": [
+      "us:policies/usda/snap/fy-2026-cola/deductions",
+      "us:policies/usda/snap/fy-2026-cola/income-eligibility-standards",
+      "us:policies/usda/snap/fy-2026-cola/maximum-allotments"
+     ],
+     "parameters": [
+      "snap_asset_limit_elderly_or_disabled_member",
+      "snap_asset_limit_other_households",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_130_percent_fpl_48_states_dc_table",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_additional_member",
+      "snap_gross_income_limit_165_percent_fpl_48_states_dc_table",
+      "snap_homeless_shelter_deduction",
+      "snap_maximum_allotment_additional_member",
+      "snap_maximum_allotment_table",
+      "snap_maximum_excess_shelter_deduction_48_states_dc",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_additional_member",
+      "snap_net_income_limit_100_percent_fpl_48_states_dc_table",
+      "snap_standard_deduction_48_states_dc_table"
+     ]
+    }
+   ]
   },
   {
    "slug": "us-tx-tanf",

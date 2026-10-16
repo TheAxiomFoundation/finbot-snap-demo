@@ -72,15 +72,18 @@ describe("BBCE input plumbing", () => {
   it("includes each relevant limitation once per request and only on its program", () => {
     for (const state of ["az", "ma", "fl", "al", "tn", "co"]) {
       const program = getProgram(`us-${state}-snap`)!;
-      const built = buildRequest({ program });
+      const built = buildRequest({ program, period: "2026-10" });
       for (const note of CATALOG_OVERLAY[program.slug].notes!) {
         expect(built.applied.disclosures.filter((n) => n === note)).toHaveLength(1);
         // User-facing limitations live in disclosures, not in the model notes.
         expect(built.applied.notes).not.toContain(note);
       }
-      expect(built.applied.disclosures.filter((n) => n.startsWith("SNAP figures use FY2026"))).toHaveLength(1);
+      // The standards-year limitation is period-dependent: FY2026 standards
+      // are current law through September 2026 and overdue from October.
+      expect(built.applied.disclosures.filter((n) => n.includes("figures use FY2026 standards"))).toHaveLength(1);
+      expect(buildRequest({ program, period: "2026-09" }).applied.disclosures.some((n) => n.includes("FY2026"))).toBe(false);
     }
-    expect(buildRequest({ program: getProgram("us-fiit")! }).applied.disclosures.some((n) => n.includes("FY2026"))).toBe(false);
+    expect(buildRequest({ program: getProgram("us-fiit")!, period: "2026-10" }).applied.disclosures.some((n) => n.includes("FY2026"))).toBe(false);
   });
 });
 

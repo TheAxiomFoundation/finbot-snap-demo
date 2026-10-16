@@ -19,6 +19,7 @@
     "test:gates": "tsx scripts/test-gates.ts",
     "test:exclusions": "tsx scripts/test-exclusions.ts",
     "test:legal-links": "tsx scripts/test-legal-links.ts",
+    "test:annual-updates": "tsx scripts/test-annual-updates.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { annualUpdateNoticesAt, periodStartDate } from "@/lib/annual-updates";
 import { getCatalog, getProgram } from "@/lib/catalog";
 import { programDisclosures } from "@/lib/catalog-overlay";
 import { legalIdToUrl } from "@/lib/legal-links";
 import { programCoverageStatus } from "@/lib/coverage";
+import { defaultPeriodFor } from "@/lib/request-builder";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -45,7 +47,10 @@ export default async function ProgramPage({ params }: PageProps) {
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>{program.display_name}</h1>
       <p style={{ color: "#374151", margin: "6px 0 4px" }}>{program.description}</p>
       <p className="tool-coverage-status">{programCoverageStatus(program)}</p>
-      {programDisclosures(program).map((note) => <p key={note} className="tool-coverage-status">{note}</p>)}
+      {[
+        ...programDisclosures(program),
+        ...annualUpdateNoticesAt(program, periodStartDate(defaultPeriodFor(program))),
+      ].map((note) => <p key={note} className="tool-coverage-status">{note}</p>)}
       <p className="mono" style={{ fontSize: 12, color: "#6b7280", marginBottom: 20 }}>
         {program.slug} · period {program.evaluation_period} · {program.counts.derived} rules ·{" "}
         {program.counts.parameters} parameters ·{" "}
