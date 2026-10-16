@@ -32,6 +32,7 @@ import {
 import type { CatalogInputSlot, CatalogOutput, CatalogProgram } from "./catalog";
 import { legalIdToUrl } from "./legal-links";
 import { programDisclosures } from "./catalog-overlay";
+import { annualUpdateDisclosure, annualUpdateWarning, overdueAnnualUpdates } from "./annual-updates";
 
 export type Facts = Record<string, FactScalar>;
 
@@ -400,6 +401,20 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         }
       }
     }
+  }
+
+  // -- Annual updates past due ----------------------------------------------
+  // A period on or after the date an annually reissued parameter was due
+  // (e.g. SNAP's October 1 COLA) still evaluates last year's version when the
+  // release doesn't carry the new one. Disclose it rather than answer as if
+  // current; outputs that don't reach such a parameter never trigger this.
+  const overdue = overdueAnnualUpdates(
+    program,
+    queried.map((output) => ({ output, periodStart: periodForOutput(output, resolved, program).interval.start }))
+  );
+  for (const update of overdue) {
+    disclosures.push(annualUpdateDisclosure(program, update));
+    notes.push(annualUpdateWarning(update, resolved.label));
   }
 
   // -- Instances -------------------------------------------------------------

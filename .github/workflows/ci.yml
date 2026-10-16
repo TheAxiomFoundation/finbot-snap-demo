@@ -78,3 +78,4 @@ jobs:
           bun run test:properties
           bun run test:exclusions
           bun run test:gates
+          bun run test:annual-updates

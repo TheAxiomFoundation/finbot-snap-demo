@@ -55,7 +55,13 @@ async function runRelease(release: Release): Promise<ReleaseResult> {
     assert.equal(built.request.dataset.inputs.some((i) => i.name.endsWith("#input.assistance_group_size")), release === "baseline");
     const shaped = shapeResult(program!, built, await runCompiled(program!.slug, built.request));
     assert.ok(shaped.applied.disclosures.some((text) => text.includes("Florida") && text.includes("broad-based")), "Florida BBCE disclosure retained");
-    assert.ok(shaped.applied.disclosures.some((text) => text.includes("FY2027")), "standards-year disclosure retained");
+    // FY2026 standards are current law in the fixture's period (2026-09); the
+    // annual-update disclosure appears only from 2026-10-01 (see annual-updates.ts).
+    assert.equal(
+      shaped.applied.disclosures.some((text) => text.includes("FY2027")),
+      fixture.period >= "2026-10",
+      "standards-year disclosure follows the period"
+    );
     const values = Object.fromEntries(shaped.outputs.filter((o) => selected.includes(o.name)).map((o) => [o.name, o.value])) as Values;
     for (const name of selected) assert.ok(Object.hasOwn(values, name), `returned output: ${name}`);
     accepted++;

@@ -116,12 +116,9 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
   },
 };
 
-/** Shared copy for program pages, describe_program, and computation cards. */
+/** Shared copy for program pages, describe_program, and computation cards.
+ *  Period-dependent limitations (annual updates not encoded yet) come from
+ *  the catalog instead — see src/lib/annual-updates.ts. */
 export function programDisclosures(program: { slug: string; program_id: string }): string[] {
-  return [
-    ...(CATALOG_OVERLAY[program.slug]?.notes ?? []),
-    ...(program.program_id === "snap"
-      ? ["SNAP figures use FY2026 standards; FY2027 standards took effect October 1, 2026 and are not encoded yet."]
-      : []),
-  ];
+  return [...(CATALOG_OVERLAY[program.slug]?.notes ?? [])];
 }

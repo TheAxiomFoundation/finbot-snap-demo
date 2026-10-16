@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { annualUpdateNoticesAt, periodStartDate } from "@/lib/annual-updates";
 import { getCatalog } from "@/lib/catalog";
 import { programDisclosures } from "@/lib/catalog-overlay";
 import { jurisdictionCoverageStatus, programCoverageStatus } from "@/lib/coverage";
+import { defaultPeriodFor } from "@/lib/request-builder";
 
 export const metadata: Metadata = {
   title: "Encoded programs — Axiom rules engine",
@@ -70,7 +72,10 @@ export default function ProgramsPage() {
                     <span className="mono" style={{ fontSize: 11, color: "#6b7280" }}>{program.evaluation_period}</span>
                   </div>
                   <div className="tool-coverage-status">{programCoverageStatus(program)}</div>
-                  {programDisclosures(program).map((note) => (
+                  {[
+                    ...programDisclosures(program),
+                    ...annualUpdateNoticesAt(program, periodStartDate(defaultPeriodFor(program))),
+                  ].map((note) => (
                     <p key={note} className="tool-coverage-status">{note}</p>
                   ))}
                   <div className="mono" style={{ fontSize: 11, color: "#6b7280", margin: "4px 0 8px" }}>
