@@ -16,6 +16,7 @@
     "eval:oracle": "tsx eval/oracle-eval.ts",
     "test:regression": "tsx scripts/test-regression.ts",
     "test:legal-links": "tsx scripts/test-legal-links.ts",
+    "test:compute-errors": "tsx scripts/test-compute-errors.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

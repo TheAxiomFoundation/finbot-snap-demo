@@ -89,6 +89,20 @@ function asToolError(err: unknown): { error: string; suggestions?: string[]; hin
   throw err;
 }
 
+/** Engine (and other unexpected) failures as data, never as a thrown error:
+ *  a throw inside a tool executor ends the chat stream, and the user gets an
+ *  empty reply instead of an explanation or a retry. */
+function engineFailure(err: unknown): { error: string; hint: string } {
+  const message = (err instanceof Error ? err.message : String(err)).slice(0, 600);
+  const missing = /missing input `([^`]+)`/.exec(message)?.[1];
+  return {
+    error: `calculation failed: ${message}`,
+    hint: missing
+      ? `The rules engine needed input "${missing}", which this request did not resolve. If describe_program lists it as an input slot and the user's facts determine it, retry once with it set as a fact. Otherwise tell the user this calculation could not be completed — do NOT state a figure for it from memory.`
+      : "The rules engine could not finish this calculation. If the error points at a fact you passed, retry once with a corrected value. Otherwise tell the user this calculation could not be completed — do NOT state a figure for it from memory.",
+  };
+}
+
 /** Wrap a tool executor so every object result carries `_ms` (execution time)
  *  and the server logs a timing line. This is how we attribute latency between
  *  engine work (fast) and LLM round-trips (slow). */
@@ -227,7 +241,7 @@ export const tools = {
           return asToolError(err);
         } catch {
           console.error("[finbot] compute failed:", err, "program:", slug, "facts:", facts);
-          throw err;
+          return engineFailure(err);
         }
       }
     }),
@@ -285,7 +299,7 @@ export const tools = {
           return asToolError(err);
         } catch {
           console.error("[finbot] lookup_value failed:", err, "program:", slug, "output:", output);
-          throw err;
+          return engineFailure(err);
         }
       }
     }),

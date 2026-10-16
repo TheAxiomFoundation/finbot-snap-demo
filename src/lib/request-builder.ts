@@ -424,6 +424,24 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       return out;
     }
 
+    // The reverse direction: a non-member rule can read a member-entity rule
+    // directly, without a relation aggregator (us-fiit's senior-deduction
+    // MAGI, a TaxUnit rule, adds the §911 exclusion, a Person rule). The
+    // engine then evaluates that rule at the query instance itself, so its
+    // member-scope inputs must resolve there. Mirror member 1's values — the
+    // primary filer/applicant — onto every non-member query instance; slots
+    // that already have a non-member-scope record keep it.
+    const member1Facts: Facts = {
+      ...topLevelMemberFacts(),
+      ...(options.members?.[0]?.facts ?? {}),
+    };
+    for (const [entity, entityId] of queryInstances) {
+      for (const slot of memberSlots) {
+        if (nonMemberSlots.has(slot.name)) continue;
+        record(slot, entity, entityId, member1Facts[slot.name]);
+      }
+    }
+
     // Member-check queries evaluate member-entity judgments at member 1; any
     // household-scope inputs those rule chains read must resolve there too.
     // Add the non-member union to member 1, excluding slots that already have
