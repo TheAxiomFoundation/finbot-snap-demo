@@ -21,7 +21,7 @@ export function Chat() {
     setMessages,
     append,
   } = useChat({
-    api: "/chatbot/api/chat",
+    api: "/gallery/chatbot/api/chat",
     maxSteps: 12,
     onError(err) {
       console.error("[finbot] chat error:", err);
@@ -50,7 +50,7 @@ export function Chat() {
   async function fanOutRaw(messagesForRaw: Array<{ role: string; content: string }>, userMsgId: string) {
     setRawResponses((m) => ({ ...m, [userMsgId]: null }));
     try {
-      const r = await fetch("/chatbot/api/raw", {
+      const r = await fetch("/gallery/chatbot/api/raw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: messagesForRaw }),
