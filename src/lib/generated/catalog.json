@@ -73645,7 +73645,8 @@
      {
       "name": "taxpayer_is_individual",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "taxpayer_is_nonresident_alien_for_any_portion_of_year",

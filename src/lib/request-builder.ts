@@ -292,17 +292,57 @@ export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">
   return MEMBER_COUNT_INPUTS.has(slot.name) && (slot.dtype === "integer" || slot.dtype === "decimal");
 }
 
-/** SNAP's per-member citizenship input, assumed true when nothing about the
- *  member's citizenship or immigration status was stated (see buildRequest). */
-const ASSUMED_CITIZENSHIP_SLOT = "member_is_us_citizen";
 /** Fact names that state citizenship or immigration status; any of these on a
  *  member (or at the top level) disables the citizenship assumption. */
 const IMMIGRATION_STATUS_FACT =
   /citizen|national|alien|refugee|asylee|entrant|amerasian|immigra|lawful|parolee|compact|qualified_alien|qualifying_quarters|lawfully_residing/;
+/** Fact names about an SSN or TIN on the return. */
+const SSN_FACT = /(^|_)(ssn|tin)(_|$)|social_security_number/;
 
-function isSnapProgram(program: CatalogProgram): boolean {
-  return /-snap$/.test(program.slug);
+/** A member-scope fact the app assumes when the user stated nothing that
+ *  bears on it — disclosed in applied.assumed_facts so the answer says so and
+ *  invites a correction. */
+interface MemberAssumption {
+  slot: string;
+  value: FactScalar;
+  applies: (program: CatalogProgram) => boolean;
+  /** True when facts (a member's, or the top level's) already speak to
+   *  this one; the assumption then stays off for that member. */
+  stated: (facts: Facts) => boolean;
+  /** The member gate this fact feeds. When the compute checks that gate,
+   *  the disclosure keeps only members where it holds — elsewhere the
+   *  assumption changed nothing. Without one, it is always disclosed. */
+  gate?: string;
+  why: string;
 }
+
+const MEMBER_ASSUMPTIONS: MemberAssumption[] = [
+  {
+    // SNAP: a member with no stated citizenship or immigration status is
+    // assumed to be a U.S. citizen. A stated refugee/asylee/LPR status is
+    // never overridden.
+    slot: "member_is_us_citizen",
+    value: true,
+    applies: (program) => /-snap$/.test(program.slug),
+    stated: (facts) => Object.keys(facts).some((n) => IMMIGRATION_STATUS_FACT.test(n)),
+    why: "No citizenship or immigration status was stated, so these members are assumed to be U.S. citizens. Say so in Assumptions and invite the user to correct it.",
+  },
+  {
+    // 26 USC 151(d)(5)(C)(iv): the senior deduction needs the qualified
+    // individual's SSN on the return. Filers ordinarily include it, and a
+    // compute that omitted the fact headlined a $0 deduction. Setting the
+    // slot, or saying that some SSN on the return is missing (an SSN/TIN
+    // fact set false), keeps it off.
+    slot: "qualified_individual_social_security_number_included_on_return",
+    value: true,
+    applies: (program) => program.slug === "us-fiit",
+    stated: (facts) =>
+      "qualified_individual_social_security_number_included_on_return" in facts ||
+      Object.entries(facts).some(([n, v]) => SSN_FACT.test(n) && v === false),
+    gate: "senior_deduction_qualified_individual",
+    why: "Nothing was said about this person's SSN, so it is assumed to be on the return, as the senior deduction requires. Say so in Assumptions and invite the user to correct it (someone filing with an ITIN doesn't qualify).",
+  },
+];
 
 export function buildRequest(options: BuildOptions): BuiltRequest {
   const { program } = options;
@@ -564,7 +604,8 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // facts that name member-scope slots (so "member_age: 34" works without an
   // explicit members list).
   const relations: RelationRecord[] = [];
-  const assumedCitizenMembers: number[] = [];
+  /** Assumption → the 1-based members it was set on. */
+  const assumedMembers = new Map<MemberAssumption, number[]>();
   if (memberEntity && memberCount > 0) {
     const memberSlots = program.inputs[memberEntity] ?? [];
     const memberRelations = program.relations.filter(
@@ -578,27 +619,26 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     // across members); with synthesized members they go to member 1 only
     // (primary-applicant semantics, e.g. oldest_member_age).
     const explicitMembers = (options.members?.length ?? 0) > 0;
-    // SNAP: a member with no stated citizenship or immigration status is
-    // assumed to be a U.S. citizen — disclosed in applied.assumed_facts so the
-    // answer says so and invites a correction. Any stated status (on the
-    // member or at the top level) disables the assumption, so a stated
-    // refugee/asylee/LPR status is never overridden.
-    const citizenshipSlot = memberSlots.find((s) => s.name === ASSUMED_CITIZENSHIP_SLOT);
-    const statusStatedTopLevel = Object.keys(facts).some((n) => IMMIGRATION_STATUS_FACT.test(n));
-    const assumeCitizenship = (memberFacts: Facts): boolean =>
-      isSnapProgram(program) &&
-      citizenshipSlot !== undefined &&
-      !statusStatedTopLevel &&
-      !Object.keys(memberFacts).some((n) => IMMIGRATION_STATUS_FACT.test(n));
+    // Facts the user never spoke to are assumed per member (see
+    // MEMBER_ASSUMPTIONS) and disclosed in applied.assumed_facts. A related
+    // fact on the member or at the top level keeps an assumption off.
+    const assumptions = MEMBER_ASSUMPTIONS.filter(
+      (a) => a.applies(program) && memberSlots.some((s) => s.name === a.slot) && !a.stated(facts)
+    );
+    const applyAssumptions = (memberFacts: Facts, member: number) => {
+      for (const assumption of assumptions) {
+        if (assumption.stated(memberFacts)) continue;
+        memberFacts[assumption.slot] = assumption.value;
+        if (!assumedMembers.has(assumption)) assumedMembers.set(assumption, []);
+        assumedMembers.get(assumption)!.push(member);
+      }
+    };
     for (let i = 0; i < memberCount; i++) {
       const memberId = instanceId(memberEntity, i + 1);
       const spec = options.members?.[i];
       const base = explicitMembers || i === 0 ? topLevelMemberFacts() : {};
       const memberFacts: Facts = { ...base, ...(spec?.facts ?? {}) };
-      if (assumeCitizenship(memberFacts)) {
-        memberFacts[ASSUMED_CITIZENSHIP_SLOT] = true;
-        assumedCitizenMembers.push(i + 1);
-      }
+      applyAssumptions(memberFacts, i + 1);
       for (const slot of memberSlots) {
         record(slot, memberEntity, memberId, memberFacts[slot.name]);
       }
@@ -641,7 +681,9 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       ...topLevelMemberFacts(),
       ...(options.members?.[0]?.facts ?? {}),
     };
-    if (assumedCitizenMembers.includes(1)) member1Facts[ASSUMED_CITIZENSHIP_SLOT] = true;
+    for (const [assumption, members] of assumedMembers) {
+      if (members.includes(1)) member1Facts[assumption.slot] = assumption.value;
+    }
     for (const entityId of queryInstances.values()) {
       for (const slot of memberSlots) {
         if (nonMemberSlots.has(slot.name)) continue;
@@ -702,15 +744,13 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       member_count: memberCount,
       facts_applied: facts,
       ...(Object.keys(derivedFacts).length > 0 && { derived_facts: derivedFacts }),
-      ...(assumedCitizenMembers.length > 0 && {
-        assumed_facts: [
-          {
-            slot: ASSUMED_CITIZENSHIP_SLOT,
-            value: true,
-            members: assumedCitizenMembers,
-            why: "No citizenship or immigration status was stated, so these members are assumed to be U.S. citizens. Say so in Assumptions and invite the user to correct it.",
-          },
-        ],
+      ...(assumedMembers.size > 0 && {
+        assumed_facts: [...assumedMembers].map(([assumption, members]) => ({
+          slot: assumption.slot,
+          value: assumption.value,
+          members,
+          why: assumption.why,
+        })),
       }),
       defaulted_slots: defaultedSlots,
       ...(defaultedIncomeSlots.size > 0 && {
@@ -1029,12 +1069,14 @@ export function shapeResult(
 
   const gates = built.queried.filter((o) => built.memberCheckNames.has(o.name));
   const firstMemberWith = new Map<string, number>();
+  const heldAt = new Set<string>(); // `${gate}|${member}` for every gate that holds
   const memberChecks: MemberChecks[] = built.memberCheckIds.map((id, index) => {
     const member = index + 1;
     const scope = perMember.get(id) ?? { outputs: new Map<string, ReadOutput>(), trace: {} };
     const checks: MemberCheck[] = gates.map((gate) => {
       const { name, value, legal_id, requires, requires_any, requires_partial, failed_because } =
         shapeOne(gate, scope.outputs, scope.trace, id);
+      if (value === "holds") heldAt.add(`${name}|${member}`);
       return {
         name,
         value,
@@ -1051,6 +1093,25 @@ export function shapeResult(
     firstMemberWith.set(signature, member);
     return { member, checks };
   });
+
+  // An assumption tied to a member gate changed nothing where that gate
+  // fails anyway (a 40-year-old's senior-deduction check), so disclose it
+  // only where the gate holds. Members whose gate wasn't checked (the
+  // lookup path, synthesized members past the first) stay disclosed.
+  if (built.applied.assumed_facts) {
+    const disclosed = built.applied.assumed_facts
+      .map((assumed) => {
+        const gate = MEMBER_ASSUMPTIONS.find((a) => a.slot === assumed.slot)?.gate;
+        if (!gate || !built.memberCheckNames.has(gate)) return assumed;
+        const members = assumed.members.filter(
+          (m) => m > built.memberCheckIds.length || heldAt.has(`${gate}|${m}`)
+        );
+        return { ...assumed, members };
+      })
+      .filter((assumed) => assumed.members.length > 0);
+    if (disclosed.length > 0) built.applied.assumed_facts = disclosed;
+    else delete built.applied.assumed_facts;
+  }
 
   // Primary first, then judgments, then remaining scalars.
   mainOutputs.sort((a, b) => {
