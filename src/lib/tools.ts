@@ -21,10 +21,12 @@ import {
   UnknownOutputError,
   NotSettableInputError,
   NotMemberInputError,
+  NoMemberEntityError,
   buildRequest,
   computeProgram,
   defaultPeriodFor,
   labelFor,
+  memberCountSlotNames,
   nearestNames,
   resolveOutput,
   shapeResult,
@@ -52,7 +54,7 @@ const MembersSchema = z
     })
   )
   .describe(
-    "One entry per household/tax-unit member. Member facts use member-entity slots (e.g. member_age). Top-level facts that name member-scope slots apply to EVERY listed member as a shared base (use for taxpayer-level facts like SSN-on-return); per-member facts override. Omit members to synthesize them from a recognized count input listed in describe_program."
+    "One entry per household/tax-unit member. Member facts use member-entity slots (e.g. member_age). Top-level facts that name member-scope slots apply to EVERY listed member as a shared base (use for taxpayer-level facts like SSN-on-return); per-member facts override. Omit members to synthesize them from a recognized count input listed in describe_program. On a program with no member entity (describe_program member_entity: null), entries take no facts and only set its household-count input."
   );
 
 const PeriodSchema = z
@@ -108,13 +110,27 @@ function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: st
     };
   }
   if (err instanceof NotMemberInputError) {
+    const counts = memberCountSlotNames(program);
     return {
       error: err.message,
       kind: err.kind,
       misplaced: err.misplaced,
       hint: err.memberEntity
         ? "These slots take one value for the whole unit, not one per member. Move each into the top-level facts and retry. If members gave different values for one slot, ask the user which applies instead of picking one."
-        : "This program has no member entity. Put every fact in the top-level facts, drop members[], and retry.",
+        : counts.length > 0
+          ? `This program has no member entity. Put every fact in the top-level facts and retry. members[] here only sets the household count (${counts.join(", ")}): keep one entry per member without facts, or set the count fact directly.`
+          : "This program has no member entity. Put every fact in the top-level facts, drop members[], and retry. If the household size matters, set the program's own count fact from describe_program.",
+    };
+  }
+  if (err instanceof NoMemberEntityError) {
+    return {
+      error: err.message,
+      kind: err.kind,
+      member_count: err.memberCount,
+      ...(err.conflicts.length > 0 && { conflicts: err.conflicts }),
+      hint: err.conflicts.length > 0
+        ? "members[] and the count fact give two different household sizes. Retry with one: set the count fact to the number of members, or drop members[] if the count is deliberately different (e.g. household members outside the assistance unit). If the user's description gives two sizes, ask which applies."
+        : "members[] cannot change this program's result. Drop members[] and put every fact in the top-level facts. If the household size matters, set the program's own count fact from describe_program (inputs_search \"count\" or \"size\") and retry.",
     };
   }
   if (err instanceof UnknownInputError) {

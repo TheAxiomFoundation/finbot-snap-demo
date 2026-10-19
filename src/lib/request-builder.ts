@@ -152,6 +152,27 @@ export class NotMemberInputError extends Error {
   }
 }
 
+/** members[] on a program with no member entity. No member instances exist,
+ *  so the list states a headcount only, which buildRequest writes to the
+ *  program's verified count inputs. Raised when that takes a silent choice:
+ *  the program has no verified count input (the list would be dropped), or
+ *  the caller set one to a different number (two household sizes). */
+export class NoMemberEntityError extends Error {
+  readonly kind = "no_member_entity";
+  constructor(
+    readonly memberCount: number,
+    readonly countInputs: string[],
+    readonly conflicts: Array<{ slot: string; value: FactScalar }>,
+    programSlug: string
+  ) {
+    super(
+      conflicts.length > 0
+        ? `members[] lists ${memberCount} entries but ${conflicts.map((c) => `${c.slot}=${c.value}`).join(", ")}; ${programSlug} has no member entity, so members[] only sets ${countInputs.join(", ")}`
+        : `${programSlug} has no member entity and no recognized household-count input, so members[] (${memberCount} entries) cannot reach the engine`
+    );
+  }
+}
+
 /** Token-overlap nearest-match scoring for self-correcting error messages. */
 export function nearestNames(needle: string, haystack: Iterable<string>, limit = 5): string[] {
   const tokens = new Set(needle.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
@@ -286,10 +307,22 @@ const MEMBER_COUNT_INPUTS = new Set([
   "fns_unit_size",
   "tanf_household_size",
   "tanf_family_size",
+  // us-ny-tanf only: indexes the grant table; its family_size indexes the
+  // shelter allowance, so a household size must reach both.
+  "number_of_persons_in_household",
 ]);
 
 export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">): boolean {
   return MEMBER_COUNT_INPUTS.has(slot.name) && (slot.dtype === "integer" || slot.dtype === "decimal");
+}
+
+/** The program's verified count inputs, on any entity. */
+export function memberCountSlotNames(program: CatalogProgram): string[] {
+  const names = new Set<string>();
+  for (const slots of Object.values(program.inputs)) {
+    for (const slot of slots) if (isMemberCountSlot(slot)) names.add(slot.name);
+  }
+  return [...names];
 }
 
 /** Fact names that state citizenship or immigration status; any of these on a
@@ -471,6 +504,29 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
           notes.push(`set ${slot.name}=${memberCount} to match members[]`);
         }
       }
+    }
+  } else if (options.members?.length) {
+    // No member entity: no member instances exist and member facts were
+    // rejected above, so the list states a headcount only. Write it to the
+    // verified count inputs as the member-entity path does, so a household
+    // given through members[] never computes at the count's default (us-ny-tanf
+    // gave $183.10 for one person, not $389 for three). Refuse when that takes
+    // a silent choice: with no count input the list would be dropped, and a
+    // count fact that differs from the list is a second household size only
+    // the caller can reconcile (an assistance unit can be smaller than the
+    // household).
+    const size = options.members.length;
+    const countInputs = memberCountSlotNames(program);
+    const conflicts = countInputs
+      .filter((name) => facts[name] !== undefined && Number(facts[name]) !== size)
+      .map((name) => ({ slot: name, value: facts[name] }));
+    if (countInputs.length === 0 || conflicts.length > 0) {
+      throw new NoMemberEntityError(size, countInputs, conflicts, program.slug);
+    }
+    for (const name of countInputs) {
+      if (facts[name] !== undefined) continue;
+      facts[name] = size;
+      notes.push(`set ${name}=${size} from members[]: ${program.slug} has no member entity, so members[] sets only the household count`);
     }
   }
 
