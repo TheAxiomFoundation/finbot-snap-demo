@@ -157,33 +157,136 @@ export function slotDefaultAt(slot: CatalogInputSlot, periodStart: string): bool
   return byPeriod && periodStart >= byPeriod.before ? byPeriod.otherwise : slot.default;
 }
 
-/** Case-insensitive multi-token search across output names of every program.
- *  All tokens must appear in the output name (any order). */
+const normalizeSearchText = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/** Query words that name nothing: question filler (with the "s" of "child's"
+ *  and the "t" of "don't"), and citation scaffolding ("26 USC 151" matches
+ *  through its numbers). */
+const SEARCH_STOP_WORDS = new Set([
+  "a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does", "for", "from", "how",
+  "i", "if", "in", "is", "it", "me", "much", "my", "of", "on", "or", "per", "s", "t", "than",
+  "that", "the", "this", "to", "under", "what", "with",
+  "cfr", "irc", "sec", "section", "subsection", "usc",
+]);
+
+/** Phrases people use for terms the encoded names spell differently. Each
+ *  becomes one search term that any `|` alternative satisfies. */
+const SEARCH_SYNONYMS: Array<[RegExp, string]> = [
+  [/\bchild tax credits?\b/g, "ctc|child tax credit"],
+  [/\bearned income (?:tax )?credits?\b/g, "eitc|earned income tax credit"],
+  [/\balternative minimum tax(?:es)?\b/g, "amt|alternative minimum tax"],
+  // 26 USC 151 is headed "personal exemptions"; its rules are named exemption_*.
+  [/\bpersonal exemptions?\b/g, "personal exemption|exemption 26 151"],
+];
+
+/** A query term: the phrase as typed, and alternative word lists, any one of
+ *  which matches when all its words do. */
+interface SearchTerm {
+  text: string;
+  alternatives: string[][];
+  /** From SEARCH_SYNONYMS, whose numbers say where to look: any match ranks
+   *  as a name match. */
+  synonym?: boolean;
+}
+
+function searchTerms(query: string): SearchTerm[] {
+  let text = query.toLowerCase().replace(/§/g, " section ").replace(/\bu\.?\s*s\.?\s*c\b\.?/g, " usc ");
+  const terms: SearchTerm[] = [];
+  for (const [pattern, alternatives] of SEARCH_SYNONYMS) {
+    text = text.replace(pattern, (phrase) => {
+      terms.push({ text: phrase, alternatives: alternatives.split("|").map((a) => a.split(" ")), synonym: true });
+      return " ";
+    });
+  }
+  const words = normalizeSearchText(text).split(" ").filter(Boolean);
+  const kept = words.filter((word, i) =>
+    !SEARCH_STOP_WORDS.has(word) &&
+    // A tax or benefit year ("2026") is the period to evaluate, not part of
+    // a name; a section number after "USC"/"section" is kept (7 USC 2017).
+    !(/^(19|20)\d\d$/.test(word) && !["usc", "section", "sec"].includes(words[i - 1]))
+  );
+  // A query of nothing but filler still searches its words, as before.
+  const chosen = terms.length === 0 && kept.length === 0 ? words : kept;
+  for (const word of chosen) terms.push({ text: word, alternatives: [[word]] });
+  const seen = new Set<string>();
+  return terms.filter((t) => !seen.has(t.text) && seen.add(t.text));
+}
+
+/** Every output with its name and legal-id document path normalized for
+ *  matching (` exemption amount `, ` us statutes 26 151 `); built once. */
+let searchIndex: Array<{ program: CatalogProgram; output: CatalogOutput; name: string; citation: string }> | null = null;
+
+function getSearchIndex() {
+  searchIndex ??= catalog.programs.flatMap((program) =>
+    program.outputs.map((output) => ({
+      program,
+      output,
+      name: ` ${normalizeSearchText(output.name)} `,
+      citation: ` ${normalizeSearchText((output.id ?? output.source ?? "").split("#")[0])} `,
+    }))
+  );
+  return searchIndex;
+}
+
+/** 2 when the term matches within the output name, 1 when it needs a number
+ *  or letter from the legal id's document path (`us:statutes/26/1/h#...` →
+ *  26, 1, h), 0 when it does not match. Words match the name anywhere
+ *  ("deduct" finds `..._deduction`); numbers and single letters match whole
+ *  words only. */
+function termMatch(term: SearchTerm, name: string, citation: string): 0 | 1 | 2 {
+  const isCitationPart = (word: string) => word.length === 1 || /^\d+$/.test(word);
+  const inName = (word: string) => name.includes(isCitationPart(word) ? ` ${word} ` : word);
+  let match: 0 | 1 | 2 = 0;
+  for (const words of term.alternatives) {
+    if (words.every(inName)) return 2;
+    if (words.every((word) => inName(word) || (isCitationPart(word) && citation.includes(` ${word} `)))) {
+      match = term.synonym ? 2 : 1;
+    }
+  }
+  return match;
+}
+
+/** Case-insensitive search across output names of every program. When some
+ *  outputs match every query term, only those are returned: certified first,
+ *  then shorter (more specific) names. Otherwise the outputs that match the
+ *  most terms are returned with the terms they miss — plus those one term
+ *  short of them once they match three or more — but only if that is at
+ *  least two terms and half the query, so a word or two in common ("income
+ *  tax") does not fill the results. Among equal matches, a number found in
+ *  the name ranks above the same number found only in the citation. */
 export function searchOutputs(
   query: string,
   options: { jurisdiction?: string; limit?: number } = {}
-): Array<{ program: string; output: CatalogOutput }> {
-  const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  const tokens = normalize(query).split(" ").filter(Boolean);
-  if (tokens.length === 0) return [];
+): Array<{ program: string; output: CatalogOutput; unmatched?: string[] }> {
+  const terms = searchTerms(query);
+  if (terms.length === 0) return [];
   const limit = options.limit ?? 24;
-  const matches: Array<{ program: string; output: CatalogOutput }> = [];
-  for (const program of catalog.programs) {
+  const scored: Array<{ program: string; output: CatalogOutput; matched: number[]; score: number; inName: number }> = [];
+  let best = 0;
+  for (const { program, output, name, citation } of getSearchIndex()) {
     if (options.jurisdiction && program.jurisdiction !== options.jurisdiction) continue;
-    for (const output of program.outputs) {
-      const hay = " " + normalize(output.name) + " ";
-      if (tokens.every((t) => hay.includes(t))) {
-        matches.push({ program: program.slug, output });
-        if (matches.length >= limit * 4) return matches.slice(0, limit * 4);
-      }
-    }
+    const matched = terms.map((term) => termMatch(term, name, citation));
+    const score = matched.filter((m) => m > 0).length;
+    if (score === 0) continue;
+    scored.push({ program: program.slug, output, matched, score, inName: matched.filter((m) => m === 2).length });
+    best = Math.max(best, score);
   }
-  // Certified outputs first, then shorter (more specific) names.
-  matches.sort((a, b) =>
-    Number(b.output.certified) - Number(a.output.certified) ||
-    a.output.name.length - b.output.name.length
-  );
-  return matches.slice(0, limit);
+  if (best < terms.length && (best < 2 || best * 2 < terms.length)) return [];
+  const floor = best === terms.length || best < 3 ? best : best - 1;
+  return scored
+    .filter((m) => m.score >= floor)
+    .sort((a, b) =>
+      b.score - a.score ||
+      b.inName - a.inName ||
+      Number(b.output.certified) - Number(a.output.certified) ||
+      a.output.name.length - b.output.name.length
+    )
+    .slice(0, limit)
+    .map(({ program, output, matched, score }) =>
+      score === terms.length
+        ? { program, output }
+        : { program, output, unmatched: terms.filter((_, i) => matched[i] === 0).map((t) => t.text) }
+    );
 }
 
 /** Legal-id-prefix → corpus_citation_path map declared by rulespec modules.
