@@ -30,7 +30,14 @@ import {
   runCompiled,
   yearInterval,
 } from "./engine";
-import { getCatalog, slotDefaultAt, type CatalogInputSlot, type CatalogOutput, type CatalogProgram } from "./catalog";
+import {
+  getCatalog,
+  slotDefaultAt,
+  type CatalogInputSlot,
+  type CatalogOutput,
+  type CatalogProgram,
+  type Requirement,
+} from "./catalog";
 import { legalIdToUrl } from "./legal-links";
 import artifactsLock from "../../artifacts.lock.json";
 import { programDisclosures } from "./catalog-overlay";
@@ -753,6 +760,10 @@ export interface ShapedOutput {
    *  (`age gte 65`). `requires_partial` marks additional
    *  conditional/disjunctive logic not captured here. */
   requires?: CatalogOutput["requires"];
+  /** Attached with a not_holds judgment: the `or`s in its chain that are
+   *  still unmet — no alternative group holds on the recorded inputs and the
+   *  trace doesn't show the enclosing rule holding. */
+  requires_any?: CatalogOutput["requires_any"];
   requires_partial?: boolean;
   /** Attached when a judgment came back not_holds and the explain trace
    *  shows why: the deepest sub-judgments on its failing path, with their
@@ -869,12 +880,15 @@ function failingSubJudgments(
   return found;
 }
 
+/** Unmet `or`s shown per failed judgment; the catalog keeps up to six. */
+const OPEN_ALTERNATIVES_CAP = 3;
+
 /** One member-gate judgment at one member. Gates are always unpublished
  *  member-entity judgments, so the ShapedOutput fields that would repeat
  *  per member (label, unit, semantics, entity, ...) are left out. */
 export type MemberCheck = Pick<
   ShapedOutput,
-  "name" | "value" | "legal_id" | "requires" | "requires_partial" | "failed_because"
+  "name" | "value" | "legal_id" | "requires" | "requires_any" | "requires_partial" | "failed_because"
 >;
 
 /** Exactly one of `checks` / `same_as` is set: a member whose checks match
@@ -945,16 +959,51 @@ export function shapeResult(
     Object.assign(trace, result.trace ?? {});
   }
 
+  // Recorded input values by `entity_id|legal input id`, to tell which
+  // `requires_any` alternatives already hold. A slot recorded twice with
+  // different values counts as unknown.
+  const recorded = new Map<string, string | undefined>();
+  for (const input of built.request.dataset.inputs) {
+    const key = `${input.entity_id}|${input.name}`;
+    const value = String(input.value.value);
+    recorded.set(key, recorded.has(key) && recorded.get(key) !== value ? undefined : value);
+  }
+  const meets = (entityId: string | undefined, req: Requirement): boolean => {
+    const value = recorded.get(`${entityId}|${legalInputId(program.slug, req.slot)}`);
+    if (value === undefined) return false;
+    if (!req.op) return value === String(req.value);
+    const [n, t] = [Number(value), Number(req.value)];
+    return req.op === "gt" ? n > t : req.op === "gte" ? n >= t : req.op === "lt" ? n < t : n <= t;
+  };
+  const openAlternatives = (
+    output: CatalogOutput,
+    entityId: string | undefined,
+    scopeTrace: Record<string, DerivedTraceNode>
+  ): NonNullable<ShapedOutput["requires_any"]> => {
+    if (!output.requires_any) return [];
+    const holding = new Set(Object.values(scopeTrace).filter((n) => n.outcome === "holds").map((n) => n.name));
+    return output.requires_any
+      .filter((alt) => !holding.has(alt.rule) && !alt.any_of.some((group) => group.every((req) => meets(entityId, req))))
+      .slice(0, OPEN_ALTERNATIVES_CAP);
+  };
+  const mainEntityOf = new Map<string, string>();
+  for (const query of built.request.queries) {
+    if (gateOnlyIds.has(query.entity_id)) continue;
+    for (const key of query.outputs) if (!mainEntityOf.has(key)) mainEntityOf.set(key, query.entity_id);
+  }
+
   const shapeOne = (
     output: CatalogOutput,
     outputs: Map<string, ReadOutput>,
-    scopeTrace: Record<string, DerivedTraceNode>
+    scopeTrace: Record<string, DerivedTraceNode>,
+    entityId = mainEntityOf.get(queryKey(output))
   ): ShapedOutput => {
     const r = outputs.get(queryKey(output));
     let value: ShapedOutput["value"] = null;
     if (r) value = r.kind === "judgment" ? r.outcome ?? null : r.numeric ?? null;
     const failedJudgment = output.semantics === "judgment" && value === "not_holds";
     const failedBecause = failedJudgment ? failingSubJudgments(scopeTrace, queryKey(output), output.name) : [];
+    const open = failedJudgment ? openAlternatives(output, entityId, scopeTrace) : [];
     return {
       name: output.name,
       label: labelFor(output.name),
@@ -965,9 +1014,10 @@ export function shapeResult(
       published_output: output.certified,
       acknowledged_incomplete: output.acknowledged_incomplete,
       legal_id: output.id,
-      ...(failedJudgment && output.requires && {
-        requires: output.requires,
-        ...(output.requires_partial && { requires_partial: true }),
+      ...(failedJudgment && output.requires && { requires: output.requires }),
+      ...(open.length > 0 && { requires_any: open }),
+      ...(failedJudgment && (output.requires || open.length > 0) && output.requires_partial && {
+        requires_partial: true,
       }),
       ...(failedBecause.length > 0 && { failed_because: failedBecause }),
     };
@@ -983,12 +1033,14 @@ export function shapeResult(
     const member = index + 1;
     const scope = perMember.get(id) ?? { outputs: new Map<string, ReadOutput>(), trace: {} };
     const checks: MemberCheck[] = gates.map((gate) => {
-      const { name, value, legal_id, requires, requires_partial, failed_because } = shapeOne(gate, scope.outputs, scope.trace);
+      const { name, value, legal_id, requires, requires_any, requires_partial, failed_because } =
+        shapeOne(gate, scope.outputs, scope.trace, id);
       return {
         name,
         value,
         legal_id,
         ...(requires && { requires }),
+        ...(requires_any && { requires_any }),
         ...(requires_partial && { requires_partial }),
         ...(failed_because && { failed_because }),
       };

@@ -31,8 +31,18 @@ describe("ordering tests in judgment requires", () => {
       { slot: "qualified_individual_social_security_number_included_on_return", value: true },
       AGE_TEST,
     ]);
-    // The taxpayer-or-joint-spouse test is a disjunction — still not listed.
-    expect(output.requires_partial).toBe(true);
+    // The taxpayer-or-joint-spouse test is a disjunction: listed as
+    // alternatives, so nothing is left beyond the two lists.
+    expect(output.requires_any).toEqual([
+      {
+        rule: CHECK,
+        any_of: [
+          [{ slot: "is_taxpayer", value: true }],
+          [{ slot: "is_spouse_of_taxpayer", value: true }, { slot: "filing_status", value: 1 }],
+        ],
+      },
+    ]);
+    expect(output.requires_partial).toBeUndefined();
   });
 
   it("skips a threshold that changes by period", () => {

@@ -110,6 +110,10 @@ function IncompleteBadge() {
 /** A `requires` entry with `op` is a threshold test (`age ≥ 65`). */
 const OP_SYMBOL: Record<string, string> = { gt: ">", gte: "≥", lt: "<", lte: "≤" };
 
+function requirementText(r: { slot: string; op?: string; value: unknown }): string {
+  return `${r.slot}${(r.op && OP_SYMBOL[r.op]) ?? "="}${r.value}`;
+}
+
 function displayValue(o: { value: unknown; unit?: string | null }): string {
   if (typeof o.value === "number") return formatValue(o.value, o.unit);
   if (o.value === "holds") return "✓ holds";
@@ -208,9 +212,15 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
                   </div>
                   {o.value === "not_holds" && o.requires && (
                     <div className="mono" style={{ fontSize: 10.5, color: "#92400e", marginTop: 2 }}>
-                      requires: {o.requires.map((r: any) => `${r.slot}${OP_SYMBOL[r.op] ?? "="}${r.value}`).join(" ")}
+                      requires: {o.requires.map(requirementText).join(" ")}
                     </div>
                   )}
+                  {o.value === "not_holds" &&
+                    o.requires_any?.map((alt: any, i: number) => (
+                      <div key={`${alt.rule}-${i}`} className="mono" style={{ fontSize: 10.5, color: "#92400e", marginTop: 2 }}>
+                        {alt.rule} needs one of: {alt.any_of.map((group: any[]) => group.map(requirementText).join(" ")).join(" | ")}
+                      </div>
+                    ))}
                 </div>
               ))
             )
