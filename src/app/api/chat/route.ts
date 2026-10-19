@@ -4,6 +4,7 @@ import { checkGrounding } from "@/lib/grounding";
 import { FINBOT_MODEL_NAME, finbotModel, REASONING_EFFORT } from "@/lib/model";
 import { prefetchSection } from "@/lib/prefetch";
 import { buildSystemPrompt } from "@/lib/prompts";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { createTools } from "@/lib/tools";
 
 export const runtime = "nodejs"; // we need child_process to spawn axiom-rules-engine
@@ -12,6 +13,8 @@ export const runtime = "nodejs"; // we need child_process to spawn axiom-rules-e
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
+  const limited = enforceRateLimit(req);
+  if (limited) return limited;
   if (!process.env.OPENAI_API_KEY) {
     return new Response(
       JSON.stringify({ error: "OPENAI_API_KEY not set on the server. Add it to .env.local and restart." }),

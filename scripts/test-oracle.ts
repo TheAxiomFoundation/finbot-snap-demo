@@ -17,6 +17,7 @@ import path from "node:path";
 
 import { getProgram } from "../src/lib/catalog";
 import { computeProgram, type Facts, type MemberSpec } from "../src/lib/request-builder";
+import { runBbceRegressions } from "./bbce-regression";
 
 interface OracleCase {
   id: string;
@@ -102,6 +103,10 @@ async function main() {
       ? `\noracle tests passed: ${doc.cases.length}/${doc.cases.length} cases agree with PolicyEngine`
       : `\noracle tests FAILED: ${failures}/${doc.cases.length}`
   );
+  console.log("\nBBCE eligibility/starter regressions (separate from PolicyEngine dollar comparisons):");
+  const bbceFailures = await runBbceRegressions("oracle-bbce");
+  console.log(`BBCE regressions: ${33 - bbceFailures}/33 passed; Colorado default BBCE gap remains`);
+  failures += bbceFailures;
   process.exit(failures === 0 ? 0 : 1);
 }
 

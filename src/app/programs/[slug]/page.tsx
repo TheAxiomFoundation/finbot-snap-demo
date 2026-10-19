@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { annualUpdateNoticesAt, periodStartDate } from "@/lib/annual-updates";
 import { getCatalog, getProgram } from "@/lib/catalog";
+import { programDisclosures } from "@/lib/catalog-overlay";
 import { legalIdToUrl } from "@/lib/legal-links";
+import { programCoverageStatus } from "@/lib/coverage";
+import { defaultPeriodFor } from "@/lib/request-builder";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -28,10 +32,10 @@ export default async function ProgramPage({ params }: PageProps) {
   if (!program) notFound();
   const catalog = getCatalog();
 
-  const certifiedSet = new Set(program.certified_outputs);
+  const publishedSet = new Set(program.certified_outputs);
   const incompleteSet = new Set(program.acknowledged_incomplete);
-  const certifiedOutputs = program.outputs.filter((o) => certifiedSet.has(o.name));
-  const otherOutputCount = program.outputs.length - certifiedOutputs.length;
+  const publishedOutputs = program.outputs.filter((o) => publishedSet.has(o.name));
+  const otherOutputCount = program.outputs.length - publishedOutputs.length;
 
   return (
     <main style={{ maxWidth: 980, margin: "0 auto", padding: "40px 20px 80px" }}>
@@ -42,6 +46,11 @@ export default async function ProgramPage({ params }: PageProps) {
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 700 }}>{program.display_name}</h1>
       <p style={{ color: "#374151", margin: "6px 0 4px" }}>{program.description}</p>
+      <p className="tool-coverage-status">{programCoverageStatus(program)}</p>
+      {[
+        ...programDisclosures(program),
+        ...annualUpdateNoticesAt(program, periodStartDate(defaultPeriodFor(program))),
+      ].map((note) => <p key={note} className="tool-coverage-status">{note}</p>)}
       <p className="mono" style={{ fontSize: 12, color: "#6b7280", marginBottom: 20 }}>
         {program.slug} · period {program.evaluation_period} · {program.counts.derived} rules ·{" "}
         {program.counts.parameters} parameters ·{" "}
@@ -78,7 +87,7 @@ export default async function ProgramPage({ params }: PageProps) {
 
       <section style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-          Certified outputs
+          Published outputs
           {otherOutputCount > 0 && (
             <span style={{ fontSize: 12, fontWeight: 400, color: "#6b7280" }}>
               {" "}
@@ -87,7 +96,7 @@ export default async function ProgramPage({ params }: PageProps) {
           )}
         </h2>
         <div style={{ display: "grid", gap: 8 }}>
-          {certifiedOutputs.map((output) => (
+          {publishedOutputs.map((output) => (
             <div key={output.name} className="card" style={{ padding: 12 }}>
               <div style={{ display: "flex", gap: 8, alignItems: "baseline", flexWrap: "wrap" }}>
                 <span className="mono" style={{ fontWeight: 600, fontSize: 13 }}>{output.name}</span>

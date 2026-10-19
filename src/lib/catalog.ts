@@ -25,6 +25,27 @@ export interface CatalogOutput {
    *  the values that satisfy them — what must be set for it to hold. */
   requires?: Array<{ slot: string; value: boolean | number | string }>;
   requires_partial?: boolean;
+  /** Earliest `due` among the annually reissued parameters this output
+   *  reaches (see CatalogAnnualUpdate); absent when it reaches none. */
+  annual_update_due?: string;
+}
+
+/** Parameters reissued every year (classified in src/lib/annual-updates.ts),
+ *  grouped by when their next version falls due. A period starting on or
+ *  after `due` evaluates values this release may have outdated. */
+export interface CatalogAnnualUpdate {
+  /** One year after `last_effective_from`. */
+  due: string;
+  /** Latest encoded effective_from — the version still evaluated past `due`. */
+  last_effective_from: string;
+  /** `fiscal_year_source`: the source document names a fiscal year
+   *  (`.../fy-2026-cola/...`). `annual_versions`: versions recur yearly. */
+  basis: "fiscal_year_source" | "annual_versions";
+  /** Federal fiscal year of the values in use, when the source names it. */
+  fiscal_year?: number;
+  /** Source documents (legal ids without the #fragment). */
+  sources: string[];
+  parameters: string[];
 }
 
 export interface CatalogInputSlot {
@@ -76,6 +97,8 @@ export interface CatalogProgram {
   outputs: CatalogOutput[];
   inputs: Record<string, CatalogInputSlot[]>;
   counts: { derived: number; parameters: number; relations: number };
+  /** Annually reissued parameters reachable from any output; absent when none. */
+  annual_updates?: CatalogAnnualUpdate[];
 }
 
 export interface Catalog {

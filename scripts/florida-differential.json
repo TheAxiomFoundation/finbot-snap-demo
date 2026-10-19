@@ -1,0 +1,76 @@
+{
+  "program": "us-fl-snap",
+  "period": "2026-09",
+  "engine": {
+    "ref": "98af0dcec5a09e1dca12d1458e08ccb02516c1ef",
+    "version": "axiom-rules-engine 0.1.2"
+  },
+  "baseline": {
+    "catalog_ref": "3d8f94058e55b53b6bcac00fe23956e3a60125ff",
+    "release_tag": "program-artifacts-09d8d50a9add",
+    "artifact_sha256": "da2cdaca2b9ce028806ccc2f81feda4668bda8d12ee00479107048c9b31172e1"
+  },
+  "current": {
+    "release_tag": "program-artifacts-16a667719019",
+    "artifact_sha256": "c912ca4d42084a646e09db975f48f071c61978875d862d9745e87d2934f92a54"
+  },
+  "grid": {
+    "sizes": [1, 2, 3, 4, 5, 9, 11],
+    "earnings": [0, 500, 1000, 2000, 3300, 6000],
+    "shelter": [0, 1800, 3000],
+    "cases": 126
+  },
+  "expected_grid_changed_counts": {
+    "snap_eligible": 0,
+    "snap_benefit": 0,
+    "snap_monthly_allotment": 0,
+    "monthly_200_percent_gross_income_limit": 108,
+    "monthly_130_percent_gross_income_limit": 108,
+    "monthly_100_percent_net_income_limit": 108,
+    "maximum_food_assistance_benefit": 108,
+    "monthly_165_percent_need_standard": 108,
+    "standard_deduction_band": 72,
+    "standard_deduction": 72,
+    "snap_net_monthly_income": 0,
+    "snap_total_gross_income": 0,
+    "snap_standard_deduction": 0,
+    "snap_maximum_allotment": 0,
+    "snap_earned_income_deduction_for_net_income": 0,
+    "snap_excess_shelter_deduction_for_net_income": 0,
+    "snap_standard_gross_income_eligible": 0,
+    "snap_standard_net_income_eligible": 0
+  },
+  "size_cases": {
+    "earned": 3300,
+    "shelter": 1800,
+    "outputs": [
+      "monthly_200_percent_gross_income_limit",
+      "monthly_130_percent_gross_income_limit",
+      "monthly_100_percent_net_income_limit",
+      "maximum_food_assistance_benefit",
+      "monthly_165_percent_need_standard",
+      "standard_deduction_band",
+      "standard_deduction"
+    ],
+    "baseline_values": [2610, 1696, 1305, 298, 2152, 0, 209],
+    "expected": [
+      { "size": 1, "values": [2610, 1696, 1305, 298, 2152, 0, 209] },
+      { "size": 2, "values": [3526, 2292, 1763, 546, 2909, 0, 209] },
+      { "size": 3, "values": [4442, 2888, 2221, 785, 3665, 0, 209] },
+      { "size": 4, "values": [5360, 3483, 2680, 994, 4421, 1, 223] },
+      { "size": 5, "values": [6276, 4079, 3138, 1183, 5177, 2, 261] },
+      { "size": 9, "values": [9944, 6463, 4972, 2007, 8203, 3, 299] }
+    ]
+  },
+  "size_three_headline": {
+    "snap_eligible": "not_holds",
+    "snap_benefit": 0,
+    "snap_monthly_allotment": 231
+  },
+  "bbce": {
+    "size": 3,
+    "fpl": 2221,
+    "percentages": [131, 145, 175, 195, 200, 207],
+    "shelter": 3000
+  }
+}

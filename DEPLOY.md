@@ -1,6 +1,6 @@
 # Deploy
 
-Two services, both under PolicyEngine accounts:
+Two services: the engine on PolicyEngine's Modal workspace, the app on the `axiom-foundation` Vercel team.
 
 | Where | What | Why |
 |---|---|---|
@@ -40,10 +40,10 @@ curl https://policyengine--axiom-engine.modal.run/health
 ## 2. Deploy the frontend to Vercel
 
 ```bash
-# One-time: link this repo to a Vercel project under the PolicyEngine team.
+# One-time: link this repo to the finbot-snap-demo project on the axiom-foundation team.
 npm i -g vercel
 vercel login
-vercel link --scope policyengine
+vercel link --scope axiom-foundation
 ```
 
 Set the env vars Vercel needs:
@@ -51,7 +51,9 @@ Set the env vars Vercel needs:
 ```bash
 vercel env add OPENAI_API_KEY
 vercel env add AXIOM_ENGINE_URL      # Modal URL from step 1
-# Optional model override. Default is gpt-5.5; see src/lib/model.ts.
+# Optional model override. Default is gpt-5.5; see src/lib/model.ts. The
+# session notice names this model, and it is read at build time, so redeploy
+# after changing it (Vercel applies env changes only to new deployments).
 # vercel env add FINBOT_MODEL          # e.g. gpt-5.5-pro
 ```
 

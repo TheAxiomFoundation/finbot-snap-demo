@@ -25,9 +25,9 @@ function stepPhrases(inv: ToolInvocation): { running: string; done: string } {
     case "list_programs": {
       if (typeof args.search === "string" && args.search) {
         const s = clip(args.search);
-        return { running: `searching certified outputs for “${s}”`, done: `searched certified outputs for “${s}”` };
+        return { running: `searching encoded outputs for “${s}”`, done: `searched encoded outputs for “${s}”` };
       }
-      return { running: "checking the certified-program catalog", done: "checked the certified-program catalog" };
+      return { running: "checking the program catalog", done: "checked the program catalog" };
     }
     case "describe_program": {
       const filter = typeof args.inputs_search === "string" && args.inputs_search ? clip(args.inputs_search) : null;

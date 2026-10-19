@@ -1,3 +1,15 @@
+/** BBCE candidates. The California starter is the Aspen page's CA-1 chip:
+ *  $3,400/month for three people is about 150% of the poverty line under both
+ *  the 2025 and 2026 HHS guidelines, between 130% and California's 200% limit. The real-engine
+ *  regressions pin the California household; consumer ChatGPT needs human
+ *  pretesting before it is presented as a reliable plain-model failure.
+ *  Colorado is deferred: its categorical input bypasses an encoded IPV bar,
+ *  so it cannot safely become an automatic default. Kept for
+ *  scripts/bbce-regression.ts; not featured in STARTERS (see below). */
+export const BBCE_STARTERS: readonly string[] = [
+  "I'm a single mom in Fresno, California with two kids (8 and 5). I make $3,400 a month before taxes, pay $1,500 rent, and pay about $120 a month for utilities, including heat. Can we get CalFresh, and how much would we get each month?",
+];
+
 /** Pre-written starter prompts: one TANF question and one federal tax
  *  question, each short and phrased the way a real person asks. Chosen by
  *  eval/preset-compare.ts plus direct OpenAI API runs (2026-10-16) against

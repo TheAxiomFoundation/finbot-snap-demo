@@ -3,7 +3,7 @@
  *
  * Latency: the model's first round-trip in almost every conversation is a
  * describe_program call whose payload the server can compute in ~1ms. When
- * the user's message names a certified program unambiguously (state name +
+ * the user's message names an encoded program unambiguously (state name +
  * program vocabulary, both derived from the catalog), we inject the exact
  * describe_program payload into the system prompt so the model can go
  * straight to compute — saving one full LLM round-trip per question.
@@ -85,7 +85,7 @@ function programTokens(p: CatalogProgram): string[] {
   return name ? [name] : [];
 }
 
-/** Slugs of certified programs the text plausibly asks about. State-scoped
+/** Slugs of encoded programs the text plausibly asks about. State-scoped
  *  matches (state named + program vocabulary) win over federal ones; empty
  *  when nothing (or too much) matches. */
 export function detectProgramSlugs(text: string): string[] {
