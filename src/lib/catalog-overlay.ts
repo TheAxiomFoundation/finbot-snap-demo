@@ -123,6 +123,12 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
       // demographic test reads the boolean twin.
       taxable_year_months: 12,
       taxable_year_is_full_12_months: true,
+      // Everyone this app answers files an individual return (Form 1040);
+      // estates and trusts (Form 1041) are out of scope. 26 USC 151 and the
+      // §55 domain test the taxpayer being an individual as an input; left
+      // at false it withheld the senior deduction from a 70-year-old filer
+      // whose compute omitted the fact.
+      taxpayer_is_individual: true,
       // 26 USC 151(d)(5)(C)(i) (P.L. 119-21): the senior deduction applies
       // to "a taxable year beginning before January 1, 2029". The encoding
       // takes that date test as an input; left at false it withheld the
@@ -131,6 +137,16 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
         before: "2029-01-01",
         value: true,
         otherwise: false,
+      },
+      // 26 USC 151(d)(5)(A): "In the case of a taxable year beginning after
+      // December 31, 2017", the exemption amount "means zero" (no end date
+      // since P.L. 119-21). The encoding takes that date test as an input;
+      // left at false, exemption_amount read the $2,000 base, so lookup_value
+      // gave $2,000 for 2026 and §55 added it back into amt_income.
+      taxable_year_begins_after_exemption_amount_zero_start: {
+        before: "2018-01-01",
+        value: false,
+        otherwise: true,
       },
     },
   },

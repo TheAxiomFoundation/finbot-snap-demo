@@ -41798,7 +41798,31 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.305(B)(1)(a)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "requires_any": [
+      {
+       "rule": "trafficking_victim_status_documentation_accepted",
+       "any_of": [
+        [
+         {
+          "slot": "trafficking_victim_certification_or_eligibility_letter_present",
+          "value": true
+         }
+        ],
+        [
+         {
+          "slot": "trafficked_minor_has_interim_assistance_letter",
+          "value": true
+         },
+         {
+          "slot": "trafficking_minor_interim_assistance_letter_calendar_days_since_effective_date",
+          "op": "lte",
+          "value": 120
+         }
+        ]
+       ]
+      }
+     ]
     },
     {
      "name": "qualified_noncitizen_status_without_additional_condition",
@@ -47176,9 +47200,13 @@
       {
        "slot": "application_process_incomplete",
        "value": true
+      },
+      {
+       "slot": "application_processing_days_elapsed",
+       "op": "gt",
+       "value": 60
       }
-     ],
-     "requires_partial": true
+     ]
     },
     {
      "name": "local_office_fault_complete_record_continue_original_application",
@@ -47197,6 +47225,11 @@
        "value": true
       },
       {
+       "slot": "application_processing_days_elapsed",
+       "op": "gt",
+       "value": 60
+      },
+      {
        "slot": "local_office_at_fault_for_not_completing_application_process_by_end_of_second_thirty_day_period",
        "value": true
       },
@@ -47208,8 +47241,7 @@
        "slot": "office_continues_to_process_original_application_until_eligibility_determination_made",
        "value": true
       }
-     ],
-     "requires_partial": true
+     ]
     },
     {
      "name": "retroactive_benefits_to_month_of_application_required",
@@ -47226,6 +47258,11 @@
       {
        "slot": "application_process_incomplete",
        "value": true
+      },
+      {
+       "slot": "application_processing_days_elapsed",
+       "op": "gt",
+       "value": 60
       },
       {
        "slot": "local_office_at_fault_for_not_completing_application_process_by_end_of_second_thirty_day_period",
@@ -47247,8 +47284,7 @@
        "slot": "benefits_retroactive_to_month_of_application_provided_to_household",
        "value": true
       }
-     ],
-     "requires_partial": true
+     ]
     },
     {
      "name": "benefits_only_back_to_month_following_application_required",
@@ -47265,6 +47301,11 @@
       {
        "slot": "application_process_incomplete",
        "value": true
+      },
+      {
+       "slot": "application_processing_days_elapsed",
+       "op": "gt",
+       "value": 60
       },
       {
        "slot": "local_office_at_fault_for_not_completing_application_process_by_end_of_second_thirty_day_period",
@@ -47286,8 +47327,7 @@
        "slot": "benefits_provided_only_back_to_month_following_month_of_application",
        "value": true
       }
-     ],
-     "requires_partial": true
+     ]
     },
     {
      "name": "local_office_fault_insufficient_record_denial_and_new_application_request_required",
@@ -47306,6 +47346,11 @@
        "value": true
       },
       {
+       "slot": "application_processing_days_elapsed",
+       "op": "gt",
+       "value": 60
+      },
+      {
        "slot": "local_office_at_fault_for_not_completing_application_process_by_end_of_second_thirty_day_period",
        "value": true
       },
@@ -47321,8 +47366,7 @@
        "slot": "office_requests_household_to_file_new_application_if_desired",
        "value": true
       }
-     ],
-     "requires_partial": true
+     ]
     },
     {
      "name": "household_fault_second_period_denial_new_application_and_no_lost_benefits_required",
@@ -47339,6 +47383,11 @@
       {
        "slot": "application_process_incomplete",
        "value": true
+      },
+      {
+       "slot": "application_processing_days_elapsed",
+       "op": "gt",
+       "value": 60
       },
       {
        "slot": "household_at_fault_for_not_completing_application_process_by_end_of_second_thirty_day_period",
@@ -47951,6 +48000,11 @@
        "value": 30
       },
       {
+       "slot": "calendar_days_after_application_filing",
+       "op": "lte",
+       "value": 60
+      },
+      {
        "slot": "benefits_provided_retroactive_to_month_of_application",
        "value": true
       },
@@ -48000,6 +48054,11 @@
        "value": 30
       },
       {
+       "slot": "calendar_days_after_application_filing",
+       "op": "lte",
+       "value": 60
+      },
+      {
        "slot": "application_denied_when_eligibility_determination_made",
        "value": true
       },
@@ -48007,8 +48066,7 @@
        "slot": "notice_of_action_form_sent_to_household_when_eligibility_determination_made",
        "value": true
       }
-     ],
-     "requires_partial": true
+     ]
     },
     {
      "name": "basic_categorical_eligibility_barred",
@@ -71629,6 +71687,18 @@
      "source": "26 USC 152(c)(1)",
      "certified": false,
      "acknowledged_incomplete": false,
+     "requires": [
+      {
+       "slot": "individual_principal_place_of_abode_with_taxpayer_fraction",
+       "op": "gt",
+       "value": 0.5
+      },
+      {
+       "slot": "individual_own_support_fraction_provided_by_individual",
+       "op": "lte",
+       "value": 0.5
+      }
+     ],
      "requires_any": [
       {
        "rule": "qualifying_child_relationship",
@@ -71713,6 +71783,18 @@
      "source": "26 USC 152(c)(1), 152(c)(4)",
      "certified": false,
      "acknowledged_incomplete": false,
+     "requires": [
+      {
+       "slot": "individual_principal_place_of_abode_with_taxpayer_fraction",
+       "op": "gt",
+       "value": 0.5
+      },
+      {
+       "slot": "individual_own_support_fraction_provided_by_individual",
+       "op": "lte",
+       "value": 0.5
+      }
+     ],
      "requires_any": [
       {
        "rule": "qualifying_child_relationship",
@@ -72222,6 +72304,11 @@
       {
        "slot": "taxpayer_household_is_child_principal_place_of_abode",
        "value": true
+      },
+      {
+       "slot": "child_principal_abode_fraction_of_taxable_year",
+       "op": "gt",
+       "value": 0.5
       }
      ],
      "requires_partial": true
@@ -72245,6 +72332,11 @@
       {
        "slot": "taxpayer_maintains_household_as_home",
        "value": true
+      },
+      {
+       "slot": "taxpayer_household_cost_fraction_furnished",
+       "op": "gt",
+       "value": 0.5
       },
       {
        "slot": "spouse_not_member_of_household_final_month_count",
@@ -72335,6 +72427,13 @@
      "source": "26 USC 32(c)(3), 26 USC 152(c)",
      "certified": false,
      "acknowledged_incomplete": false,
+     "requires": [
+      {
+       "slot": "individual_principal_place_of_abode_with_taxpayer_fraction",
+       "op": "gt",
+       "value": 0.5
+      }
+     ],
      "requires_any": [
       {
        "rule": "qualifying_child_relationship",
@@ -72408,6 +72507,11 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "individual_principal_place_of_abode_with_taxpayer_fraction",
+       "op": "gt",
+       "value": 0.5
+      },
       {
        "slot": "qualifying_child_principal_place_of_abode_is_in_united_states",
        "value": true
@@ -74272,6 +74376,11 @@
       "name": "taxable_year_begins_after_exemption_amount_zero_start",
       "dtype": "bool",
       "default": false,
+      "default_source": "overlay",
+      "default_by_period": {
+       "before": "2018-01-01",
+       "otherwise": true
+      },
       "variant_switch": true
      },
      {
@@ -74341,7 +74450,8 @@
      {
       "name": "taxpayer_is_individual",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "taxpayer_is_nonresident_alien_for_any_portion_of_year",
@@ -81684,7 +81794,15 @@
      "period": "Month",
      "source": "ESS Program Policy Manual 1620.0206 (TCA)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "requires": [
+      {
+       "slot": "tca_sfu_total_assets",
+       "op": "gte",
+       "value": 1900
+      }
+     ],
+     "requires_partial": true
     },
     {
      "name": "joint_financial_account_funds_counted_as_asset_to_individual",
@@ -86062,6 +86180,11 @@
       {
        "slot": "person_resides_in_institution",
        "value": true
+      },
+      {
+       "slot": "institution_meals_provided_to_person_per_day",
+       "op": "gte",
+       "value": 1.5
       }
      ],
      "requires_partial": true
@@ -86081,9 +86204,13 @@
       {
        "slot": "person_is_student",
        "value": true
+      },
+      {
+       "slot": "school_facility_meals_purchased_by_person_per_day",
+       "op": "gte",
+       "value": 1.5
       }
-     ],
-     "requires_partial": true
+     ]
     },
     {
      "name": "person_ineligible_due_to_detention_or_custody",
@@ -211569,9 +211696,13 @@
       {
        "slot": "institution_provides_meals_as_part_of_normal_services",
        "value": true
+      },
+      {
+       "slot": "meals_provided_by_institution_daily",
+       "op": "gt",
+       "value": 1.5
       }
-     ],
-     "requires_partial": true
+     ]
     },
     {
      "name": "drug_related_felony_conviction_for_snap",
