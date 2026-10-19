@@ -101,6 +101,9 @@ export interface CatalogInputSlot {
   variant_switch?: boolean;
   /** Not reachable from any certified output — cannot change the headline. */
   aux?: boolean;
+  /** Outputs whose rule chain reads this slot. Listed only for the slots
+   *  the app assumes (ASSUMED_MEMBER_SLOTS); empty when no output reads it. */
+  read_by?: string[];
 }
 
 export interface CatalogRelation {

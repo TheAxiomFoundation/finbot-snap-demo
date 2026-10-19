@@ -9795,7 +9795,21 @@
      {
       "name": "member_is_us_citizen",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_eligible_core",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "snap_regular_month_allotment",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -19362,7 +19376,19 @@
       "dtype": "bool",
       "default": true,
       "default_source": "fixture",
-      "aux": true
+      "aux": true,
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_household_member_eligible",
+       "snap_household_residency_and_citizenship_eligible",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -32351,7 +32377,30 @@
       "name": "member_is_us_citizen",
       "dtype": "bool",
       "default": true,
-      "default_source": "fixture"
+      "default_source": "fixture",
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "calfresh_categorical_member_inclusion_status",
+       "calfresh_categorical_member_ineligible_alien_exclusion_applies",
+       "calfresh_categorical_zero_benefit_denial_applies",
+       "calfresh_income_and_resource_eligible",
+       "calfresh_mce_member_eligible",
+       "calfresh_mce_net_income_eligibility_test_waived",
+       "calfresh_mce_resource_eligibility_test_waived",
+       "calfresh_mce_status_conferred",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_household_member_eligible",
+       "snap_household_residency_and_citizenship_eligible",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "snap_regular_month_allotment",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -66276,7 +66325,22 @@
       "name": "member_is_us_citizen",
       "dtype": "bool",
       "default": true,
-      "default_source": "fixture"
+      "default_source": "fixture",
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "eligible_second_period_retroactive_prorated_benefit_amount",
+       "snap_allotment",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_regular_month_allotment",
+       "snap_residency_citizenship_eligible",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -73669,7 +73733,31 @@
      {
       "name": "qualified_individual_social_security_number_included_on_return",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "alternative_minimum_tax",
+       "amt_base_tax",
+       "amt_excluded_deductions",
+       "amt_exemption",
+       "amt_exemption_before_kiddie_tax_limit",
+       "amt_exemption_phaseout",
+       "amt_higher_base_tax",
+       "amt_income",
+       "amt_income_for_exemption_offset",
+       "amt_income_less_exemptions",
+       "amt_lower_base_tax",
+       "amt_separate_addition",
+       "amt_tax_before_foreign_tax_credit",
+       "income_tax_before_credits",
+       "income_tax_before_refundable_credits",
+       "income_tax_capped_non_refundable_credits",
+       "income_tax_unavailable_non_refundable_credits",
+       "regular_tax_after_ordinary_ftc",
+       "section_55_verified_domain_is_satisfied",
+       "senior_deduction",
+       "senior_deduction_qualified_individual",
+       "tentative_minimum_tax_after_amtftc"
+      ]
      },
      {
       "name": "qualifying_child_marital_status_requires_section_151_entitlement",
@@ -80715,7 +80803,21 @@
      {
       "name": "member_is_us_citizen",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_eligible_core",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "snap_regular_month_allotment",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -122018,7 +122120,21 @@
      {
       "name": "member_is_us_citizen",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_eligible_core",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "snap_regular_month_allotment",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -138276,7 +138392,21 @@
      {
       "name": "member_is_us_citizen",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_eligible_core",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "snap_regular_month_allotment",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -179403,7 +179533,21 @@
      {
       "name": "member_is_us_citizen",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_eligible_core",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "snap_regular_month_allotment",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -190526,7 +190670,22 @@
       "name": "member_is_us_citizen",
       "dtype": "bool",
       "default": true,
-      "default_source": "fixture"
+      "default_source": "fixture",
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_household_member_eligible",
+       "snap_household_residency_and_citizenship_eligible",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "snap_regular_month_allotment",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -239972,7 +240131,21 @@
      {
       "name": "member_is_us_citizen",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_eligible_core",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "snap_regular_month_allotment",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
@@ -264035,7 +264208,21 @@
      {
       "name": "member_is_us_citizen",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "alien_documentation_failure_ineligible",
+       "alien_status_documentation_ineligible",
+       "citizen_child_of_sponsored_alien_deeming_exemption",
+       "citizen_status_eligible",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_eligible_core",
+       "snap_member_citizen_or_national_status_eligible",
+       "snap_member_citizenship_or_alien_status_eligible",
+       "snap_member_eligible",
+       "snap_regular_month_allotment",
+       "sponsored_alien_deeming_applies"
+      ]
      },
      {
       "name": "member_is_us_noncitizen_national",
