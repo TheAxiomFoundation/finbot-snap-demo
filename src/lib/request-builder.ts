@@ -152,6 +152,51 @@ export class NotMemberInputError extends Error {
   }
 }
 
+/** members[].relations names that match none of the program's member
+ *  relations. Linking keeps only the names that match, so a wrong name linked
+ *  the member through no relation and every aggregation over it lost that
+ *  member (us-fiit HoH, two kids, $40,000, relations ["dependent"]: EITC
+ *  $3,923 became $0). */
+export class UnknownRelationError extends Error {
+  readonly kind = "unknown_relation";
+  constructor(
+    readonly unknown: Array<{ path: string; relation: string; suggestions: string[] }>,
+    readonly known: string[],
+    programSlug: string
+  ) {
+    const names = [...new Set(unknown.map((u) => `"${u.relation}"`))];
+    const closest = [...new Set(unknown.flatMap((u) => u.suggestions))];
+    super(
+      known.length === 0
+        ? `${programSlug} has no member relations, so members[].relations cannot link anything: ${unknown.map((u) => u.path).join(", ")}`
+        : `unknown relation ${names.join(", ")} for ${programSlug}` +
+          (closest.length ? `; closest relations: ${closest.join(", ")}` : `; member relations: ${known.join(", ")}`)
+    );
+  }
+}
+
+/** Member facts on a slot the program reads on the member entity and on a
+ *  non-member entity too (us-fiit filing_status: Person and TaxUnit), with no
+ *  top-level value. The member's own record takes the fact; the non-member
+ *  instances read only the top-level facts, so they keep the default. */
+export class UnitFactUnsetError extends Error {
+  readonly kind = "unit_fact_unset";
+  constructor(
+    readonly unset: Array<{ slot: string; paths: string[]; entities: string[] }>,
+    readonly memberEntity: string,
+    programSlug: string
+  ) {
+    super(
+      unset
+        .map(
+          (u) =>
+            `${u.paths.join(", ")} set ${u.slot} on ${memberEntity} only; ${programSlug} also reads ${u.slot} on ${u.entities.join("/")}, which keeps its default because the top-level facts do not set it`
+        )
+        .join("; ")
+    );
+  }
+}
+
 /** members[] on a program with no member entity. No member instances exist,
  *  so the list states a headcount only, which buildRequest writes to the
  *  program's verified count inputs. Raised when that takes a silent choice:
@@ -389,6 +434,29 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       }
     }
   }
+  // Relation names, full or short, must name one of the member relations the
+  // members are linked through. An unknown name used to match nothing, so the
+  // member was linked through no relation and dropped from every aggregation.
+  const memberRelations = program.member_entity
+    ? program.relations.filter(
+        (r) => r.related_entity === program.member_entity && (r.used || program.relations.length === 1)
+      )
+    : [];
+  const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
+  const relationNames = new Set(memberRelations.flatMap((r) => [r.name, shortName(r.name)]));
+  const knownRelations = [...new Set(memberRelations.map((r) => shortName(r.name)))];
+  const unknownRelations: UnknownRelationError["unknown"] = [];
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const [position, relation] of (member.relations ?? []).entries()) {
+      if (relationNames.has(relation)) continue;
+      unknownRelations.push({
+        path: `members[${index}].relations[${position}]`,
+        relation,
+        suggestions: nearestNames(relation, knownRelations, 3),
+      });
+    }
+  }
+  if (unknownRelations.length > 0) throw new UnknownRelationError(unknownRelations, knownRelations, program.slug);
   // Member instances record member-scope slots only, so a member fact on a
   // slot with no member scope (us-fiit's TaxUnit-only
   // taxpayer_includes_required_social_security_number_on_return) would be
@@ -409,6 +477,34 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     }
   }
   if (misplaced.length > 0) throw new NotMemberInputError(misplaced, program.member_entity, program.slug);
+  // A slot read on the member entity and on a non-member entity takes a
+  // member fact on that member's record only; the non-member instances read
+  // the top-level facts. us-fiit filing_status is the one such non-aux slot:
+  // under members[0] alone, TaxUnit kept 0, so MFJ regular tax came out
+  // $8,528 instead of $7,040 and the $420k CTC $0 instead of $3,400. Reject
+  // rather than copy the member value to the unit: on Person it is that
+  // individual's own return (§152(c)(1)(E) reads a child's joint return), so
+  // a member's value is not always the unit's. The top-level facts stay the
+  // one place that sets the unit's value. Auxiliary slots get the warning
+  // below.
+  const unitUnset = new Map<string, { paths: string[]; entities: string[] }>();
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const name of Object.keys(member.facts ?? {})) {
+      if (!memberScoped.has(name) || slotsByName.get(name)!.aux || options.facts?.[name] !== undefined) continue;
+      const entities = slotEntities.get(name)!.filter((entity) => entity !== program.member_entity);
+      if (entities.length === 0) continue;
+      const entry = unitUnset.get(name) ?? { paths: [], entities };
+      entry.paths.push(`members[${index}].facts.${name}`);
+      unitUnset.set(name, entry);
+    }
+  }
+  if (unitUnset.size > 0) {
+    throw new UnitFactUnsetError(
+      [...unitUnset].map(([slot, entry]) => ({ slot, ...entry })),
+      program.member_entity!,
+      program.slug
+    );
+  }
 
   const derivedFacts: Facts = {};
   if (program.slug === "us-ny-snap") {
@@ -428,16 +524,24 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // output) silently do nothing to the headline — the classic trap is a
   // plausible sibling name (`countable_monthly_unearned_income` vs the live
   // `snap_total_monthly_unearned_income`). Surface it loudly in the applied
-  // report with the nearest on-path sibling.
+  // report with the nearest on-path sibling. Member facts get the same
+  // warning with their members[i] path; one warning per slot.
   const certifiedSlotNames = [...slotsByName.values()].filter((s) => !s.aux).map((s) => s.name);
-  for (const name of Object.keys(facts)) {
-    if (slotsByName.get(name)?.aux) {
-      const siblings = nearestNames(name, certifiedSlotNames, 3);
-      notes.push(
-        `WARNING: fact "${name}" targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
-          (siblings.length ? ` Did you mean: ${siblings.join(", ")}?` : "")
-      );
-    }
+  const auxPaths = new Map<string, string[]>();
+  const noteAux = (name: string, path: string) => {
+    if (slotsByName.get(name)?.aux) auxPaths.set(name, [...(auxPaths.get(name) ?? []), path]);
+  };
+  for (const name of Object.keys(facts)) noteAux(name, "facts");
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const name of Object.keys(member.facts ?? {})) noteAux(name, `members[${index}].facts`);
+  }
+  for (const [name, paths] of auxPaths) {
+    const siblings = nearestNames(name, certifiedSlotNames, 3);
+    const where = paths.length === 1 && paths[0] === "facts" ? "" : ` (in ${paths.join(", ")})`;
+    notes.push(
+      `WARNING: fact "${name}"${where} targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
+        (siblings.length ? ` Did you mean: ${siblings.join(", ")}?` : "")
+    );
   }
 
   // -- Member count ----------------------------------------------------------
@@ -623,10 +727,6 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   const assumedCitizenMembers: number[] = [];
   if (memberEntity && memberCount > 0) {
     const memberSlots = program.inputs[memberEntity] ?? [];
-    const memberRelations = program.relations.filter(
-      (r) => r.related_entity === memberEntity && (r.used || program.relations.length === 1)
-    );
-    const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
 
     // Top-level facts that name member-scope slots: with an explicit
     // members[] they form the shared base for EVERY member (taxpayer-level
