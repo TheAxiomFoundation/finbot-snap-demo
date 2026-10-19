@@ -7,6 +7,17 @@
  * override it here instead of special-casing the generator. Keys are artifact
  * slugs (`us-co-snap`, `us-fiit`). Everything degrades gracefully when absent.
  */
+
+/** A curated default the law itself changes on a date: `value` for
+ *  evaluation periods that start before `before` (ISO date), `otherwise`
+ *  from that date on. For statutory date tests the encoding takes as inputs
+ *  (a provision's sunset), so a fixed value can't be right in every year. */
+export interface PeriodDefault {
+  before: string;
+  value: boolean | number | string;
+  otherwise: boolean | number | string;
+}
+
 export interface ProgramOverlay {
   display_name?: string;
   description?: string;
@@ -20,7 +31,7 @@ export interface ProgramOverlay {
    *  (which statute regime applies this period) and always-true
    *  administrative facts. Never household-specific facts. Each entry should
    *  say why. Disclosed in describe_program and on /programs. */
-  default_overrides?: Record<string, boolean | number | string>;
+  default_overrides?: Record<string, boolean | number | string | PeriodDefault>;
   /** Limitations disclosed once on the relevant program's tool result. */
   notes?: string[];
 }
@@ -112,6 +123,15 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
       // demographic test reads the boolean twin.
       taxable_year_months: 12,
       taxable_year_is_full_12_months: true,
+      // 26 USC 151(d)(5)(C)(i) (P.L. 119-21): the senior deduction applies
+      // to "a taxable year beginning before January 1, 2029". The encoding
+      // takes that date test as an input; left at false it withheld the
+      // deduction from every 2026 return whose compute omitted the fact.
+      taxable_year_begins_before_senior_deduction_termination: {
+        before: "2029-01-01",
+        value: true,
+        otherwise: false,
+      },
     },
   },
 };

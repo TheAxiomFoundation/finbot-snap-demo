@@ -30,7 +30,7 @@ import {
   runCompiled,
   yearInterval,
 } from "./engine";
-import { getCatalog, type CatalogInputSlot, type CatalogOutput, type CatalogProgram } from "./catalog";
+import { getCatalog, slotDefaultAt, type CatalogInputSlot, type CatalogOutput, type CatalogProgram } from "./catalog";
 import { legalIdToUrl } from "./legal-links";
 import artifactsLock from "../../artifacts.lock.json";
 import { programDisclosures } from "./catalog-overlay";
@@ -453,11 +453,15 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   const INCOME_SLOT = /(taxable|gross|earned|countable|unearned|net)_income/;
   const defaultedIncomeSlots = new Set<string>();
 
+  // Defaults that change on a date (a provision's sunset) resolve at the
+  // start of the evaluated period.
+  const defaultFor = (slot: CatalogInputSlot) => slotDefaultAt(slot, inputInterval.start);
+
   const record = (slot: CatalogInputSlot, entity: string, entityId: string, override?: FactScalar) => {
-    const value = override !== undefined ? override : slot.default;
+    const value = override !== undefined ? override : defaultFor(slot);
     if (override === undefined) {
       defaultedSlots++;
-      if (!slot.aux && slot.default === 0 && INCOME_SLOT.test(slot.name)) {
+      if (!slot.aux && value === 0 && INCOME_SLOT.test(slot.name)) {
         defaultedIncomeSlots.add(slot.name);
       }
     }
@@ -616,7 +620,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         for (const slots of Object.values(program.inputs)) {
           for (const s of slots) {
             if (s.default_source === "overlay" && !s.aux && !userSet.has(s.name)) {
-              inEffect[s.name] = s.default as Facts[string];
+              inEffect[s.name] = defaultFor(s);
             }
           }
         }

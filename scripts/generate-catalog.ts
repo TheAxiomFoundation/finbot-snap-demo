@@ -90,6 +90,9 @@ interface CatalogInputSlot {
   default: boolean | number | string;
   /** Where the default came from; omitted for the plain dtype heuristic. */
   default_source?: "fixture" | "table_min" | "overlay";
+  /** Overlay default that changes on a date (a PeriodDefault overlay):
+   *  `default` holds for periods that start before `before`. */
+  default_by_period?: { before: string; otherwise: boolean | number | string };
   /** Enum-coded input: value → label mined from the branch each code selects
    *  (e.g. filing_status 1 → "income_tax_bracket_thresholds_joint"). */
   enum?: Record<string, string>;
@@ -1136,8 +1139,11 @@ function analyzeProgram(
     // carrying the slot; per-program entries win over global.
     const override = overlay.default_overrides?.[name] ?? GLOBAL_DEFAULT_OVERRIDES[name];
     if (override !== undefined) {
-      slot.default = override;
+      slot.default = typeof override === "object" ? override.value : override;
       slot.default_source = "overlay";
+      if (typeof override === "object") {
+        slot.default_by_period = { before: override.before, otherwise: override.otherwise };
+      }
       if (GLOBAL_DEFAULT_OVERRIDES[name] !== undefined) matchedGlobalOverrides.add(name);
     }
 
