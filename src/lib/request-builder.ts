@@ -126,6 +126,25 @@ export class NotSettableInputError extends Error {
   }
 }
 
+/** Facts under members[].facts whose slots are not member-scoped. Member
+ *  instances record member-entity slots only, so the engine would never see
+ *  them and the answer would compute from their defaults. */
+export class NotMemberInputError extends Error {
+  readonly kind = "not_member_input";
+  constructor(
+    readonly misplaced: Array<{ path: string; slot: string; entities: string[] }>,
+    readonly memberEntity: string | null,
+    programSlug: string
+  ) {
+    const list = misplaced.map((m) => `${m.path} (${m.entities.join("/")})`).join(", ");
+    super(
+      memberEntity
+        ? `not ${memberEntity} inputs for ${programSlug}: ${list}; members[].facts take ${memberEntity}-scope slots only`
+        : `${programSlug} has no member entity, so members[].facts never apply: ${list}`
+    );
+  }
+}
+
 /** Token-overlap nearest-match scoring for self-correcting error messages. */
 export function nearestNames(needle: string, haystack: Iterable<string>, limit = 5): string[] {
   const tokens = new Set(needle.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
@@ -330,6 +349,26 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       }
     }
   }
+  // Member instances record member-scope slots only, so a member fact on a
+  // slot with no member scope (us-fiit's TaxUnit-only
+  // taxpayer_includes_required_social_security_number_on_return) would be
+  // dropped and the answer computed from its default. Reject it instead of
+  // hoisting it to the top level: there it takes one value for the whole
+  // unit, and when members disagree with each other or with the top level,
+  // picking one is the user's call. A copy equal to the top-level value
+  // changes nothing and passes. Slots that also have a member scope keep
+  // their per-member records.
+  const memberScoped = new Set(
+    program.member_entity ? (program.inputs[program.member_entity] ?? []).map((s) => s.name) : []
+  );
+  const misplaced: NotMemberInputError["misplaced"] = [];
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const [name, value] of Object.entries(member.facts ?? {})) {
+      if (memberScoped.has(name) || options.facts?.[name] === value) continue;
+      misplaced.push({ path: `members[${index}].facts.${name}`, slot: name, entities: slotEntities.get(name)! });
+    }
+  }
+  if (misplaced.length > 0) throw new NotMemberInputError(misplaced, program.member_entity, program.slug);
 
   const derivedFacts: Facts = {};
   if (program.slug === "us-ny-snap") {

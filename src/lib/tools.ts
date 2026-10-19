@@ -20,6 +20,7 @@ import {
   UnknownInputError,
   UnknownOutputError,
   NotSettableInputError,
+  NotMemberInputError,
   buildRequest,
   computeProgram,
   defaultPeriodFor,
@@ -104,6 +105,16 @@ function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: st
       slot: err.slot,
       path: err.path,
       hint: "Remove this fact and disclose the encoding limitation. Do not retry by setting an eligibility gate or routing it through members[].facts.",
+    };
+  }
+  if (err instanceof NotMemberInputError) {
+    return {
+      error: err.message,
+      kind: err.kind,
+      misplaced: err.misplaced,
+      hint: err.memberEntity
+        ? "These slots take one value for the whole unit, not one per member. Move each into the top-level facts and retry. If members gave different values for one slot, ask the user which applies instead of picking one."
+        : "This program has no member entity. Put every fact in the top-level facts, drop members[], and retry.",
     };
   }
   if (err instanceof UnknownInputError) {
