@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getProgram } from "../src/lib/catalog";
 import {
   NotMemberInputError,
+  UnitFactUnsetError,
+  UnknownRelationError,
   buildRequest,
   computeProgram,
   type BuildOptions,
@@ -113,14 +117,6 @@ describe("member facts on slots with no member scope", () => {
     expect(rejection(conflict).misplaced.map((m) => m.slot)).toEqual([SSN_ON_RETURN]);
   });
 
-  it("keep a slot that also has a member scope on that member only", () => {
-    // filing_status is both a Person and a TaxUnit slot in us-fiit.
-    const options = withoutSsn([{ facts: { age: 34, filing_status: 3 } }, child(8)]);
-    const { filing_status: _, ...facts } = options.facts!;
-    const built = { ...options, facts };
-    expect(recorded(built, "person:1", "filing_status")).toEqual([3]);
-    expect(recorded(built, "taxunit:1", "filing_status")).toEqual([0]);
-  });
 
   it("reject every member fact for a program with no member entity", () => {
     const program = getProgram("us-ny-income-tax")!;
@@ -145,6 +141,67 @@ describe.skipIf(!engineAvailable())("real-engine member facts with no member sco
   });
 });
 
+// eitc-mfj3-50k: married filing jointly, kids 10, 7 and 4, $50,000 in wages
+// in 2026. us-fiit's filing_status is a TaxUnit and a Person slot. The
+// top-level filing_status: 1 used to reach every member, so each child "filed
+// a joint return" (§152(c)(1)(E)), failed the qualifying-child gate, and EITC
+// came back $0 on every married-joint return.
+const mfjTaxpayer: MemberSpec = { facts: { age: 38, is_taxpayer: true } };
+const mfjSpouse: MemberSpec = { facts: { age: 36, is_spouse_of_taxpayer: true } };
+const mfjThreeKids = (members: MemberSpec[] = [mfjTaxpayer, mfjSpouse, child(10), child(7), child(4)]): BuildOptions => ({
+  program: fiit(),
+  period: "2026",
+  facts: {
+    filing_status: 1,
+    adjusted_gross_income: 50000,
+    employee_compensation_includible_in_gross_income: 50000,
+    taxpayer_includes_required_social_security_number_on_return: true,
+  },
+  members,
+});
+
+describe("return-scoped member facts", () => {
+  it("record a top-level filing_status on the tax unit, taxpayer and spouse, not the children", () => {
+    const options = mfjThreeKids();
+    expect(recorded(options, "taxunit:1", "filing_status")).toEqual([1]);
+    expect(recorded(options, "person:1", "filing_status")).toEqual([1]);
+    expect(recorded(options, "person:2", "filing_status")).toEqual([1]);
+    for (const id of ["person:3", "person:4", "person:5"]) {
+      expect(recorded(options, id, "filing_status")).toEqual([0]);
+    }
+    expect(buildRequest(options).applied.notes.join("\n")).toContain("not on member(s) 3, 4, 5");
+  });
+
+  it("keep a member's own filing_status", () => {
+    const options = mfjThreeKids([mfjTaxpayer, mfjSpouse, { facts: { ...child(17).facts, filing_status: 1 } }, child(4)]);
+    expect(recorded(options, "person:3", "filing_status")).toEqual([1]);
+    expect(buildRequest(options).applied.notes.join("\n")).toContain("not on member(s) 4;");
+  });
+});
+
+describe.skipIf(!engineAvailable())("real-engine return-scoped member facts", () => {
+  it("MFJ, three kids, $50,000: the children qualify and EITC = $4,263", async () => {
+    const result = await computeProgram(mfjThreeKids());
+    // IRS Rev. Proc. 2025-32: $8,231 − 21.06% × ($50,000 − $31,160) = $4,263.30.
+    expect(Math.round(numericOutput(result, "eitc"))).toBe(4263);
+    for (const member of [3, 4, 5]) {
+      expect(memberCheck(result, member, "eitc_qualifying_child").value).toBe("holds");
+    }
+  });
+
+  it("the spouse's joint status still reaches the senior-deduction gate", async () => {
+    const senior = (facts: MemberSpec["facts"]): MemberSpec => ({
+      facts: { ...facts, age: 67, qualified_individual_social_security_number_included_on_return: true },
+    });
+    const result = await computeProgram(
+      mfjThreeKids([senior(mfjTaxpayer.facts), senior(mfjSpouse.facts), child(10)])
+    );
+    expect(memberCheck(result, 1, "senior_deduction_qualified_individual").value).toBe("holds");
+    expect(memberCheck(result, 2, "senior_deduction_qualified_individual").value).toBe("holds");
+    expect(memberCheck(result, 3, "senior_deduction_qualified_individual").value).toBe("not_holds");
+  });
+});
+
 describe.skipIf(!engineAvailable())("real-engine member checks", () => {
   it("taxpayer first: the children's EITC gate holds and EITC = $3,923", async () => {
     const result = await computeProgram(hohTwoKids([taxpayer, child(8), child(5)]));
@@ -165,5 +222,188 @@ describe.skipIf(!engineAvailable())("real-engine member checks", () => {
     expect(memberCheck(result, 1, "eitc_qualifying_child").value).toBe("holds");
     expect(memberCheck(result, 2, "eitc_qualifying_child").value).toBe("holds");
     expect(memberCheck(result, 3, "eitc_qualifying_child").value).toBe("not_holds");
+  });
+});
+
+const thrown = <E extends Error>(options: BuildOptions, type: new (...args: never[]) => E): E => {
+  try {
+    buildRequest(options);
+  } catch (err) {
+    if (err instanceof type) return err;
+    throw err;
+  }
+  throw new Error(`buildRequest did not throw ${type.name}`);
+};
+const linked = (options: BuildOptions, memberId: string) =>
+  buildRequest(options)
+    .request.dataset.relations.filter((r) => r.tuple.includes(memberId))
+    .map((r) => r.name.split("#").pop());
+const withRelations = (spec: MemberSpec, relations: string[]): MemberSpec => ({ ...spec, relations });
+
+// A relation name that matched nothing used to link the member through no
+// relation: the children dropped out of every aggregation and EITC fell
+// from $3,923 to $0 with no note.
+describe("members[].relations names", () => {
+  it("reject an unknown name at every path, with nearest matches", () => {
+    const err = thrown(
+      hohTwoKids([taxpayer, withRelations(child(8), ["dependent"]), withRelations(child(5), ["qualifying_child_of_tax_unit", "dependent"])]),
+      UnknownRelationError
+    );
+    expect(err.kind).toBe("unknown_relation");
+    expect(err.unknown).toEqual([
+      { path: "members[1].relations[0]", relation: "dependent", suggestions: ["dependent_of_tax_unit"] },
+      { path: "members[2].relations[1]", relation: "dependent", suggestions: ["dependent_of_tax_unit"] },
+    ]);
+    expect(err.known).toContain("qualifying_child_of_tax_unit");
+    expect(err.message).toBe('unknown relation "dependent" for us-fiit; closest relations: dependent_of_tax_unit');
+  });
+
+  it("accept short and full names, and link through exactly those", () => {
+    const options = hohTwoKids([
+      taxpayer,
+      withRelations(child(8), ["qualifying_child_of_tax_unit", "us:statutes/26/24/h#relation.dependent_of_tax_unit"]),
+    ]);
+    expect(linked(options, "person:2")).toEqual(["relation.dependent_of_tax_unit", "relation.qualifying_child_of_tax_unit"]);
+    expect(linked(options, "person:1")).toHaveLength(fiit().relations.length);
+  });
+
+  it("refuse any name on a program with no member relations", () => {
+    const program = getProgram("us-ny-tanf")!;
+    const err = thrown({ program, members: [{ relations: ["member_of_household"] }] }, UnknownRelationError);
+    expect(err.known).toEqual([]);
+    expect(err.message).toContain("us-ny-tanf has no member relations");
+  });
+});
+
+// The aux-slot warning used to read top-level facts only.
+describe("auxiliary member facts", () => {
+  const ABODE_FRACTION = "child_principal_abode_fraction_of_taxable_year";
+  const auxWarnings = (options: BuildOptions) =>
+    buildRequest(options).applied.notes.filter((n) => n.includes("targets an auxiliary slot"));
+
+  it("warn once per slot, with every members[i] path", () => {
+    const kid = (age: number): MemberSpec => ({ facts: { age, [ABODE_FRACTION]: 1 } });
+    const warnings = auxWarnings(hohTwoKids([taxpayer, kid(8), kid(5)]));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatch(
+      new RegExp(`^WARNING: fact "${ABODE_FRACTION}" \\(in members\\[1\\]\\.facts, members\\[2\\]\\.facts\\) targets an auxiliary slot`)
+    );
+  });
+
+  it("warn on a member fact in a SNAP program", () => {
+    const fact = "act_was_for_purpose_of_using_presenting_transferring_acquiring_receiving_or_possessing_program_benefits";
+    const warnings = auxWarnings({ program: getProgram("us-fl-snap")!, members: [{ facts: { [fact]: true } }, {}] });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain(`"${fact}" (in members[0].facts)`);
+  });
+
+  it("keep the top-level warning as it was", () => {
+    const options = hohTwoKids([taxpayer, { facts: { age: 8 } }]);
+    const warnings = auxWarnings({ ...options, facts: { ...options.facts, [ABODE_FRACTION]: 1 } });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatch(new RegExp(`^WARNING: fact "${ABODE_FRACTION}" targets an auxiliary slot`));
+  });
+});
+
+// us-fiit filing_status is read on Person and on TaxUnit. A value under a
+// member alone reached that Person; the TaxUnit kept the default 0.
+describe("member facts on a slot the unit also reads", () => {
+  const noFilingStatus = (members: MemberSpec[]): BuildOptions => {
+    const { filing_status: _, ...facts } = hohTwoKids(members).facts!;
+    return { ...hohTwoKids(members), facts };
+  };
+
+  it("reject filing_status under members when the top level does not set it", () => {
+    const err = thrown(
+      noFilingStatus([{ facts: { age: 34, filing_status: 3 } }, { facts: { ...child(8).facts, filing_status: 0 } }]),
+      UnitFactUnsetError
+    );
+    expect(err).toMatchObject({
+      kind: "unit_fact_unset",
+      memberEntity: "Person",
+      unset: [{ slot: "filing_status", paths: ["members[0].facts.filing_status", "members[1].facts.filing_status"], entities: ["TaxUnit"] }],
+    });
+  });
+
+  it("with a top-level value, a member's own value reaches that member only", () => {
+    const options = { ...hohTwoKids([{ facts: { age: 34, is_taxpayer: true } }, { facts: { ...child(8).facts, filing_status: 0 } }]) };
+    options.facts = { ...options.facts, filing_status: 1 };
+    expect(recorded(options, "taxunit:1", "filing_status")).toEqual([1]);
+    expect(recorded(options, "person:1", "filing_status")).toEqual([1]);
+    expect(recorded(options, "person:2", "filing_status")).toEqual([0]);
+  });
+
+  it("leave an auxiliary slot with a member scope to the warning", () => {
+    // gross_income is an aux slot on Person and Household in us-az-snap.
+    const built = buildRequest({ program: getProgram("us-az-snap")!, members: [{ facts: { gross_income: 900 } }] });
+    expect(built.applied.notes.some((n) => n.includes('"gross_income" (in members[0].facts)'))).toBe(true);
+  });
+});
+
+interface OracleCase {
+  id: string;
+  program: string;
+  axiom: { facts: BuildOptions["facts"]; members: Array<{ facts: Record<string, unknown>; relations?: string[] }> };
+}
+const oracle = JSON.parse(readFileSync(path.join(__dirname, "oracle-cases.json"), "utf8")) as {
+  period: string;
+  cases: OracleCase[];
+  shared_member_facts: Record<string, NonNullable<MemberSpec["facts"]>>;
+};
+const oracleOptions = (id: string, filingStatus: "top" | "member0" | "none"): BuildOptions => {
+  const c = oracle.cases.find((x) => x.id === id)!;
+  const { filing_status, ...facts } = c.axiom.facts!;
+  const members = c.axiom.members.map((m, i): MemberSpec => {
+    const { $ref, ...own } = m.facts as { $ref?: string } & NonNullable<MemberSpec["facts"]>;
+    const extra: NonNullable<MemberSpec["facts"]> = i === 0 && filingStatus === "member0" ? { filing_status } : {};
+    return { facts: { ...($ref ? oracle.shared_member_facts[$ref] : {}), ...own, ...extra }, relations: m.relations };
+  });
+  return {
+    program: getProgram(c.program)!,
+    period: oracle.period,
+    facts: filingStatus === "top" ? { ...facts, filing_status } : facts,
+    members,
+    extraOutputs: ["regular_tax_before_credits", "ctc_after_advance_payments"],
+  };
+};
+
+describe.skipIf(!engineAvailable())("real-engine member relation names and unit facts", () => {
+  it("refuse an unknown relation instead of computing EITC = $0", async () => {
+    // Linked through no relation, the children count for nothing: what the
+    // unknown name used to produce.
+    const unlinked = await computeProgram(hohTwoKids([taxpayer, withRelations(child(8), []), withRelations(child(5), [])]));
+    expect(numericOutput(unlinked, "eitc")).toBe(0);
+    await expect(
+      computeProgram(hohTwoKids([taxpayer, withRelations(child(8), ["dependent"]), withRelations(child(5), ["dependent"])]))
+    ).rejects.toBeInstanceOf(UnknownRelationError);
+    const short = await computeProgram(
+      hohTwoKids([taxpayer, withRelations(child(8), ["qualifying_child_of_tax_unit"]), withRelations(child(5), ["qualifying_child_of_tax_unit"])])
+    );
+    expect(Math.round(numericOutput(short, "eitc"))).toBe(3923);
+  });
+
+  it("an auxiliary member fact warns and leaves EITC at $3,923", async () => {
+    const kid = (age: number): MemberSpec => ({ facts: { ...child(age).facts, child_principal_abode_fraction_of_taxable_year: 1 } });
+    const result = await computeProgram(hohTwoKids([taxpayer, kid(8), kid(5)]));
+    expect(Math.round(numericOutput(result, "eitc"))).toBe(3923);
+    expect(result.applied.notes.some((n) => n.includes('"child_principal_abode_fraction_of_taxable_year" (in members[1].facts, members[2].facts)'))).toBe(true);
+  });
+
+  it("fiit-mfj-2kids: filing_status under members[0] is refused, not computed as $8,528", async () => {
+    // TaxUnit at the default 0: what the member-only value used to produce.
+    const unset = await computeProgram(oracleOptions("fiit-mfj-2kids", "none"));
+    expect(numericOutput(unset, "regular_tax_before_credits")).toBe(8528);
+    await expect(computeProgram(oracleOptions("fiit-mfj-2kids", "member0"))).rejects.toBeInstanceOf(UnitFactUnsetError);
+    const top = await computeProgram(oracleOptions("fiit-mfj-2kids", "top"));
+    expect(numericOutput(top, "regular_tax_before_credits")).toBe(7040);
+    expect(numericOutput(top, "ctc_after_advance_payments")).toBe(4400);
+  });
+
+  it("fiit-ctc-phaseout-420k: filing_status under members[0] is refused, not computed as CTC $0", async () => {
+    const unset = await computeProgram(oracleOptions("fiit-ctc-phaseout-420k", "none"));
+    expect(numericOutput(unset, "ctc_after_advance_payments")).toBe(0);
+    await expect(computeProgram(oracleOptions("fiit-ctc-phaseout-420k", "member0"))).rejects.toBeInstanceOf(UnitFactUnsetError);
+    const top = await computeProgram(oracleOptions("fiit-ctc-phaseout-420k", "top"));
+    expect(numericOutput(top, "ctc_after_advance_payments")).toBe(3400);
   });
 });

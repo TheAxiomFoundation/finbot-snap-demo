@@ -77,15 +77,17 @@ interface CatalogOutput {
    *  chain (through derived refs, depth-capped) with the values that satisfy
    *  them. What the LLM needs to make the judgment hold — e.g. the CTC
    *  qualifying-child SSN facts. An entry with `op` is an ordering test
-   *  against a fixed threshold (`age gte 65`): it names the slot the rule
-   *  reads, not a value to set. Disjunctive/conditional branches are not
+   *  against a fixed threshold (`age gte 65`, or a constant derived rule
+   *  such as the 1/2 abode fraction): it names the slot the rule reads, not
+   *  a value to set. Disjunctive/conditional branches are not
    *  descended; `requires_partial` marks truncation. */
   requires?: Array<{ slot: string; value: boolean | number | string; op?: "gt" | "gte" | "lt" | "lte" }>;
   /** For judgments: one entry per `or` in the same chain — `rule` holds it,
    *  and it is met when every entry of any one `any_of` group holds. */
   requires_any?: Array<{ rule: string; any_of: Array<NonNullable<CatalogOutput["requires"]>> }>;
   /** Logic beyond `requires` and `requires_any` (an `or` with a branch they
-   *  can't express, a `not`, a derived threshold). */
+   *  can't express, a `not`, a threshold that changes by period or reads a
+   *  fact). */
   requires_partial?: boolean;
   /** Earliest due date among annually reissued parameters this rule reaches. */
   annual_update_due?: string;
@@ -1205,9 +1207,10 @@ function analyzeProgram(
   // `or`/`not`/`if` — those are disjunctive or conditional). These are the
   // facts that must hold for the judgment to hold, i.e. exactly what the LLM
   // must set to make a member qualify. An ordering test of an input against a
-  // fixed threshold (`age >= senior_deduction_age_threshold`) is kept as
-  // `{slot, op, value}`: without it the model can't see which slot the rule
-  // reads, sets a lookalike, and the input sits at its 0 default.
+  // fixed threshold (`age >= senior_deduction_age_threshold`, or `abode
+  // fraction > abode_fraction_threshold` where that rule is `1 / 2`) is kept
+  // as `{slot, op, value}`: without it the model can't see which slot the
+  // rule reads, sets a lookalike, and the input sits at its 0 default.
   //
   // An `or` in that chain becomes one `requires_any` entry instead: its
   // alternatives in disjunctive normal form, each group a conjunction of
@@ -1237,19 +1240,65 @@ function analyzeProgram(
     (program.parameters as Array<{ name: string; versions?: Array<{ values?: Record<string, unknown> }> }>)
       .map((p) => [p.name, p])
   );
-  // A literal, or a scalar parameter with one value in every version. A
-  // threshold that changes by period has no single value to show — skipped.
+  // A literal, a scalar parameter with one value in every version, or
+  // arithmetic over those — through derived rules, so 26 USC 152(c)
+  // `abode_fraction_threshold` (`1 / 2`) is 0.5. A threshold that changes
+  // by period or reads a fact has no single value to show — skipped.
+  const constantRules = new Map<string, number | null>();
   const fixedThreshold = (node: IRNode | undefined): number | null => {
-    if (node?.kind === "literal") return numericLiteral(node.value);
-    if (node?.kind !== "parameter_lookup" || typeof node.parameter !== "string") return null;
-    const index = node.index as IRNode | undefined;
-    if (index?.kind !== "literal") return null;
-    const key = String((index.value as { value?: unknown } | undefined)?.value);
-    const values = new Set(
-      (paramByName.get(node.parameter)?.versions ?? []).map((v) => numericLiteral(v.values?.[key]))
-    );
-    const [only] = values;
-    return values.size === 1 && only !== null ? only : null;
+    const operands = (...items: unknown[]) => {
+      const values = items.map((item) => fixedThreshold(item as IRNode | undefined));
+      return values.every((v): v is number => v !== null) ? values : null;
+    };
+    const finite = (n: number) => (Number.isFinite(n) ? n : null);
+    switch (node?.kind) {
+      case "literal":
+        return numericLiteral(node.value);
+      case "parameter_lookup": {
+        if (typeof node.parameter !== "string") return null;
+        const index = node.index as IRNode | undefined;
+        if (index?.kind !== "literal") return null;
+        const key = String((index.value as { value?: unknown } | undefined)?.value);
+        const values = new Set(
+          (paramByName.get(node.parameter)?.versions ?? []).map((v) => numericLiteral(v.values?.[key]))
+        );
+        const [only] = values;
+        return values.size === 1 && only !== null ? only : null;
+      }
+      case "derived": {
+        if (typeof node.name !== "string") return null;
+        if (!constantRules.has(node.name)) {
+          constantRules.set(node.name, null); // a cycle folds to nothing
+          const rule = ruleByName.get(node.name);
+          // Every version must fold to the same value.
+          const values = new Set(rule ? ruleExpressions(rule).map((e) => fixedThreshold(e as IRNode)) : [null]);
+          const [only] = values;
+          constantRules.set(node.name, values.size === 1 ? only : null);
+        }
+        return constantRules.get(node.name)!;
+      }
+      case "add": case "min": case "max": {
+        const items = operands(...((node.items as unknown[] | undefined) ?? []));
+        if (!items?.length) return null;
+        if (node.kind === "add") return finite(items.reduce((a, b) => a + b, 0));
+        return node.kind === "min" ? Math.min(...items) : Math.max(...items);
+      }
+      case "sub": case "mul": case "div": {
+        const pair = operands(node.left, node.right);
+        if (!pair) return null;
+        const [a, b] = pair;
+        if (node.kind === "sub") return finite(a - b);
+        if (node.kind === "mul") return finite(a * b);
+        return b === 0 ? null : finite(a / b);
+      }
+      case "floor": case "ceil": {
+        const [value] = operands(node.value) ?? [null];
+        if (value === null) return null;
+        return node.kind === "floor" ? Math.floor(value) : Math.ceil(value);
+      }
+      default:
+        return null;
+    }
   };
   const orderingRequirement = (cmp: IRNode): Requirement | null => {
     if (!isOrderingOp(cmp.op)) return null;

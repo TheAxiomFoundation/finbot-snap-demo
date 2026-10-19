@@ -152,6 +152,51 @@ export class NotMemberInputError extends Error {
   }
 }
 
+/** members[].relations names that match none of the program's member
+ *  relations. Linking keeps only the names that match, so a wrong name linked
+ *  the member through no relation and every aggregation over it lost that
+ *  member (us-fiit HoH, two kids, $40,000, relations ["dependent"]: EITC
+ *  $3,923 became $0). */
+export class UnknownRelationError extends Error {
+  readonly kind = "unknown_relation";
+  constructor(
+    readonly unknown: Array<{ path: string; relation: string; suggestions: string[] }>,
+    readonly known: string[],
+    programSlug: string
+  ) {
+    const names = [...new Set(unknown.map((u) => `"${u.relation}"`))];
+    const closest = [...new Set(unknown.flatMap((u) => u.suggestions))];
+    super(
+      known.length === 0
+        ? `${programSlug} has no member relations, so members[].relations cannot link anything: ${unknown.map((u) => u.path).join(", ")}`
+        : `unknown relation ${names.join(", ")} for ${programSlug}` +
+          (closest.length ? `; closest relations: ${closest.join(", ")}` : `; member relations: ${known.join(", ")}`)
+    );
+  }
+}
+
+/** Member facts on a slot the program reads on the member entity and on a
+ *  non-member entity too (us-fiit filing_status: Person and TaxUnit), with no
+ *  top-level value. The member's own record takes the fact; the non-member
+ *  instances read only the top-level facts, so they keep the default. */
+export class UnitFactUnsetError extends Error {
+  readonly kind = "unit_fact_unset";
+  constructor(
+    readonly unset: Array<{ slot: string; paths: string[]; entities: string[] }>,
+    readonly memberEntity: string,
+    programSlug: string
+  ) {
+    super(
+      unset
+        .map(
+          (u) =>
+            `${u.paths.join(", ")} set ${u.slot} on ${memberEntity} only; ${programSlug} also reads ${u.slot} on ${u.entities.join("/")}, which keeps its default because the top-level facts do not set it`
+        )
+        .join("; ")
+    );
+  }
+}
+
 /** members[] on a program with no member entity. No member instances exist,
  *  so the list states a headcount only, which buildRequest writes to the
  *  program's verified count inputs. Raised when that takes a silent choice:
@@ -310,6 +355,28 @@ const MEMBER_COUNT_INPUTS = new Set([
   // us-ny-tanf only: indexes the grant table; its family_size indexes the
   // shelter allowance, so a household size must reach both.
   "number_of_persons_in_household",
+  // us-ga-tanf: au_size, the index of the standard of need, family maximum
+  // and gross income ceiling. us-de-tanf: number_people_in_budget, the index
+  // of the payment standard table (+$69 per person past 8).
+  "assistance_unit_member_count",
+  // us-ks-tanf only: indexes the basic allowance and the Table II shelter
+  // percentage.
+  "assistance_plan_person_count",
+  // us-ca-tanf only, three headcounts that must move together: the family
+  // count indexes the minimum basic standard (applicant income test), the
+  // same-home count indexes the monthly aid payment schedule (the grant), and
+  // persons_on_aid indexes the regional MAP tables (auxiliary). Setting the
+  // grant's count alone leaves the income test on the one-person standard.
+  "eligible_needy_person_count_in_family",
+  "eligible_needy_person_count_in_same_home",
+  "persons_on_aid",
+  // Not assistance_group_size: us-in-tanf indexes its grant by
+  // participating_members, so setting the group size alone gives the
+  // one-person grant; on us-fl-tca the name is an auxiliary SNAP
+  // minimum-benefit size.
+  // Not us-co-tanf's caretaker and child counts: its grant chart is indexed
+  // by both, so one list length cannot choose between 1+2 ($620) and 2+1
+  // ($649).
 ]);
 
 export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">): boolean {
@@ -377,6 +444,19 @@ const MEMBER_ASSUMPTIONS: MemberAssumption[] = [
   },
 ];
 
+/** Member-scope slots whose top-level value is the unit's own return, and the
+ *  member facts that put a member on that return. us-fiit records
+ *  filing_status on Person too: the status of the return the individual
+ *  filed. The spouse rules (§151(b) exemption, §151(d)(5) senior deduction)
+ *  read the joint status at the spouse; §152(c)(1)(E) reads it at each child
+ *  (a child who filed a joint return is no qualifying child). So with an
+ *  explicit members list, a top-level fact on such a slot reaches the members
+ *  marked with a filer role only. Spread to the children, MFJ failed every
+ *  EITC qualifying-child gate and EITC came back $0. */
+const RETURN_SCOPED_MEMBER_FACTS: Record<string, { slots: string[]; filerRoles: string[] }> = {
+  "us-fiit": { slots: ["filing_status"], filerRoles: ["is_taxpayer", "is_spouse_of_taxpayer"] },
+};
+
 export function buildRequest(options: BuildOptions): BuiltRequest {
   const { program } = options;
   const facts = { ...(options.facts ?? {}) };
@@ -429,6 +509,29 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       }
     }
   }
+  // Relation names, full or short, must name one of the member relations the
+  // members are linked through. An unknown name used to match nothing, so the
+  // member was linked through no relation and dropped from every aggregation.
+  const memberRelations = program.member_entity
+    ? program.relations.filter(
+        (r) => r.related_entity === program.member_entity && (r.used || program.relations.length === 1)
+      )
+    : [];
+  const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
+  const relationNames = new Set(memberRelations.flatMap((r) => [r.name, shortName(r.name)]));
+  const knownRelations = [...new Set(memberRelations.map((r) => shortName(r.name)))];
+  const unknownRelations: UnknownRelationError["unknown"] = [];
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const [position, relation] of (member.relations ?? []).entries()) {
+      if (relationNames.has(relation)) continue;
+      unknownRelations.push({
+        path: `members[${index}].relations[${position}]`,
+        relation,
+        suggestions: nearestNames(relation, knownRelations, 3),
+      });
+    }
+  }
+  if (unknownRelations.length > 0) throw new UnknownRelationError(unknownRelations, knownRelations, program.slug);
   // Member instances record member-scope slots only, so a member fact on a
   // slot with no member scope (us-fiit's TaxUnit-only
   // taxpayer_includes_required_social_security_number_on_return) would be
@@ -449,6 +552,34 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     }
   }
   if (misplaced.length > 0) throw new NotMemberInputError(misplaced, program.member_entity, program.slug);
+  // A slot read on the member entity and on a non-member entity takes a
+  // member fact on that member's record only; the non-member instances read
+  // the top-level facts. us-fiit filing_status is the one such non-aux slot:
+  // under members[0] alone, TaxUnit kept 0, so MFJ regular tax came out
+  // $8,528 instead of $7,040 and the $420k CTC $0 instead of $3,400. Reject
+  // rather than copy the member value to the unit: on Person it is that
+  // individual's own return (§152(c)(1)(E) reads a child's joint return), so
+  // a member's value is not always the unit's. The top-level facts stay the
+  // one place that sets the unit's value. Auxiliary slots get the warning
+  // below.
+  const unitUnset = new Map<string, { paths: string[]; entities: string[] }>();
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const name of Object.keys(member.facts ?? {})) {
+      if (!memberScoped.has(name) || slotsByName.get(name)!.aux || options.facts?.[name] !== undefined) continue;
+      const entities = slotEntities.get(name)!.filter((entity) => entity !== program.member_entity);
+      if (entities.length === 0) continue;
+      const entry = unitUnset.get(name) ?? { paths: [], entities };
+      entry.paths.push(`members[${index}].facts.${name}`);
+      unitUnset.set(name, entry);
+    }
+  }
+  if (unitUnset.size > 0) {
+    throw new UnitFactUnsetError(
+      [...unitUnset].map(([slot, entry]) => ({ slot, ...entry })),
+      program.member_entity!,
+      program.slug
+    );
+  }
 
   const derivedFacts: Facts = {};
   if (program.slug === "us-ny-snap") {
@@ -468,16 +599,24 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // output) silently do nothing to the headline — the classic trap is a
   // plausible sibling name (`countable_monthly_unearned_income` vs the live
   // `snap_total_monthly_unearned_income`). Surface it loudly in the applied
-  // report with the nearest on-path sibling.
+  // report with the nearest on-path sibling. Member facts get the same
+  // warning with their members[i] path; one warning per slot.
   const certifiedSlotNames = [...slotsByName.values()].filter((s) => !s.aux).map((s) => s.name);
-  for (const name of Object.keys(facts)) {
-    if (slotsByName.get(name)?.aux) {
-      const siblings = nearestNames(name, certifiedSlotNames, 3);
-      notes.push(
-        `WARNING: fact "${name}" targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
-          (siblings.length ? ` Did you mean: ${siblings.join(", ")}?` : "")
-      );
-    }
+  const auxPaths = new Map<string, string[]>();
+  const noteAux = (name: string, path: string) => {
+    if (slotsByName.get(name)?.aux) auxPaths.set(name, [...(auxPaths.get(name) ?? []), path]);
+  };
+  for (const name of Object.keys(facts)) noteAux(name, "facts");
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const name of Object.keys(member.facts ?? {})) noteAux(name, `members[${index}].facts`);
+  }
+  for (const [name, paths] of auxPaths) {
+    const siblings = nearestNames(name, certifiedSlotNames, 3);
+    const where = paths.length === 1 && paths[0] === "facts" ? "" : ` (in ${paths.join(", ")})`;
+    notes.push(
+      `WARNING: fact "${name}"${where} targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
+        (siblings.length ? ` Did you mean: ${siblings.join(", ")}?` : "")
+    );
   }
 
   // -- Member count ----------------------------------------------------------
@@ -664,17 +803,17 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   const assumedMembers = new Map<MemberAssumption, number[]>();
   if (memberEntity && memberCount > 0) {
     const memberSlots = program.inputs[memberEntity] ?? [];
-    const memberRelations = program.relations.filter(
-      (r) => r.related_entity === memberEntity && (r.used || program.relations.length === 1)
-    );
-    const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
 
     // Top-level facts that name member-scope slots: with an explicit
     // members[] they form the shared base for EVERY member (taxpayer-level
     // facts like SSN-on-return are member-scoped in the IR but identical
-    // across members); with synthesized members they go to member 1 only
-    // (primary-applicant semantics, e.g. oldest_member_age).
+    // across members) except return-scoped slots, which reach filer-role
+    // members only (RETURN_SCOPED_MEMBER_FACTS); with synthesized members
+    // they go to member 1 only (primary-applicant semantics, e.g.
+    // oldest_member_age).
     const explicitMembers = (options.members?.length ?? 0) > 0;
+    const returnScoped = explicitMembers ? RETURN_SCOPED_MEMBER_FACTS[program.slug] : undefined;
+    const withheld = new Map<string, number[]>(); // slot → members it did not reach
     // Facts the user never spoke to are assumed per member (see
     // MEMBER_ASSUMPTIONS) and disclosed in applied.assumed_facts. A related
     // fact on the member or at the top level keeps an assumption off.
@@ -693,6 +832,18 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       const memberId = instanceId(memberEntity, i + 1);
       const spec = options.members?.[i];
       const base = explicitMembers || i === 0 ? topLevelMemberFacts() : {};
+      if (returnScoped) {
+        const own = { ...base, ...(spec?.facts ?? {}) };
+        if (!returnScoped.filerRoles.some((role) => own[role] === true)) {
+          for (const slot of returnScoped.slots) {
+            if (!(slot in base)) continue;
+            delete base[slot];
+            if (spec?.facts?.[slot] !== undefined) continue; // the member's own value applies
+            if (!withheld.has(slot)) withheld.set(slot, []);
+            withheld.get(slot)!.push(i + 1);
+          }
+        }
+      }
       const memberFacts: Facts = { ...base, ...(spec?.facts ?? {}) };
       applyAssumptions(memberFacts, i + 1);
       for (const slot of memberSlots) {
@@ -712,6 +863,11 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
           : [primaryId, memberId];
         relations.push({ name: relation.name, tuple, interval: inputInterval });
       }
+    }
+    for (const [slot, members] of withheld) {
+      notes.push(
+        `top-level ${slot}=${facts[slot]} describes the ${program.primary_entity}'s own return, so it was recorded on members with ${returnScoped!.filerRoles.join(" or ")} true and not on member(s) ${members.join(", ")}; their own ${slot} stays at its default.`
+      );
     }
 
     function topLevelMemberFacts(): Facts {

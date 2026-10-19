@@ -138,6 +138,16 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
         value: true,
         otherwise: false,
       },
+      // 26 USC 151(d)(5)(A): "In the case of a taxable year beginning after
+      // December 31, 2017", the exemption amount "means zero" (no end date
+      // since P.L. 119-21). The encoding takes that date test as an input;
+      // left at false, exemption_amount read the $2,000 base, so lookup_value
+      // gave $2,000 for 2026 and §55 added it back into amt_income.
+      taxable_year_begins_after_exemption_amount_zero_start: {
+        before: "2018-01-01",
+        value: false,
+        otherwise: true,
+      },
     },
   },
 };
