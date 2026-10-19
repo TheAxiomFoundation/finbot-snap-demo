@@ -16,6 +16,7 @@
  *     suggestions so the LLM can self-correct.
  */
 import {
+  type DerivedTraceNode,
   type ExecutionRequest,
   type ExecutionResponse,
   type FactScalar,
@@ -29,8 +30,11 @@ import {
   runCompiled,
   yearInterval,
 } from "./engine";
-import type { CatalogInputSlot, CatalogOutput, CatalogProgram } from "./catalog";
+import { getCatalog, type CatalogInputSlot, type CatalogOutput, type CatalogProgram } from "./catalog";
 import { legalIdToUrl } from "./legal-links";
+import artifactsLock from "../../artifacts.lock.json";
+import { programDisclosures } from "./catalog-overlay";
+import { annualUpdateDisclosure, annualUpdateWarning, overdueAnnualUpdates } from "./annual-updates";
 
 export type Facts = Record<string, FactScalar>;
 
@@ -79,6 +83,46 @@ export class UnknownOutputError extends Error {
       `unknown output "${output}" for ${programSlug}` +
         (suggestions.length ? `; closest outputs: ${suggestions.join(", ")}` : "")
     );
+  }
+}
+
+export const ASSISTANT_UNSETTABLE_INPUTS: Record<string, Record<string, { state: string; reason?: string }>> = {
+  "us-ma-snap": { snap_household_is_categorically_eligible: { state: "Massachusetts" } },
+  "us-al-snap": { household_is_categorically_eligible: { state: "Alabama" } },
+  "us-tn-snap": { household_is_categorically_eligible: { state: "Tennessee" } },
+  "us-az-snap": { na_budgetary_unit_is_eligible: { state: "Arizona", reason: "does not test eligibility yet" } },
+  "us-ca-snap": {
+    snap_categorically_eligible_for_resource_exemption: {
+      state: "California",
+      reason: "takes categorical eligibility as an unchecked input (it would apply at any income)",
+    },
+  },
+  "us-ga-snap": {
+    member_authorized_to_receive_tanf_community_outreach_services: {
+      state: "Georgia",
+      reason: "treats TANF community outreach services as categorical eligibility at any income",
+    },
+    member_receives_tanf_community_outreach_services: {
+      state: "Georgia",
+      reason: "treats TANF community outreach services as categorical eligibility at any income",
+    },
+  },
+  "us-co-snap": {
+    snap_basic_categorical_eligible: {
+      state: "Colorado",
+      reason: "does not yet apply categorical eligibility exclusions",
+    },
+    snap_expanded_categorical_eligible: {
+      state: "Colorado",
+      reason: "does not yet apply categorical eligibility exclusions",
+    },
+  },
+};
+
+export class NotSettableInputError extends Error {
+  readonly kind = "not_settable_input";
+  constructor(readonly slot: string, readonly path: string, state: string, reason?: string) {
+    super(`not settable by the assistant: Axiom's ${state} SNAP encoding ${reason ?? "does not yet determine categorical eligibility from income"}`);
   }
 }
 
@@ -189,17 +233,54 @@ export interface BuiltRequest {
      *  not overridden by caller facts. Present only when non-empty, so a
      *  question that never touches those rules carries no disclosure noise. */
     overlay_defaults_in_effect?: Facts;
+    /** Factual companion slots derived from supplied income, not eligibility. */
+    derived_facts?: Facts;
+    /** Instructions and diagnostics for the model; not shown to users. */
     notes: string[];
+    /** User-facing limitations of this program's encoding, shown on the tool card. */
+    disclosures: string[];
   };
 }
 
-const SIZE_SLOT = /(household|family|unit)_size$/;
+// Verified headcount inputs in the served catalog: these index household,
+// family, and assistance-unit tables or directly count their members. The
+// catalog's numeric dtype alone cannot distinguish counts from dollar amounts
+// such as poverty_income_guideline_for_household_size.
+const MEMBER_COUNT_INPUTS = new Set([
+  "household_size",
+  "family_size",
+  "assistance_unit_size",
+  "filing_unit_size",
+  "fns_unit_size",
+  "tanf_household_size",
+  "tanf_family_size",
+]);
+
+export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">): boolean {
+  return MEMBER_COUNT_INPUTS.has(slot.name) && (slot.dtype === "integer" || slot.dtype === "decimal");
+}
 
 export function buildRequest(options: BuildOptions): BuiltRequest {
   const { program } = options;
   const facts = { ...(options.facts ?? {}) };
   const notes: string[] = [];
   const resolved = resolvePeriod(program, options.period);
+
+  // These are free eligibility judgments, not household observations. Reject
+  // both values and both fact paths so a retry cannot turn a denial into an
+  // over-award or silently override an assumed-eligibility calculation.
+  const validateSettable = (supplied: Facts, path: string) => {
+    for (const name of Object.keys(supplied)) {
+      const blocked = ASSISTANT_UNSETTABLE_INPUTS[program.slug]?.[name];
+      if (blocked) throw new NotSettableInputError(name, `${path}.${name}`, blocked.state, blocked.reason);
+    }
+  };
+  validateSettable(options.facts ?? {}, "facts");
+  for (const [index, member] of (options.members ?? []).entries()) {
+    validateSettable(member.facts ?? {}, `members[${index}].facts`);
+  }
+
+  const disclosures = programDisclosures(program);
 
   // -- Validate fact names against the slot universe -------------------------
   const slotsByName = new Map<string, CatalogInputSlot>();
@@ -232,6 +313,20 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     }
   }
 
+  const derivedFacts: Facts = {};
+  if (program.slug === "us-ny-snap") {
+    // New York's 150% path takes this factual companion input. Its actual
+    // eligibility threshold remains entirely in the compiled rules engine.
+    const earnedSlot = "snap_gross_monthly_earned_income";
+    const earned = Number(facts[earnedSlot] ?? slotsByName.get(earnedSlot)?.default ?? 0);
+    const hasEarned = earned > 0;
+    const slot = "household_has_earned_income_budgeted_for_snap";
+    facts[slot] = hasEarned;
+    derivedFacts[slot] = hasEarned;
+    notes.push(`Derived ${slot}=${hasEarned} from ${earnedSlot}=${earned}; disclose this in Assumptions.`);
+    disclosures.push(`New York: the household's earned-income input was set from the earnings given (${hasEarned ? "has" : "no"} earned income).`);
+  }
+
   // Facts landing on auxiliary slots (not reachable from any certified
   // output) silently do nothing to the headline — the classic trap is a
   // plausible sibling name (`countable_monthly_unearned_income` vs the live
@@ -242,7 +337,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     if (slotsByName.get(name)?.aux) {
       const siblings = nearestNames(name, certifiedSlotNames, 3);
       notes.push(
-        `WARNING: fact "${name}" targets an auxiliary slot that does NOT feed the certified outputs — the headline ignores it.` +
+        `WARNING: fact "${name}" targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
           (siblings.length ? ` Did you mean: ${siblings.join(", ")}?` : "")
       );
     }
@@ -256,17 +351,20 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       memberCount = options.members.length;
     } else {
       const sizeFact = Object.entries(facts).find(
-        ([name, value]) => SIZE_SLOT.test(name) && typeof value === "number" && value >= 1
+        ([name, value]) => {
+          const slot = slotsByName.get(name);
+          return slot && isMemberCountSlot(slot) && typeof value === "number" && value >= 1;
+        }
       );
       memberCount = sizeFact ? Math.min(20, Math.floor(sizeFact[1] as number)) : 1;
       if (sizeFact) notes.push(`synthesized ${memberCount} ${memberEntity} member(s) from ${sizeFact[0]}`);
     }
-    // Keep size-style inputs consistent with an explicit members list.
+    // Keep verified count inputs consistent with an explicit members list.
     if (options.members?.length) {
-      for (const name of slotsByName.keys()) {
-        if (SIZE_SLOT.test(name) && facts[name] === undefined) {
-          facts[name] = memberCount;
-          notes.push(`set ${name}=${memberCount} to match members[]`);
+      for (const slot of slotsByName.values()) {
+        if (isMemberCountSlot(slot) && facts[slot.name] === undefined) {
+          facts[slot.name] = memberCount;
+          notes.push(`set ${slot.name}=${memberCount} to match members[]`);
         }
       }
     }
@@ -305,6 +403,20 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         }
       }
     }
+  }
+
+  // -- Annual updates past due ----------------------------------------------
+  // A period on or after the date an annually reissued parameter was due
+  // (e.g. SNAP's October 1 COLA) still evaluates last year's version when the
+  // release doesn't carry the new one. Disclose it rather than answer as if
+  // current; outputs that don't reach such a parameter never trigger this.
+  const overdue = overdueAnnualUpdates(
+    program,
+    queried.map((output) => ({ output, periodStart: periodForOutput(output, resolved, program).interval.start }))
+  );
+  for (const update of overdue) {
+    disclosures.push(annualUpdateDisclosure(program, update));
+    notes.push(annualUpdateWarning(update, resolved.label));
   }
 
   // -- Instances -------------------------------------------------------------
@@ -430,15 +542,16 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     // engine then evaluates that rule at the query instance itself, so its
     // member-scope inputs must resolve there. Mirror member 1's values — the
     // primary filer/applicant — onto every non-member query instance; slots
-    // that already have a non-member-scope record keep it.
+    // that already have a non-member-scope record keep it. The records keep
+    // the slot's own entity: the engine resolves inputs by entity_id only.
     const member1Facts: Facts = {
       ...topLevelMemberFacts(),
       ...(options.members?.[0]?.facts ?? {}),
     };
-    for (const [entity, entityId] of queryInstances) {
+    for (const entityId of queryInstances.values()) {
       for (const slot of memberSlots) {
         if (nonMemberSlots.has(slot.name)) continue;
-        record(slot, entity, entityId, member1Facts[slot.name]);
+        record(slot, memberEntity, entityId, member1Facts[slot.name]);
       }
     }
 
@@ -487,6 +600,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       period: resolved.label,
       member_count: memberCount,
       facts_applied: facts,
+      ...(Object.keys(derivedFacts).length > 0 && { derived_facts: derivedFacts }),
       defaulted_slots: defaultedSlots,
       ...(defaultedIncomeSlots.size > 0 && {
         defaulted_income_slots: [...defaultedIncomeSlots],
@@ -509,6 +623,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         return Object.keys(inEffect).length > 0 ? { overlay_defaults_in_effect: inEffect } : {};
       })(),
       notes,
+      disclosures,
     },
   };
 }
@@ -524,7 +639,8 @@ export interface ShapedOutput {
   unit: string | null;
   semantics: string;
   entity: string;
-  certified: boolean;
+  /** One of the program's outputs listed in the release manifest. */
+  published_output: boolean;
   acknowledged_incomplete: boolean;
   legal_id: string | null;
   /** Attached when a judgment came back not_holds: the facts (with values)
@@ -533,6 +649,119 @@ export interface ShapedOutput {
    *  not captured here. */
   requires?: Array<{ slot: string; value: boolean | number | string }>;
   requires_partial?: boolean;
+  /** Attached when a judgment came back not_holds and the explain trace
+   *  shows why: the deepest sub-judgments on its failing path, with their
+   *  legal ids and sources (e.g. snap_member_eligible ←
+   *  snap_member_citizenship_or_alien_status_eligible, 7 CFR 273.4(a)). */
+  failed_because?: Array<{ name: string; legal_id: string | null; source: string | null }>;
+}
+
+/** One leaf of a rule's dependency closure: a parameter or an unconditioned
+ *  input the rule ultimately rests on. */
+export interface ProvenanceParameter {
+  legal_id: string | null;
+  name: string;
+  value: unknown;
+  source: string | null;
+}
+
+/** The derivation behind one output: every rule legal id the engine actually
+ *  fired to produce it (BFS order, root first) and the parameters/inputs at
+ *  the bottom of that chain. Derived from the `explain`-mode trace — see
+ *  `deriveRuleProvenance` — never derived from anywhere else. */
+export interface RuleProvenance {
+  rule_path: string[];
+  parameters_used: ProvenanceParameter[];
+}
+
+/** Reproducibility stamps for one compute: which corpus and engine build
+ *  produced it, and when. `release_tag`/`corpus_sha` come from the catalog
+ *  (itself pinned by `artifacts.lock.json` at catalog-generation time);
+ *  `engine_ref` is read from the same lock file directly since it isn't
+ *  otherwise threaded into the runtime. */
+export interface Stamps {
+  release_tag: string;
+  corpus_sha: string;
+  engine_ref: string;
+  evaluated_at: string;
+}
+
+export function computeStamps(): Stamps {
+  const catalog = getCatalog();
+  return {
+    release_tag: catalog.release_tag,
+    corpus_sha: catalog.corpus_sha,
+    engine_ref: (artifactsLock as { engine: { ref: string } }).engine.ref,
+    evaluated_at: new Date().toISOString(),
+  };
+}
+
+/** Walk a trace node's `dependencies` breadth-first from `rootKey`, collecting
+ *  every fired rule's legal id (`rule_path`) and the leaf nodes it ultimately
+ *  rests on (`parameters_used`). A dependency key absent from `trace` is a
+ *  short-circuited sibling branch the engine never evaluated — signal, not
+ *  error, so it's skipped rather than throwing. */
+export function deriveRuleProvenance(
+  trace: Record<string, DerivedTraceNode>,
+  rootKey: string
+): RuleProvenance {
+  const visited = new Set<string>();
+  const queue: string[] = [rootKey];
+  const rulePath: string[] = [];
+  const parametersUsed: ProvenanceParameter[] = [];
+  while (queue.length) {
+    const key = queue.shift()!;
+    if (visited.has(key)) continue;
+    visited.add(key);
+    const node = trace[key];
+    if (!node) continue; // short-circuited branch never evaluated
+    if (node.id) rulePath.push(node.id);
+    if (!node.dependencies || node.dependencies.length === 0) {
+      parametersUsed.push({
+        legal_id: node.id ?? null,
+        name: node.name,
+        value: node.kind === "judgment" ? node.outcome ?? null : node.value?.value ?? null,
+        source: node.source ?? null,
+      });
+    } else {
+      for (const dep of node.dependencies) queue.push(dep);
+    }
+  }
+  return { rule_path: rulePath, parameters_used: parametersUsed };
+}
+
+/** Follow a failed judgment's not_holds sub-judgments down the explain trace
+ *  and return the deepest ones — the conditions that actually failed, which
+ *  the top-level gate alone doesn't name. Empty when the trace doesn't reach
+ *  a failing sub-judgment (e.g. the judgment failed on an input directly). */
+function failingSubJudgments(
+  trace: Record<string, DerivedTraceNode>,
+  key: string,
+  name: string,
+  limit = 5
+): NonNullable<ShapedOutput["failed_because"]> {
+  const rootKey = trace[key] ? key : trace[name] ? name : null;
+  if (!rootKey) return [];
+  const found: NonNullable<ShapedOutput["failed_because"]> = [];
+  const seen = new Set<string>();
+  const visit = (k: string) => {
+    if (seen.has(k) || found.length >= limit) return;
+    seen.add(k);
+    const node = trace[k];
+    if (!node) return;
+    const failing = node.dependencies.filter(
+      (d) => trace[d]?.kind === "judgment" && trace[d]?.outcome === "not_holds"
+    );
+    if (failing.length === 0) {
+      if (k !== rootKey && !found.some((f) => f.name === node.name)) {
+        found.push({ name: node.name, legal_id: node.id ?? null, source: node.source ?? null });
+      }
+      return;
+    }
+    failing.forEach(visit);
+  };
+  visit(rootKey);
+  return found;
 }
 
 export interface ShapedResult {
@@ -548,6 +777,13 @@ export interface ShapedResult {
   applied: BuiltRequest["applied"];
   citations: Array<{ id: string; url: string }>;
   incomplete_note: string | null;
+  /** Per-output derivation, keyed by output name. Sized for a UI panel
+   *  (20–50 KB of raw trace collapses to a rule-id list + leaf parameters
+   *  per output) — never meant to ride in a tool result back to the model;
+   *  callers strip this before returning to the model and forward it
+   *  out-of-band instead (see route.ts's stream annotations). */
+  provenance: Record<string, RuleProvenance>;
+  stamps: Stamps;
 }
 
 export function labelFor(name: string): string {
@@ -561,10 +797,12 @@ export function shapeResult(
   response: ExecutionResponse
 ): ShapedResult {
   const merged = new Map<string, ReturnType<typeof readOutput> & { raw?: unknown }>();
+  const trace: Record<string, DerivedTraceNode> = {};
   for (const result of response.results) {
     for (const [key, value] of Object.entries(result.outputs ?? {})) {
       merged.set(key, readOutput(value));
     }
+    Object.assign(trace, result.trace ?? {});
   }
 
   const shaped: ShapedOutput[] = built.queried.map((output) => {
@@ -572,6 +810,7 @@ export function shapeResult(
     let value: ShapedOutput["value"] = null;
     if (r) value = r.kind === "judgment" ? r.outcome ?? null : r.numeric ?? null;
     const failedJudgment = output.semantics === "judgment" && value === "not_holds";
+    const failedBecause = failedJudgment ? failingSubJudgments(trace, queryKey(output), output.name) : [];
     return {
       name: output.name,
       label: labelFor(output.name),
@@ -579,13 +818,14 @@ export function shapeResult(
       unit: output.unit,
       semantics: output.semantics,
       entity: output.entity,
-      certified: output.certified,
+      published_output: output.certified,
       acknowledged_incomplete: output.acknowledged_incomplete,
       legal_id: output.id,
       ...(failedJudgment && output.requires && {
         requires: output.requires,
         ...(output.requires_partial && { requires_partial: true }),
       }),
+      ...(failedBecause.length > 0 && { failed_because: failedBecause }),
     };
   });
 
@@ -615,6 +855,13 @@ export function shapeResult(
     );
   }
 
+  const provenance: Record<string, RuleProvenance> = {};
+  for (const output of built.queried) {
+    const key = queryKey(output);
+    if (!trace[key]) continue; // no trace root — e.g. output never fired
+    provenance[output.name] = deriveRuleProvenance(trace, key);
+  }
+
   return {
     program: program.slug,
     display_name: program.display_name,
@@ -626,8 +873,10 @@ export function shapeResult(
     applied: built.applied,
     citations: citationsFor(mainOutputs),
     incomplete_note: incomplete.length
-      ? `Outputs flagged acknowledged_incomplete by the rulespec authors (parts of the rule chain are known to be unfinished): ${incomplete.join(", ")}. Flag this to the user.`
+      ? `Flagged in the program spec as not fully encoded: ${incomplete.join(", ")}.`
       : null,
+    provenance,
+    stamps: computeStamps(),
   };
 }
 

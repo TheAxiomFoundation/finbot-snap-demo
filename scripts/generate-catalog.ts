@@ -1,8 +1,8 @@
 /**
  * Build-time catalog generator.
  *
- * Generalizes the old scripts/regenerate-co-snap-base.py across every program
- * in the pinned rulespec-us program-artifacts release. For each compiled
+ * Generalizes the old scripts/regenerate-co-snap-base.py across the programs
+ * finbot presents from the pinned rulespec-us release. For each compiled
  * artifact it:
  *
  *   - lists every derived rule as a queryable output (legal id when present;
@@ -30,6 +30,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 
+import { classifyAnnualParameter, groupAnnualUpdates, type AnnualParameter } from "../src/lib/annual-updates";
+import type { CatalogAnnualUpdate } from "../src/lib/catalog";
 import { CATALOG_OVERLAY, GLOBAL_DEFAULT_OVERRIDES } from "../src/lib/catalog-overlay";
 
 /** Global override keys that matched at least one slot across all programs. */
@@ -39,6 +41,20 @@ const ROOT = path.resolve(path.join(import.meta.dirname ?? __dirname, ".."));
 const ARTIFACTS_DIR = path.join(ROOT, "engine", "artifacts");
 const CACHE_DIR = path.join(ROOT, ".cache");
 const OUTPUT_PATH = path.join(ROOT, "src", "lib", "generated", "catalog.json");
+
+// Programs currently presented by finbot. Release artifacts can add programs
+// independently; expand this list deliberately when adding them to the app.
+const CATALOG_PROGRAM_SLUGS = new Set([
+  "us-ak-tanf", "us-al-snap", "us-al-tanf", "us-ar-tanf",
+  "us-az-snap", "us-az-tanf", "us-ca-snap", "us-ca-tanf",
+  "us-co-snap", "us-co-tanf", "us-ct-tanf", "us-de-tanf",
+  "us-fiit", "us-fl-snap", "us-fl-tca", "us-ga-snap",
+  "us-ga-tanf", "us-il-scretd", "us-in-tanf", "us-ks-tanf",
+  "us-ma-snap", "us-md-tca", "us-me-tanf", "us-nc-snap",
+  "us-nh-income-tax", "us-ny-income-tax", "us-ny-snap", "us-ny-tanf",
+  "us-oasdi-wage-tax", "us-sc-snap", "us-tn-snap", "us-tx-tanf",
+  "us-us-tariff-duty", "us-ut-tanf",
+]);
 
 // ---------------------------------------------------------------------------
 // Types mirrored into src/lib/catalog.ts. Keep in sync.
@@ -64,6 +80,8 @@ interface CatalogOutput {
    *  descended; `requires_partial` marks truncation. */
   requires?: Array<{ slot: string; value: boolean | number | string }>;
   requires_partial?: boolean;
+  /** Earliest due date among annually reissued parameters this rule reaches. */
+  annual_update_due?: string;
 }
 
 interface CatalogInputSlot {
@@ -123,6 +141,8 @@ interface CatalogProgram {
   /** Input slots grouped by entity scope. */
   inputs: Record<string, CatalogInputSlot[]>;
   counts: { derived: number; parameters: number; relations: number };
+  /** Annually reissued parameters, grouped by when their next version is due. */
+  annual_updates?: CatalogAnnualUpdate[];
 }
 
 // ---------------------------------------------------------------------------
@@ -157,6 +177,7 @@ const PROGRAM_NAMES: Record<string, string> = {
   "income-tax": "Income Tax",
   "oasdi-wage-tax": "OASDI Wage Tax",
   scretd: "Senior Citizens Real Estate Tax Deferral",
+  "us-tariff-duty": "Tariff Duty",
 };
 
 function programDisplayName(jurisdiction: string, programId: string): string {
@@ -342,11 +363,15 @@ function ensureCorpusCheckout(lock: { repo: string; corpus_sha: string }): strin
  *  scalars and full YAML parsing of ~10k files is needlessly slow. */
 function collectCorpusPaths(corpusDir: string): Record<string, string> {
   const corpusPaths: Record<string, string> = {};
-  const jurisdictions = readdirSync(corpusDir).filter((name) =>
+  const jurisdictions = readdirSync(corpusDir).sort().filter((name) =>
     /^us(-[a-z]{2})?$/.test(name) && statSync(path.join(corpusDir, name)).isDirectory()
   );
   const walk = (dir: string, visit: (file: string) => void) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    // Directory order differs across filesystems. Keep the citation map's
+    // serialization stable so catalog freshness checks work on macOS/Linux.
+    const entries = readdirSync(dir, { withFileTypes: true })
+      .sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    for (const entry of entries) {
       const p = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(p, visit);
       else if (entry.name.endsWith(".yaml") && !entry.name.endsWith(".test.yaml")) visit(p);
@@ -431,6 +456,13 @@ interface DerivedRule {
   source?: string | null;
   semantics?: string;
   expr?: unknown;
+  versions?: Array<{ expr?: unknown }>;
+}
+
+/** `expr` is the latest formula; older periods can read different facts and
+ *  parameters. Catalog discovery must cover the union of all formulas. */
+function ruleExpressions(rule: DerivedRule): unknown[] {
+  return [rule.expr, ...(rule.versions ?? []).map((version) => version.expr)];
 }
 
 const PRIMARY_OUTPUT_SUFFIX =
@@ -494,7 +526,7 @@ function analyzeProgram(
   const directInputEntities = new Map<string, Set<string>>(); // input name → entities whose rules use it directly
   for (const rule of rules) {
     const entity = rule.entity ?? "Household";
-    for (const { node, scope } of walkRefs(rule.expr, null, entity, new Map())) {
+    for (const { node, scope } of walkRefs(ruleExpressions(rule), null, entity, new Map())) {
       // walkRefs without relation entities keeps aggregator-inner scope at the
       // outer entity — filter those out by skipping nodes under aggregators is
       // complex; instead only record refs whose scope equals the rule entity
@@ -530,7 +562,7 @@ function analyzeProgram(
 
   for (const rule of rules) {
     const outerEntity = rule.entity ?? "Household";
-    for (const { node } of walkRefs(rule.expr, null, outerEntity, new Map())) {
+    for (const { node } of walkRefs(ruleExpressions(rule), null, outerEntity, new Map())) {
       if (!isAggregator(node)) continue;
       const relation = node.relation as string;
       if (!relationSlots.has(relation)) {
@@ -688,7 +720,7 @@ function analyzeProgram(
   const inputsByEntity = new Map<string, Set<string>>();
   for (const rule of rules) {
     const outerEntity = rule.entity ?? "Household";
-    for (const { node, parent, scope } of walkRefs(rule.expr, null, outerEntity, relationEntityMap)) {
+    for (const { node, parent, scope } of walkRefs(ruleExpressions(rule), null, outerEntity, relationEntityMap)) {
       if (node.kind !== "input") continue;
       const name = node.name as string;
       if (!dtypeCandidates.has(name)) dtypeCandidates.set(name, []);
@@ -841,7 +873,7 @@ function analyzeProgram(
     }
     for (const value of Object.values(n)) mineDecisionPoints(value);
   };
-  for (const rule of rules) mineDecisionPoints(rule.expr);
+  for (const rule of rules) mineDecisionPoints(ruleExpressions(rule));
 
   // -- Table-index default inference ----------------------------------------
   // Parameter tables are keyed 1..N (household size, day of month, …); an
@@ -882,7 +914,7 @@ function analyzeProgram(
     ruleDirectInputs.set(name, inputsSet);
     ruleDirectDerived.set(name, derivedSet);
   };
-  for (const rule of rules) collectDirect(rule.name, rule.expr);
+  for (const rule of rules) collectDirect(rule.name, ruleExpressions(rule));
 
   const reachableMemo = new Map<string, Set<string>>();
   const reachableInputs = (ruleName: string, seen = new Set<string>()): Set<string> => {
@@ -914,7 +946,7 @@ function analyzeProgram(
       if (obj.kind === "parameter_lookup" && typeof obj.parameter === "string") params.add(obj.parameter);
       Object.values(obj).forEach(visit);
     };
-    visit(rule.expr);
+    visit(ruleExpressions(rule));
     ruleDirectParams.set(rule.name, params);
   }
   const paramVersions = new Map<string, Array<{ effective_from?: string; effective_to?: string }>>();
@@ -966,6 +998,44 @@ function analyzeProgram(
     );
   }
 
+  // -- Annual updates ---------------------------------------------------------
+  // Parameters reissued every year (SNAP's October 1 cost-of-living
+  // adjustment, Maine's TANF grant table). Record when each one's next
+  // version falls due, so the runtime can flag a period past that date
+  // instead of silently evaluating last year's values with this year's label.
+  const annualParams = new Map<string, AnnualParameter>();
+  for (const param of program.parameters as Array<{
+    name: string;
+    id?: string | null;
+    versions?: Array<{ effective_from?: string | null }>;
+  }>) {
+    const annual = classifyAnnualParameter(param);
+    if (annual) annualParams.set(param.name, annual);
+  }
+  const annualUpdateDue = (ruleName: string): string | undefined => {
+    let due: string | undefined;
+    for (const param of reachableParams(ruleName)) {
+      const annual = annualParams.get(param);
+      if (annual && (!due || annual.due < due)) due = annual.due;
+    }
+    return due;
+  };
+  const usedAnnualParams = new Set<string>();
+  for (const params of ruleDirectParams.values()) {
+    for (const param of params) if (annualParams.has(param)) usedAnnualParams.add(param);
+  }
+  const annualUpdates = groupAnnualUpdates(
+    [...usedAnnualParams].map((name) => ({ name, ...annualParams.get(name)! }))
+  );
+  const today = new Date().toISOString().slice(0, 10);
+  for (const update of annualUpdates) {
+    if (update.due <= today) {
+      warn(
+        `${update.parameters.length} annually reissued parameter(s) were due ${update.due} (latest version ${update.last_effective_from}) — the pinned release doesn't carry the new values; computes from ${update.due} disclose it`
+      );
+    }
+  }
+
   const minKeyDefaults = new Map<string, number>();
   const visitLookups = (n: unknown) => {
     if (Array.isArray(n)) { n.forEach(visitLookups); return; }
@@ -995,7 +1065,7 @@ function analyzeProgram(
     }
     Object.values(obj).forEach(visitLookups);
   };
-  for (const rule of rules) visitLookups(rule.expr);
+  for (const rule of rules) visitLookups(ruleExpressions(rule));
 
   const mined = new Map<string, { dtype: CatalogInputSlot["dtype"]; default: boolean | number | string }>();
   for (const fixture of fixtureCandidates) {
@@ -1191,6 +1261,8 @@ function analyzeProgram(
         if (partial) output.requires_partial = true;
       }
     }
+    const due = annualUpdateDue(rule.name);
+    if (due) output.annual_update_due = due;
     return output;
   });
 
@@ -1218,6 +1290,7 @@ function analyzeProgram(
     outputs,
     inputs,
     counts: manifestProgram.counts,
+    ...(annualUpdates.length > 0 && { annual_updates: annualUpdates }),
   };
 }
 
@@ -1239,8 +1312,17 @@ async function main() {
   const corpusDir = ensureCorpusCheckout(lock);
   const warnings: string[] = [];
 
-  console.log(`==> generating catalog for ${manifest.programs.length} programs`);
-  const programs = manifest.programs
+  const selectedPrograms = manifest.programs.filter((mp) =>
+    CATALOG_PROGRAM_SLUGS.has(mp.artifact.replace(/\.compiled\.json$/, ""))
+  );
+  const availableSlugs = new Set(selectedPrograms.map((mp) => mp.artifact.replace(/\.compiled\.json$/, "")));
+  const missingSlugs = [...CATALOG_PROGRAM_SLUGS].filter((slug) => !availableSlugs.has(slug));
+  if (missingSlugs.length) {
+    throw new Error(`release is missing configured catalog programs: ${missingSlugs.join(", ")}`);
+  }
+
+  console.log(`==> generating catalog for ${selectedPrograms.length} of ${manifest.programs.length} release programs`);
+  const programs = selectedPrograms
     .map((mp) => analyzeProgram(mp, corpusDir, warnings))
     .sort((a, b) => a.slug.localeCompare(b.slug));
 
@@ -1292,6 +1374,15 @@ async function main() {
         `  ${p.slug.padEnd(20)} enum:[${enums.map((s) => s.name).join(", ")}] eq:[${eqGated
           .map((s) => `${s.name}=${s.eq_hints!.join("|")}`)
           .join(", ")}] variant:[${variants.map((s) => s.name).slice(0, 6).join(", ")}${variants.length > 6 ? ` +${variants.length - 6}` : ""}] overlay:[${overlaid.map((s) => s.name).join(", ")}]`
+      );
+    }
+  }
+
+  console.log("\nannual updates (annually reissued parameters → next version due):");
+  for (const p of programs) {
+    for (const u of p.annual_updates ?? []) {
+      console.log(
+        `  ${p.slug.padEnd(20)} due ${u.due} (latest ${u.last_effective_from}${u.fiscal_year ? `, FY${u.fiscal_year}` : ""}) ${u.basis} · ${u.parameters.length} parameter(s)`
       );
     }
   }

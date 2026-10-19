@@ -12,7 +12,10 @@
 import { openai } from "@ai-sdk/openai";
 import { wrapLanguageModel } from "ai";
 
-export const FINBOT_MODEL_NAME = process.env.FINBOT_MODEL ?? "gpt-6-luna";
+// `||`, not `??`: .env.example ships `FINBOT_MODEL=`, and an empty value
+// must fall back too (it would otherwise break API calls and render "runs on
+// OpenAI's ." in the session notice).
+export const FINBOT_MODEL_NAME = process.env.FINBOT_MODEL?.trim() || "gpt-6-luna";
 
 /** Optional reasoning-effort override (FINBOT_REASONING=low|medium|high).
  *  Unset → null, which the provider treats as absent: the model's own

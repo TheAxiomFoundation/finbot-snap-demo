@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { annualUpdateNoticesAt, periodStartDate } from "@/lib/annual-updates";
 import { getCatalog } from "@/lib/catalog";
+import { programDisclosures } from "@/lib/catalog-overlay";
+import { jurisdictionCoverageStatus, programCoverageStatus } from "@/lib/coverage";
+import { defaultPeriodFor } from "@/lib/request-builder";
 
 export const metadata: Metadata = {
-  title: "Certified programs — Axiom rules engine",
+  title: "Encoded programs — Axiom rules engine",
   description:
-    "Every program certified in the pinned rulespec-us release, grouped by jurisdiction.",
+    "Every program encoded in the rulespec-us release the chatbot runs on, grouped by jurisdiction.",
 };
 
 export default function ProgramsPage() {
@@ -29,7 +33,12 @@ export default function ProgramsPage() {
           ← chat
         </Link>
       </div>
-      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Certified programs</h1>
+      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Encoded programs</h1>
+      <p style={{ color: "#374151", fontSize: 14, lineHeight: 1.55, maxWidth: 720, margin: "4px 0 8px" }}>
+        The chatbot can compute only these programs, whose rules Axiom encoded from statutes,
+        regulations, and agency guidance in the rulespec-us release it pins. Encodings can contain
+        errors, and outputs marked incomplete are flagged in their program specs as not fully encoded.
+      </p>
       <p className="mono" style={{ fontSize: 12, color: "#6b7280", marginBottom: 24 }}>
         release {catalog.release_tag} · corpus{" "}
         <a
@@ -50,6 +59,9 @@ export default function ProgramsPage() {
             <h2 className="mono" style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 10 }}>
               {jurisdiction} · {programs.length} program{programs.length === 1 ? "" : "s"}
             </h2>
+            <p style={{ fontSize: 12, color: "#6b7280", margin: "-4px 0 10px" }}>
+              {jurisdictionCoverageStatus(programs)}
+            </p>
             <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
               {programs.map((program) => (
                 <div key={program.slug} className="card" style={{ padding: 14 }}>
@@ -59,6 +71,13 @@ export default function ProgramsPage() {
                     </Link>
                     <span className="mono" style={{ fontSize: 11, color: "#6b7280" }}>{program.evaluation_period}</span>
                   </div>
+                  <div className="tool-coverage-status">{programCoverageStatus(program)}</div>
+                  {[
+                    ...programDisclosures(program),
+                    ...annualUpdateNoticesAt(program, periodStartDate(defaultPeriodFor(program))),
+                  ].map((note) => (
+                    <p key={note} className="tool-coverage-status">{note}</p>
+                  ))}
                   <div className="mono" style={{ fontSize: 11, color: "#6b7280", margin: "4px 0 8px" }}>
                     {program.slug} · {program.counts.derived} rules · {program.counts.parameters} parameters
                   </div>
@@ -73,9 +92,9 @@ export default function ProgramsPage() {
                         key={`inc-${name}`}
                         className="badge"
                         style={{ fontSize: 10, background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d" }}
-                        title="Flagged acknowledged_incomplete by the rulespec authors."
+                        title="Flagged in the program spec as not fully encoded."
                       >
-                        {name} ⚠
+                        {name} · incomplete
                       </span>
                     ))}
                   </div>

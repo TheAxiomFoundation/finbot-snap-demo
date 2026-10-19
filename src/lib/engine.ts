@@ -72,13 +72,33 @@ export type OutputValue =
   | { kind: "scalar"; name: string; id: string; dtype: string; unit?: string | null; value: { kind: string; value: string | number | boolean } }
   | { kind: "judgment"; name: string; id: string; unit?: string | null; outcome: Outcome };
 
+/** One fired-rule node from `mode: "explain"` — keyed by the same public
+ *  legal-id/name the corresponding entry in `outputs` uses. Present only for
+ *  rules the engine actually evaluated (the fired closure, not the whole
+ *  program) — `dependencies` may name keys absent from the trace when a
+ *  sibling branch short-circuited before reaching them. */
+export interface DerivedTraceNode {
+  kind?: "scalar" | "judgment";
+  name: string;
+  id?: string;
+  dtype?: string;
+  unit?: string | null;
+  value?: { kind: string; value: string | number | boolean };
+  outcome?: Outcome;
+  source?: string;
+  source_url?: string;
+  rounding?: string;
+  pre_rounding_value?: unknown;
+  dependencies: string[];
+}
+
 export interface ExecutionResponse {
   metadata: { requested_mode: string; actual_mode: string; fallback_reason: string | null };
   results: Array<{
     entity_id: string;
     period: { period_kind: string; start: string; end: string };
     outputs: Record<string, OutputValue>;
-    trace?: Record<string, unknown>;
+    trace?: Record<string, DerivedTraceNode>;
   }>;
 }
 

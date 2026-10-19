@@ -134,14 +134,20 @@ async function seniorDeduction() {
 }
 
 async function engineFailuresAreToolResults() {
-  const cases: Array<[string, () => PromiseLike<unknown>]> = [
+  // [label, call, expected error]: an unclassified engine exit falls through
+  // to the generic failure; a missing formula version keeps asToolError's
+  // more specific no_formula_version limitation.
+  const cases: Array<[string, () => PromiseLike<unknown>, RegExp, string?]> = [
     [
       "compute, non-numeric decimal fact",
       () => tools.compute.execute!({ program: "us-fiit", period: "2026", facts: { adjusted_gross_income: "100k" } }, CALL),
+      /^calculation failed: axiom-rules-engine/,
     ],
     [
       "compute, period before any formula version",
       () => tools.compute.execute!({ program: "us-fiit", period: "1990", facts: MODEL_FACTS }, CALL),
+      /no rule in force for 1990/,
+      "no_formula_version",
     ],
     [
       "lookup_value, period before any formula version",
@@ -150,15 +156,18 @@ async function engineFailuresAreToolResults() {
           { program: "us-fiit", output: "income_tax_before_credits", period: "1990", facts: MODEL_FACTS },
           CALL
         ),
+      /no rule in force for 1990/,
+      "no_formula_version",
     ],
   ];
-  for (const [label, run] of cases) {
+  for (const [label, run, error, kind] of cases) {
     // Must resolve, not reject: a rejection is what ended the stream.
-    const result = (await run()) as { error?: unknown; hint?: unknown };
+    const result = (await run()) as { error?: unknown; hint?: unknown; kind?: unknown };
     assert.equal(typeof result.error, "string", `${label}: no error field in ${JSON.stringify(result)}`);
-    assert.match(result.error as string, /^calculation failed: axiom-rules-engine/, label);
+    assert.match(result.error as string, error, label);
+    assert.equal(result.kind, kind, `${label}: kind`);
     assert.equal(typeof result.hint, "string", `${label}: no hint`);
-    console.log(`ok   ${label} → {error, hint}`);
+    console.log(`ok   ${label} → {error, hint}${kind ? ` (${kind})` : ""}`);
   }
 }
 

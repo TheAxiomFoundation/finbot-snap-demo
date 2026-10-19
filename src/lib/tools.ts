@@ -1,7 +1,8 @@
 /**
- * AI SDK tool definitions — five generic, catalog-driven tools. The model
- * only emits dollar amounts and eligibility verdicts that flow through these
- * tools; see `prompts.ts` for the system contract that enforces it.
+ * AI SDK tool definitions — five generic, catalog-driven tools. The system
+ * prompt (`prompts.ts`) instructs the model to take every dollar amount and
+ * eligibility verdict from these tools; that is a prompt-level contract with
+ * no runtime check (`bun run eval:llm` measures it).
  *
  * Unknown program slugs, input names, and output names come back as
  * structured errors with nearest-match suggestions instead of thrown
@@ -12,11 +13,13 @@ import { z } from "zod";
 
 import { getCatalog, getProgram, searchOutputs, type CatalogProgram } from "./catalog";
 import { fetchCitation } from "./citations";
+import { programDisclosures } from "./catalog-overlay";
 import { describeProgramPayload } from "./describe";
 import { legalIdToUrl } from "./legal-links";
 import {
   UnknownInputError,
   UnknownOutputError,
+  NotSettableInputError,
   buildRequest,
   computeProgram,
   defaultPeriodFor,
@@ -24,6 +27,8 @@ import {
   nearestNames,
   resolveOutput,
   shapeResult,
+  type RuleProvenance,
+  type Stamps,
 } from "./request-builder";
 import { runCompiled } from "./engine";
 
@@ -46,7 +51,7 @@ const MembersSchema = z
     })
   )
   .describe(
-    "One entry per household/tax-unit member. Member facts use member-entity slots (e.g. member_age). Top-level facts that name member-scope slots apply to EVERY listed member as a shared base (use for taxpayer-level facts like SSN-on-return); per-member facts override. Omit members to synthesize them from a *_size fact."
+    "One entry per household/tax-unit member. Member facts use member-entity slots (e.g. member_age). Top-level facts that name member-scope slots apply to EVERY listed member as a shared base (use for taxpayer-level facts like SSN-on-return); per-member facts override. Omit members to synthesize them from a recognized count input listed in describe_program."
   );
 
 const PeriodSchema = z
@@ -54,7 +59,7 @@ const PeriodSchema = z
   .regex(/^\d{4}(-\d{2})?$/)
   .optional()
   .describe(
-    "Evaluation period, YYYY-MM or YYYY. Defaults to the current month (current year for annual programs) — only pass this when the user asks about a different time."
+    "Evaluation period, YYYY-MM or YYYY, subject to encoded formula and parameter coverage. Defaults to the current month (current year for annual programs) — only pass this when the user asks about a different time. A missing formula version returns a rule-coverage limitation instead of an amount or eligibility verdict."
   );
 
 function programOr404(slug: string): CatalogProgram | { error: string; known_slugs: string[] } {
@@ -71,7 +76,36 @@ function isErr(x: unknown): x is { error: string } {
 }
 
 /** Convert builder errors into data the model can act on. */
-function asToolError(err: unknown): { error: string; suggestions?: string[]; hint?: string } {
+function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: string) {
+  // Both local and hosted adapters preserve this engine diagnostic. Keep the
+  // missing rule visible as an encoding limitation, without shaping any value.
+  const gap = err instanceof Error
+    ? /derived `([^`]+)` has no formula version at (\d{4}-\d{2}-\d{2})/.exec(err.message)
+    : null;
+  if (gap) {
+    const [, output, atDate] = gap;
+    const period = requestedPeriod ?? defaultPeriodFor(program);
+    const disclosure = `Axiom has no rule in force for ${period} for ${output}.`;
+    return {
+      error: disclosure,
+      kind: "no_formula_version",
+      program: program.slug,
+      period,
+      output,
+      at_date: atDate,
+      applied: { disclosures: [...programDisclosures(program), disclosure] },
+      hint: "Disclose this rule-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",
+    };
+  }
+  if (err instanceof NotSettableInputError) {
+    return {
+      error: err.message,
+      kind: err.kind,
+      slot: err.slot,
+      path: err.path,
+      hint: "Remove this fact and disclose the encoding limitation. Do not retry by setting an eligibility gate or routing it through members[].facts.",
+    };
+  }
   if (err instanceof UnknownInputError) {
     return {
       error: err.message,
@@ -123,203 +157,233 @@ function timed<A, R>(name: string, execute: (args: A) => Promise<R>): (args: A) 
   };
 }
 
-export const tools = {
-  list_programs: tool({
-    description:
-      "Search encoded output names (thresholds, deductions, credits) across all certified programs via `search`. The system-prompt coverage digest already lists every program with its primary output — do NOT call this to confirm a program exists or to restate coverage; call it only when you genuinely need the output-name search.",
-    parameters: z.object({
-      jurisdiction: z
-        .string()
-        .optional()
-        .describe("Optional filter, e.g. 'us-co' for Colorado or 'us' for federal."),
-      search: z
-        .string()
-        .optional()
-        .describe("Case-insensitive multi-word search across all encoded output names in every program."),
-    }),
-    execute: timed("list_programs", async ({ jurisdiction, search }) => {
-      const catalog = getCatalog();
-      const programs = catalog.programs
-        .filter((p) => !jurisdiction || p.jurisdiction === jurisdiction)
-        .map((p) => ({
-          slug: p.slug,
-          jurisdiction: p.jurisdiction,
-          display_name: p.display_name,
-          default_period: defaultPeriodFor(p),
-          primary_output: p.primary_output,
-          certified_outputs: p.certified_outputs,
-          acknowledged_incomplete: p.acknowledged_incomplete,
-        }));
-      const matches = search ? searchOutputs(search, { jurisdiction }) : null;
-      return {
-        release: catalog.release_tag,
-        programs,
-        total_programs: catalog.programs.length,
-        ...(matches !== null && {
-          search_matches: matches.map((m) => ({
-            program: m.program,
-            name: m.output.name,
-            legal_id: m.output.id,
-            entity: m.output.entity,
-            semantics: m.output.semantics,
-            unit: m.output.unit,
-            certified: m.output.certified,
-          })),
-        }),
-      };
-    }),
-  }),
+/** Provenance for one compute/lookup, handed to `onProvenance` instead of the
+ *  model — the trace-derived rule paths and stamps are a UI/audit concern
+ *  (20–50 KB of derivation per call), not something the model should have to
+ *  carry through its context window. */
+export interface ProvenanceAnnotation {
+  type: "provenance";
+  tool: "compute" | "lookup_value";
+  program: string;
+  stamps: Stamps;
+  provenance: Record<string, RuleProvenance>;
+}
 
-  describe_program: tool({
-    description:
-      "Describe one program's computable surface: its entities, member relations, certified outputs, and input slots (name:dtype, defaults applied when omitted). Call this ONCE, without inputs_search, before the first compute for a program — most programs fit in one response. Only call again with `inputs_search` if the response reports omitted slots and you need one it didn't show.",
-    parameters: z.object({
-      program: z.string().describe("Program slug from list_programs, e.g. 'us-co-snap'."),
-      inputs_search: z
-        .string()
-        .optional()
-        .describe("Case-insensitive filter over input slot names, e.g. 'income' or 'shelter'."),
-    }),
-    execute: timed("describe_program", async ({ program: slug, inputs_search }) => {
-      const program = programOr404(slug);
-      if (isErr(program)) return program;
-      return describeProgramPayload(program, inputs_search);
-    }),
-  }),
-
-  compute: tool({
-    description:
-      "Run a certified program against a scenario and return its primary output plus all certified outputs, with citations. Facts are input-slot overrides on top of documented defaults; everything else stays defaulted. If the result flags acknowledged_incomplete outputs, tell the user that part of the rule chain is not fully encoded yet.",
-    parameters: z.object({
-      program: z.string().describe("Program slug from list_programs, e.g. 'us-ny-snap'."),
-      period: PeriodSchema,
-      facts: FactsSchema.optional(),
-      members: MembersSchema.optional(),
-      extra_outputs: z
-        .array(z.string())
-        .optional()
-        .describe("Additional encoded output names to include in the same run (e.g. intermediate deductions for a breakdown)."),
-    }),
-    execute: timed("compute", async ({ program: slug, period, facts, members, extra_outputs }) => {
-      const program = programOr404(slug);
-      if (isErr(program)) return program;
-      try {
-        // An unknown extra_outputs name must not fail the whole compute — the
-        // main calculation is still valid, and failing it costs the model a
-        // full retry round-trip (the dominant latency flake before this).
-        // Skip unknown names and report them with suggestions instead.
-        const extraErrors: Array<{ name: string; error: string; suggestions?: string[] }> = [];
-        const validExtras = extra_outputs?.filter((name) => {
-          try {
-            resolveOutput(program, name);
-            return true;
-          } catch (err) {
-            if (err instanceof UnknownOutputError) {
-              extraErrors.push({ name, error: err.message, suggestions: err.suggestions });
-              return false;
-            }
-            throw err;
-          }
-        });
-        const result = await computeProgram({
-          program,
-          period,
-          facts,
-          members,
-          extraOutputs: validExtras,
-        });
-        return extraErrors.length === 0
-          ? result
-          : {
-              ...result,
-              extra_outputs_errors: extraErrors,
-              extra_outputs_note:
-                "Unknown extra_outputs names were SKIPPED (suggestions listed) — every other output above is complete and correct. Re-request a skipped output (once, via a suggested name) only if it is essential to the user's question.",
-            };
-      } catch (err) {
-        try {
-          return asToolError(err);
-        } catch {
-          console.error("[finbot] compute failed:", err, "program:", slug, "facts:", facts);
-          return engineFailure(err);
-        }
-      }
-    }),
-  }),
-
-  lookup_value: tool({
-    description:
-      "Read a single encoded output — a threshold, limit, deduction amount, or any intermediate value — by name. Routes the query to the right entity automatically. Facts still apply: size-indexed values (income limits, maximum allotments) need the relevant *_size fact.",
-    parameters: z.object({
-      program: z.string().describe("Program slug from list_programs."),
-      output: z.string().describe("Output name (or legal id) exactly as returned by describe_program or list_programs search."),
-      period: PeriodSchema,
-      facts: FactsSchema.optional(),
-      members: MembersSchema.optional(),
-    }),
-    execute: timed("lookup_value", async ({ program: slug, output, period, facts, members }) => {
-      const program = programOr404(slug);
-      if (isErr(program)) return program;
-      try {
-        const meta = resolveOutput(program, output);
-        const built = buildRequest({
-          program,
-          period,
-          facts,
-          members,
-          outputsOverride: [meta.name],
-        });
-        const response = await runCompiled(program.slug, built.request);
-        const shaped = shapeResult(program, built, response);
-        const value = shaped.outputs.find((o) => o.name === meta.name);
+/** Build the tool set. `onProvenance`, when given, is called once per
+ *  compute/lookup_value with the trace-derived rule paths and stamps that
+ *  call produced — the model never sees them (see `ProvenanceAnnotation`);
+ *  route.ts forwards them to the client as stream annotations instead. */
+export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void) {
+  return {
+    list_programs: tool({
+      description:
+        "Search encoded output names (thresholds, deductions, credits) across all encoded programs via `search`. The system-prompt coverage digest already lists every program with its primary output — do NOT call this to confirm a program exists or to restate coverage; call it only when you genuinely need the output-name search.",
+      parameters: z.object({
+        jurisdiction: z
+          .string()
+          .optional()
+          .describe("Optional filter, e.g. 'us-co' for Colorado or 'us' for federal."),
+        search: z
+          .string()
+          .optional()
+          .describe("Case-insensitive multi-word search across all encoded output names in every program."),
+      }),
+      execute: timed("list_programs", async ({ jurisdiction, search }) => {
+        const catalog = getCatalog();
+        const programs = catalog.programs
+          .filter((p) => !jurisdiction || p.jurisdiction === jurisdiction)
+          .map((p) => ({
+            slug: p.slug,
+            jurisdiction: p.jurisdiction,
+            display_name: p.display_name,
+            default_period: defaultPeriodFor(p),
+            primary_output: p.primary_output,
+            published_outputs: p.certified_outputs,
+            acknowledged_incomplete: p.acknowledged_incomplete,
+          }));
+        const matches = search ? searchOutputs(search, { jurisdiction }) : null;
         return {
-          program: program.slug,
-          name: meta.name,
-          label: labelFor(meta.name),
-          legal_id: meta.id,
-          entity: meta.entity,
-          semantics: meta.semantics,
-          unit: meta.unit,
-          value: value?.value ?? null,
-          ...(meta.semantics === "judgment" && meta.requires && {
-            requires: meta.requires,
-            ...(meta.requires_partial && { requires_partial: true }),
+          release: catalog.release_tag,
+          programs,
+          total_programs: catalog.programs.length,
+          ...(matches !== null && {
+            search_matches: matches.map((m) => ({
+              program: m.program,
+              name: m.output.name,
+              legal_id: m.output.id,
+              entity: m.output.entity,
+              semantics: m.output.semantics,
+              unit: m.output.unit,
+              published_output: m.output.certified,
+            })),
           }),
-          certified: meta.certified,
-          acknowledged_incomplete: meta.acknowledged_incomplete,
-          incomplete_note: meta.acknowledged_incomplete
-            ? `Output ${meta.name} is flagged acknowledged_incomplete by the rulespec authors (parts of the rule chain are known to be unfinished). Flag this to the user.`
-            : null,
-          source: meta.source,
-          url: meta.id ? legalIdToUrl(meta.id) : null,
-          applied: shaped.applied,
         };
-      } catch (err) {
-        try {
-          return asToolError(err);
-        } catch {
-          console.error("[finbot] lookup_value failed:", err, "program:", slug, "output:", output);
-          return engineFailure(err);
-        }
-      }
+      }),
     }),
-  }),
 
-  fetch_citation: tool({
-    description:
-      "Pull the legal text behind a legal id returned by compute or lookup_value, e.g. 'us:statutes/7/2017/a' or 'us-co:regulations/10-ccr-2506-1/4.207.3'. Use when the user asks for the source of a number or rule.",
-    parameters: z.object({
-      legal_id: z
-        .string()
-        .describe("Legal id from a compute/lookup result or citation list. Strip any '#rule_name' suffix."),
+    describe_program: tool({
+      description:
+        "Describe one program's computable surface: its entities, member relations, published outputs, and input slots (name:dtype, defaults applied when omitted). Call this ONCE, without inputs_search, before the first compute for a program — most programs fit in one response. Only call again with `inputs_search` if the response reports omitted slots and you need one it didn't show.",
+      parameters: z.object({
+        program: z.string().describe("Program slug from list_programs, e.g. 'us-co-snap'."),
+        inputs_search: z
+          .string()
+          .optional()
+          .describe("Case-insensitive filter over input slot names, e.g. 'income' or 'shelter'."),
+      }),
+      execute: timed("describe_program", async ({ program: slug, inputs_search }) => {
+        const program = programOr404(slug);
+        if (isErr(program)) return program;
+        return describeProgramPayload(program, inputs_search);
+      }),
     }),
-    execute: timed("fetch_citation", async ({ legal_id }) => {
-      try {
-        return await fetchCitation(legal_id);
-      } catch (err) {
-        console.error("[finbot] fetch_citation failed:", err);
-        throw err;
-      }
+
+    compute: tool({
+      description:
+        "Run an encoded program against a scenario and return its primary output plus all published outputs, with citations. Facts are input-slot overrides on top of documented defaults; everything else stays defaulted. If the result flags acknowledged_incomplete outputs, tell the user that part of the rule chain is not fully encoded yet.",
+      parameters: z.object({
+        program: z.string().describe("Program slug from list_programs, e.g. 'us-ny-snap'."),
+        period: PeriodSchema,
+        facts: FactsSchema.optional(),
+        members: MembersSchema.optional(),
+        extra_outputs: z
+          .array(z.string())
+          .optional()
+          .describe("Additional encoded output names to include in the same run (e.g. intermediate deductions for a breakdown)."),
+      }),
+      execute: timed("compute", async ({ program: slug, period, facts, members, extra_outputs }) => {
+        const program = programOr404(slug);
+        if (isErr(program)) return program;
+        try {
+          // An unknown extra_outputs name must not fail the whole compute — the
+          // main calculation is still valid, and failing it costs the model a
+          // full retry round-trip (the dominant latency flake before this).
+          // Skip unknown names and report them with suggestions instead.
+          const extraErrors: Array<{ name: string; error: string; suggestions?: string[] }> = [];
+          const validExtras = extra_outputs?.filter((name) => {
+            try {
+              resolveOutput(program, name);
+              return true;
+            } catch (err) {
+              if (err instanceof UnknownOutputError) {
+                extraErrors.push({ name, error: err.message, suggestions: err.suggestions });
+                return false;
+              }
+              throw err;
+            }
+          });
+          const full = await computeProgram({
+            program,
+            period,
+            facts,
+            members,
+            extraOutputs: validExtras,
+          });
+          const { provenance, stamps, ...result } = full;
+          onProvenance?.({ type: "provenance", tool: "compute", program: program.slug, stamps, provenance });
+          return extraErrors.length === 0
+            ? result
+            : {
+                ...result,
+                extra_outputs_errors: extraErrors,
+                extra_outputs_note:
+                  "Unknown extra_outputs names were SKIPPED (suggestions listed) — every other output above was computed normally. Re-request a skipped output (once, via a suggested name) only if it is essential to the user's question.",
+              };
+        } catch (err) {
+          try {
+            return asToolError(err, program, period);
+          } catch {
+            console.error("[finbot] compute failed:", err, "program:", slug, "facts:", facts);
+            return engineFailure(err);
+          }
+        }
+      }),
     }),
-  }),
-};
+
+    lookup_value: tool({
+      description:
+        "Read a single encoded output — a threshold, limit, deduction amount, or any intermediate value — by name. Routes the query to the right entity automatically. Facts still apply: size-indexed values (income limits, maximum allotments) need the relevant count input from describe_program.",
+      parameters: z.object({
+        program: z.string().describe("Program slug from list_programs."),
+        output: z.string().describe("Output name (or legal id) exactly as returned by describe_program or list_programs search."),
+        period: PeriodSchema,
+        facts: FactsSchema.optional(),
+        members: MembersSchema.optional(),
+      }),
+      execute: timed("lookup_value", async ({ program: slug, output, period, facts, members }) => {
+        const program = programOr404(slug);
+        if (isErr(program)) return program;
+        try {
+          const meta = resolveOutput(program, output);
+          const built = buildRequest({
+            program,
+            period,
+            facts,
+            members,
+            outputsOverride: [meta.name],
+          });
+          const response = await runCompiled(program.slug, built.request);
+          const shaped = shapeResult(program, built, response);
+          onProvenance?.({
+            type: "provenance",
+            tool: "lookup_value",
+            program: program.slug,
+            stamps: shaped.stamps,
+            provenance: shaped.provenance,
+          });
+          const value = shaped.outputs.find((o) => o.name === meta.name);
+          return {
+            program: program.slug,
+            name: meta.name,
+            label: labelFor(meta.name),
+            legal_id: meta.id,
+            entity: meta.entity,
+            semantics: meta.semantics,
+            unit: meta.unit,
+            value: value?.value ?? null,
+            ...(meta.semantics === "judgment" && meta.requires && {
+              requires: meta.requires,
+              ...(meta.requires_partial && { requires_partial: true }),
+            }),
+            published_output: meta.certified,
+            acknowledged_incomplete: meta.acknowledged_incomplete,
+            incomplete_note: meta.acknowledged_incomplete
+              ? `Flagged in the program spec as not fully encoded: ${meta.name}.`
+              : null,
+            source: meta.source,
+            url: meta.id ? legalIdToUrl(meta.id) : null,
+            applied: shaped.applied,
+          };
+        } catch (err) {
+          try {
+            return asToolError(err, program, period);
+          } catch {
+            console.error("[finbot] lookup_value failed:", err, "program:", slug, "output:", output);
+            return engineFailure(err);
+          }
+        }
+      }),
+    }),
+
+    fetch_citation: tool({
+      description:
+        "Pull the legal text behind a legal id returned by compute or lookup_value, e.g. 'us:statutes/7/2017/a' or 'us-co:regulations/10-ccr-2506-1/4.207.3'. Use when the user asks for the source of a number or rule.",
+      parameters: z.object({
+        legal_id: z
+          .string()
+          .describe("Legal id from a compute/lookup result or citation list. Strip any '#rule_name' suffix."),
+      }),
+      execute: timed("fetch_citation", async ({ legal_id }) => {
+        try {
+          return await fetchCitation(legal_id);
+        } catch (err) {
+          console.error("[finbot] fetch_citation failed:", err);
+          throw err;
+        }
+      }),
+    }),
+  };
+}
+
+/** The tool set without a provenance sink, for scripts and tests. */
+export const tools = createTools();
