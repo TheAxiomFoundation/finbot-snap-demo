@@ -233,7 +233,7 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
         search: z
           .string()
           .optional()
-          .describe("Case-insensitive multi-word search across all encoded output names in every program."),
+          .describe("Case-insensitive multi-word search across all encoded output names in every program. Numbers also match the rule's legal citation ('exemption amount 151' finds 26 USC 151 rules); years and filler words are ignored. If no output matches every word, the closest matches come back with `unmatched_terms`."),
       }),
       execute: timed("list_programs", async ({ jurisdiction, search }) => {
         const catalog = getCatalog();
@@ -262,6 +262,7 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
               semantics: m.output.semantics,
               unit: m.output.unit,
               published_output: m.output.certified,
+              ...(m.unmatched && { unmatched_terms: m.unmatched }),
             })),
           }),
         };
