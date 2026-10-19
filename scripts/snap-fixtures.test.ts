@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { BBCE_STARTERS, STARTERS } from "../src/lib/starters";
+import { getProgram } from "../src/lib/catalog";
 import { computeProgram } from "../src/lib/request-builder";
 import { engineAvailable, numericOutput, output, starterScenario, STARTER_FIXTURES } from "./snap-scenarios";
 
 describe("BBCE starter candidates", () => {
-  it("features one TANF starter and one federal tax starter", () => {
+  it("features one TANF, one federal tax and one SNAP starter", () => {
     expect(STARTERS.filter((s) => s.includes("TANF"))).toHaveLength(1);
     expect(STARTERS.some((s) => s.includes("EITC"))).toBe(true);
+    expect(STARTERS.some((s) => s.includes("SNAP"))).toBe(true);
     expect(STARTERS.some((s) => s.includes("New York"))).toBe(false);
   });
 
@@ -33,4 +35,21 @@ describe.skipIf(!engineAvailable())("real-engine starter outputs", () => {
       expect(numericOutput(result, "snap_benefit")).toBe(fixture.expectedBenefit);
     });
   }
+});
+
+describe.skipIf(!engineAvailable())("refugee SNAP starter", () => {
+  // P.L. 119-21 §10108: refugee status alone no longer confers SNAP
+  // eligibility. The member gate fails, and failed_because names the
+  // citizenship/immigration-status check so the answer can cite it.
+  it("fails Florida's citizenship/immigration-status check and says which one", async () => {
+    const result = await computeProgram({
+      program: getProgram("us-fl-snap")!,
+      facts: { household_size: 1 },
+      members: [{ facts: { member_age: 30, member_is_us_citizen: false, member_is_refugee: true } }],
+    });
+    const gate = result.member_checks?.find((o) => o.name === "snap_member_eligible");
+    expect(gate?.value).toBe("not_holds");
+    expect(gate?.failed_because?.map((f) => f.name)).toContain("snap_member_citizenship_or_alien_status_eligible");
+    expect(numericOutput(result, "snap_benefit")).toBe(0);
+  });
 });

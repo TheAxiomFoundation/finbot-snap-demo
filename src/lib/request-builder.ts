@@ -630,6 +630,11 @@ export interface ShapedOutput {
    *  not captured here. */
   requires?: Array<{ slot: string; value: boolean | number | string }>;
   requires_partial?: boolean;
+  /** Attached when a judgment came back not_holds and the explain trace
+   *  shows why: the deepest sub-judgments on its failing path, with their
+   *  legal ids and sources (e.g. snap_member_eligible ←
+   *  snap_member_citizenship_or_alien_status_eligible, 7 CFR 273.4(a)). */
+  failed_because?: Array<{ name: string; legal_id: string | null; source: string | null }>;
 }
 
 /** One leaf of a rule's dependency closure: a parameter or an unconditioned
@@ -706,6 +711,40 @@ export function deriveRuleProvenance(
   return { rule_path: rulePath, parameters_used: parametersUsed };
 }
 
+/** Follow a failed judgment's not_holds sub-judgments down the explain trace
+ *  and return the deepest ones — the conditions that actually failed, which
+ *  the top-level gate alone doesn't name. Empty when the trace doesn't reach
+ *  a failing sub-judgment (e.g. the judgment failed on an input directly). */
+function failingSubJudgments(
+  trace: Record<string, DerivedTraceNode>,
+  key: string,
+  name: string,
+  limit = 5
+): NonNullable<ShapedOutput["failed_because"]> {
+  const rootKey = trace[key] ? key : trace[name] ? name : null;
+  if (!rootKey) return [];
+  const found: NonNullable<ShapedOutput["failed_because"]> = [];
+  const seen = new Set<string>();
+  const visit = (k: string) => {
+    if (seen.has(k) || found.length >= limit) return;
+    seen.add(k);
+    const node = trace[k];
+    if (!node) return;
+    const failing = node.dependencies.filter(
+      (d) => trace[d]?.kind === "judgment" && trace[d]?.outcome === "not_holds"
+    );
+    if (failing.length === 0) {
+      if (k !== rootKey && !found.some((f) => f.name === node.name)) {
+        found.push({ name: node.name, legal_id: node.id ?? null, source: node.source ?? null });
+      }
+      return;
+    }
+    failing.forEach(visit);
+  };
+  visit(rootKey);
+  return found;
+}
+
 export interface ShapedResult {
   program: string;
   display_name: string;
@@ -752,6 +791,7 @@ export function shapeResult(
     let value: ShapedOutput["value"] = null;
     if (r) value = r.kind === "judgment" ? r.outcome ?? null : r.numeric ?? null;
     const failedJudgment = output.semantics === "judgment" && value === "not_holds";
+    const failedBecause = failedJudgment ? failingSubJudgments(trace, queryKey(output), output.name) : [];
     return {
       name: output.name,
       label: labelFor(output.name),
@@ -766,6 +806,7 @@ export function shapeResult(
         requires: output.requires,
         ...(output.requires_partial && { requires_partial: true }),
       }),
+      ...(failedBecause.length > 0 && { failed_because: failedBecause }),
     };
   });
 
