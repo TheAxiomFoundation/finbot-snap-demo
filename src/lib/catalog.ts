@@ -17,6 +17,9 @@ export interface Requirement {
   slot: string;
   value: boolean | number | string;
   op?: RequirementOp;
+  /** In `requires_any` only: `slot` names a value the engine computes
+   *  (`eitc_child_count gt 0`), not an input. */
+  computed?: true;
 }
 
 /** An `or` in a judgment's chain, inside `rule`: met when every entry of any
@@ -50,6 +53,12 @@ export interface CatalogOutput {
   requires_any?: RequirementAlternatives[];
   /** Logic beyond `requires` and `requires_any`. */
   requires_partial?: boolean;
+  /** For judgments: sub-judgments read only under `not` or as an `if`
+   *  condition; `failed_because` does not follow them. */
+  negated_judgments?: string[];
+  /** For scalars: judgments whose failure makes this output 0 (us-fiit
+   *  `eitc` is `if eitc_allowed then … else 0`). */
+  zero_unless?: string[];
   /** Earliest `due` among the annually reissued parameters this output
    *  reaches (see CatalogAnnualUpdate); absent when it reaches none. */
   annual_update_due?: string;
