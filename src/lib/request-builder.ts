@@ -310,10 +310,21 @@ const MEMBER_COUNT_INPUTS = new Set([
   // us-ks-tanf only: indexes the basic allowance and the Table II shelter
   // percentage.
   "assistance_plan_person_count",
+  // us-ca-tanf only, three headcounts that must move together: the family
+  // count indexes the minimum basic standard (applicant income test), the
+  // same-home count indexes the monthly aid payment schedule (the grant), and
+  // persons_on_aid indexes the regional MAP tables (auxiliary). Setting the
+  // grant's count alone leaves the income test on the one-person standard.
+  "eligible_needy_person_count_in_family",
+  "eligible_needy_person_count_in_same_home",
+  "persons_on_aid",
   // Not assistance_group_size: us-in-tanf indexes its grant by
   // participating_members, so setting the group size alone gives the
   // one-person grant; on us-fl-tca the name is an auxiliary SNAP
   // minimum-benefit size.
+  // Not us-co-tanf's caretaker and child counts: its grant chart is indexed
+  // by both, so one list length cannot choose between 1+2 ($620) and 2+1
+  // ($649).
 ]);
 
 export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">): boolean {

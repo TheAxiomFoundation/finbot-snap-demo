@@ -87,6 +87,7 @@ describe("members[] on programs with no member entity", () => {
       "us-ak-tanf": ["assistance_unit_size"],
       "us-al-tanf": ["assistance_unit_size"],
       "us-ar-tanf": ["assistance_unit_size"],
+      "us-ca-tanf": ["eligible_needy_person_count_in_family", "eligible_needy_person_count_in_same_home", "persons_on_aid"],
       "us-de-tanf": ["assistance_unit_member_count"],
       "us-fl-tca": ["filing_unit_size"],
       "us-ga-tanf": ["assistance_unit_member_count"],
@@ -97,7 +98,7 @@ describe("members[] on programs with no member entity", () => {
       "us-tx-tanf": ["tanf_family_size"],
       "us-ut-tanf": ["household_size"],
     });
-    expect(withoutCount.length).toBe(10);
+    expect(withoutCount.length).toBe(9);
   });
 
   it("keeps member-entity programs on the counts they already synthesize members from", () => {
@@ -197,12 +198,35 @@ describe.skipIf(!hasEngine)("real-engine members[] with no member entity", () =>
     }
   }, 60_000);
 
+  it("a three-member list reaches the engine as all three CA TANF headcounts", async () => {
+    // No oracle case (the MAP and COLA are dollar inputs, rulespec-us#949), so
+    // the MAP test is fed $1,175 and the family has $500 of income: the
+    // minimum basic standard is $341 for one and $694 for three.
+    const program = getProgram("us-ca-tanf")!;
+    const facts = { family_income: 500, maximum_aid_payment_under_section_11450: 1175 };
+    const values = async (options: Pick<BuildOptions, "facts" | "members">) => {
+      const { outputs } = await computeProgram({ program, period: "2026-01", ...options });
+      return ["calworks_monthly_aid_payment", "calworks_applicant_income_eligible"].map(
+        (name) => outputs.find((o) => o.name === name)!.value
+      );
+    };
+    expect(await values({ facts })).toEqual([326, "not_holds"]);
+    // The grant's count alone leaves the income test on the one-person standard.
+    expect(await values({ facts: { ...facts, eligible_needy_person_count_in_same_home: 3 } })).toEqual([663, "not_holds"]);
+    expect(await values({ facts, members: blank(3) })).toEqual([663, "holds"]);
+    expect(await values({ facts: { ...facts, ...countFacts(program, 3) } })).toEqual([663, "holds"]);
+  }, 60_000);
+
   it("a list with no count input to set is refused before the engine runs", async () => {
     // us-in-tanf has assistance_group_size, but its grant is indexed by
     // participating_members, so the list would compute the one-person grant.
-    await expect(computeProgram({ program: getProgram("us-in-tanf")!, members: blank(3) })).rejects.toBeInstanceOf(
-      NoMemberEntityError
-    );
+    // us-co-tanf indexes its grant by caretakers and children: three members
+    // are $543, $620 or $649 depending on the split.
+    for (const slug of ["us-in-tanf", "us-co-tanf"]) {
+      await expect(computeProgram({ program: getProgram(slug)!, members: blank(3) })).rejects.toBeInstanceOf(
+        NoMemberEntityError
+      );
+    }
   });
 });
 
