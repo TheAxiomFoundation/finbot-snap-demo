@@ -1022,6 +1022,11 @@ export interface ShapedOutput {
    *  legal ids and sources (e.g. snap_member_eligible ←
    *  snap_member_citizenship_or_alien_status_eligible, 7 CFR 273.4(a)). */
   failed_because?: Array<{ name: string; legal_id: string | null; source: string | null }>;
+  /** Attached when a scalar came back 0 because a judgment gating it failed
+   *  (the catalog's `zero_unless`: us-fiit `eitc` ← `eitc_allowed`). Each
+   *  entry reads like a failed judgment output. Member gates are left to
+   *  `member_checks`, and gates that are outputs of their own to their entry. */
+  zero_because?: GateCheck[];
 }
 
 /** One leaf of a rule's dependency closure: a parameter or an unconditioned
@@ -1101,11 +1106,14 @@ export function deriveRuleProvenance(
 /** Follow a failed judgment's not_holds sub-judgments down the explain trace
  *  and return the deepest ones — the conditions that actually failed, which
  *  the top-level gate alone doesn't name. Empty when the trace doesn't reach
- *  a failing sub-judgment (e.g. the judgment failed on an input directly). */
+ *  a failing sub-judgment (e.g. the judgment failed on an input directly).
+ *  A sub-judgment the parent reads negated (`negated`, from the catalog) is
+ *  skipped: its failing is no reason the parent failed. */
 function failingSubJudgments(
   trace: Record<string, DerivedTraceNode>,
   key: string,
   name: string,
+  negated: (judgment: string) => readonly string[] | undefined,
   limit = 5
 ): NonNullable<ShapedOutput["failed_because"]> {
   const rootKey = trace[key] ? key : trace[name] ? name : null;
@@ -1117,8 +1125,9 @@ function failingSubJudgments(
     seen.add(k);
     const node = trace[k];
     if (!node) return;
+    const skipped = negated(node.name) ?? [];
     const failing = node.dependencies.filter(
-      (d) => trace[d]?.kind === "judgment" && trace[d]?.outcome === "not_holds"
+      (d) => trace[d]?.kind === "judgment" && trace[d]?.outcome === "not_holds" && !skipped.includes(trace[d].name)
     );
     if (failing.length === 0) {
       if (k !== rootKey && !found.some((f) => f.name === node.name)) {
@@ -1132,16 +1141,45 @@ function failingSubJudgments(
   return found;
 }
 
+/** Trace keys reachable from `rootKey` through `dependencies`. */
+function reachableKeys(trace: Record<string, DerivedTraceNode>, rootKey: string): Set<string> {
+  const reached = new Set<string>();
+  const queue = [rootKey];
+  while (queue.length) {
+    const key = queue.shift()!;
+    if (reached.has(key) || !trace[key]) continue;
+    reached.add(key);
+    queue.push(...trace[key].dependencies);
+  }
+  return reached;
+}
+
 /** Unmet `or`s shown per failed judgment; the catalog keeps up to six. */
 const OPEN_ALTERNATIVES_CAP = 3;
 
-/** One member-gate judgment at one member. Gates are always unpublished
- *  member-entity judgments, so the ShapedOutput fields that would repeat
- *  per member (label, unit, semantics, entity, ...) are left out. */
-export type MemberCheck = Pick<
+/** One unpublished gate judgment (a member gate, or a gate that zeroed a
+ *  scalar), with the ShapedOutput fields that would repeat per gate (label,
+ *  unit, semantics, entity, ...) left out. */
+export type GateCheck = Pick<
   ShapedOutput,
   "name" | "value" | "legal_id" | "requires" | "requires_any" | "requires_partial" | "failed_because"
 >;
+
+/** One member-gate judgment at one member. */
+export type MemberCheck = GateCheck;
+
+function asGateCheck(shaped: ShapedOutput): GateCheck {
+  const { name, value, legal_id, requires, requires_any, requires_partial, failed_because } = shaped;
+  return {
+    name,
+    value,
+    legal_id,
+    ...(requires && { requires }),
+    ...(requires_any && { requires_any }),
+    ...(requires_partial && { requires_partial }),
+    ...(failed_because && { failed_because }),
+  };
+}
 
 /** Exactly one of `checks` / `same_as` is set: a member whose checks match
  *  an earlier member's points at that member instead of repeating them
@@ -1220,8 +1258,20 @@ export function shapeResult(
     const value = String(input.value.value);
     recorded.set(key, recorded.has(key) && recorded.get(key) !== value ? undefined : value);
   }
-  const meets = (entityId: string | undefined, req: Requirement): boolean => {
-    const value = recorded.get(`${entityId}|${legalInputId(program.slug, req.slot)}`);
+  // A `computed` entry names a derived value: read it from the trace (absent
+  // when the engine short-circuited it, so unknown).
+  const tracedValue = (scopeTrace: Record<string, DerivedTraceNode>, name: string): string | undefined => {
+    const node = Object.values(scopeTrace).find((n) => n.name === name && n.kind === "scalar");
+    return node?.value === undefined ? undefined : String(node.value.value);
+  };
+  const meets = (
+    entityId: string | undefined,
+    req: Requirement,
+    scopeTrace: Record<string, DerivedTraceNode>
+  ): boolean => {
+    const value = req.computed
+      ? tracedValue(scopeTrace, req.slot)
+      : recorded.get(`${entityId}|${legalInputId(program.slug, req.slot)}`);
     if (value === undefined) return false;
     if (!req.op) return value === String(req.value);
     const [n, t] = [Number(value), Number(req.value)];
@@ -1235,7 +1285,7 @@ export function shapeResult(
     if (!output.requires_any) return [];
     const holding = new Set(Object.values(scopeTrace).filter((n) => n.outcome === "holds").map((n) => n.name));
     return output.requires_any
-      .filter((alt) => !holding.has(alt.rule) && !alt.any_of.some((group) => group.every((req) => meets(entityId, req))))
+      .filter((alt) => !holding.has(alt.rule) && !alt.any_of.some((group) => group.every((req) => meets(entityId, req, scopeTrace))))
       .slice(0, OPEN_ALTERNATIVES_CAP);
   };
   const mainEntityOf = new Map<string, string>();
@@ -1243,6 +1293,29 @@ export function shapeResult(
     if (gateOnlyIds.has(query.entity_id)) continue;
     for (const key of query.outputs) if (!mainEntityOf.has(key)) mainEntityOf.set(key, query.entity_id);
   }
+
+  // A scalar that is `if J then X else 0` comes back 0 with no failed check
+  // when J is neither an output nor a member gate: us-fiit's eitc fails
+  // eitc_allowed on an unset taxpayer SSN fact, and the result named nothing
+  // to set. Shape each failed J on the 0's own trace path like a failed
+  // judgment output.
+  const outputByName = new Map(program.outputs.map((o) => [o.name, o]));
+  const reported = new Set(built.queried.map((o) => o.name));
+  const failedZeroGates = (
+    output: CatalogOutput,
+    scopeTrace: Record<string, DerivedTraceNode>,
+    entityId: string | undefined
+  ): GateCheck[] => {
+    const reached = reachableKeys(scopeTrace, queryKey(output));
+    return (output.zero_unless ?? []).flatMap((name) => {
+      const gate = outputByName.get(name);
+      if (!gate || gate.entity === program.member_entity || reported.has(name)) return [];
+      const key = queryKey(gate);
+      if (!reached.has(key) || scopeTrace[key].outcome !== "not_holds") return [];
+      const outcome = new Map<string, ReadOutput>([[key, { kind: "judgment", outcome: "not_holds" }]]);
+      return [asGateCheck(shapeOne(gate, outcome, scopeTrace, entityId))];
+    });
+  };
 
   const shapeOne = (
     output: CatalogOutput,
@@ -1254,8 +1327,11 @@ export function shapeResult(
     let value: ShapedOutput["value"] = null;
     if (r) value = r.kind === "judgment" ? r.outcome ?? null : r.numeric ?? null;
     const failedJudgment = output.semantics === "judgment" && value === "not_holds";
-    const failedBecause = failedJudgment ? failingSubJudgments(scopeTrace, queryKey(output), output.name) : [];
+    const failedBecause = failedJudgment
+      ? failingSubJudgments(scopeTrace, queryKey(output), output.name, (name) => outputByName.get(name)?.negated_judgments)
+      : [];
     const open = failedJudgment ? openAlternatives(output, entityId, scopeTrace) : [];
+    const zeroBecause = value === 0 ? failedZeroGates(output, scopeTrace, entityId) : [];
     return {
       name: output.name,
       label: labelFor(output.name),
@@ -1272,6 +1348,7 @@ export function shapeResult(
         requires_partial: true,
       }),
       ...(failedBecause.length > 0 && { failed_because: failedBecause }),
+      ...(zeroBecause.length > 0 && { zero_because: zeroBecause }),
     };
   };
 
@@ -1286,18 +1363,9 @@ export function shapeResult(
     const member = index + 1;
     const scope = perMember.get(id) ?? { outputs: new Map<string, ReadOutput>(), trace: {} };
     const checks: MemberCheck[] = gates.map((gate) => {
-      const { name, value, legal_id, requires, requires_any, requires_partial, failed_because } =
-        shapeOne(gate, scope.outputs, scope.trace, id);
-      if (value === "holds") heldAt.add(`${name}|${member}`);
-      return {
-        name,
-        value,
-        legal_id,
-        ...(requires && { requires }),
-        ...(requires_any && { requires_any }),
-        ...(requires_partial && { requires_partial }),
-        ...(failed_because && { failed_because }),
-      };
+      const check = asGateCheck(shapeOne(gate, scope.outputs, scope.trace, id));
+      if (check.value === "holds") heldAt.add(`${check.name}|${member}`);
+      return check;
     });
     const signature = JSON.stringify(checks);
     const sameAs = firstMemberWith.get(signature);

@@ -89,6 +89,14 @@ interface CatalogOutput {
    *  can't express, a `not`, a threshold that changes by period or reads a
    *  fact). */
   requires_partial?: boolean;
+  /** For judgments: sub-judgments read only under `not` or as an `if`
+   *  condition. One that fails is no reason this rule failed, so the trace
+   *  walk behind `failed_because` does not follow it. */
+  negated_judgments?: string[];
+  /** For scalars: judgments whose failure makes the rule 0 — it is
+   *  `if J then X else 0` (through its `then` branch and derived refs) in
+   *  every formula version. */
+  zero_unless?: string[];
   /** Earliest due date among annually reissued parameters this rule reaches. */
   annual_update_due?: string;
 }
@@ -1226,7 +1234,7 @@ function analyzeProgram(
   const ANY_CAP = 6; // `or` entries per judgment
   const ANY_GROUPS_CAP = 4; // alternatives per `or`
   const ANY_GROUP_CAP = 6; // entries per alternative
-  type Requirement = { slot: string; value: boolean | number | string; op?: OrderingOp };
+  type Requirement = { slot: string; value: boolean | number | string; op?: OrderingOp; computed?: true };
   type OrderingOp = "gt" | "gte" | "lt" | "lte";
   const FLIPPED: Record<OrderingOp, OrderingOp> = { gt: "lt", gte: "lte", lt: "gt", lte: "gte" };
   const isOrderingOp = (op: unknown): op is OrderingOp => typeof op === "string" && op in FLIPPED;
@@ -1311,9 +1319,25 @@ function analyzeProgram(
     }
     return null;
   };
+  // A computed value against a fixed threshold (`eitc_child_count > 0`),
+  // marked `computed`: it names a value the engine derives, not a fact to set.
+  const computedRequirement = (cmp: IRNode): Requirement | null => {
+    if (!isOrderingOp(cmp.op)) return null;
+    for (const [valueSide, thresholdSide, flip] of [["left", "right", false], ["right", "left", true]] as const) {
+      const derived = cmp[valueSide] as IRNode | undefined;
+      if (derived?.kind !== "derived" || typeof derived.name !== "string") continue;
+      if (ruleByName.get(derived.name)?.semantics === "judgment" || fixedThreshold(derived) !== null) continue;
+      const value = fixedThreshold(cmp[thresholdSide] as IRNode | undefined);
+      if (value !== null) return { slot: derived.name, op: flip ? FLIPPED[cmp.op] : cmp.op, value, computed: true };
+    }
+    return null;
+  };
   const requirementKey = (r: Requirement) => (r.op ? `${r.slot} ${r.op}` : r.slot);
   // One fact test: `input eq literal`, an ordering test, or (inside an
-  // alternative only) `NOT input eq bool`.
+  // alternative only) `NOT input eq bool`. An ordering test of a computed
+  // value is kept too: the childless EITC's `or` is `eitc_child_count > 0` or
+  // the childless abode and age facts, and dropping the whole `or` for the
+  // branch nothing can set left those facts named nowhere.
   const simpleRequirement = (node: IRNode, negated = false): Requirement | null => {
     if (node.kind === "not") {
       const inner = node.item as IRNode | undefined;
@@ -1328,7 +1352,7 @@ function analyzeProgram(
       const value = hit.literal.value as boolean | number | string;
       return { slot: hit.input, value: negated ? !value : value };
     }
-    return negated ? null : orderingRequirement(node);
+    return negated ? null : orderingRequirement(node) ?? computedRequirement(node);
   };
   // Conjoin two groups; null when they contradict (`x = true` and `x = false`).
   // Two bounds on one slot keep the tighter (`age < 19` over `age < 24`).
@@ -1438,6 +1462,91 @@ function analyzeProgram(
     return result;
   };
 
+  // -- Zero gates --------------------------------------------------------------
+  // A scalar written `if J then X else 0` is 0 whenever judgment J fails:
+  // us-fiit `eitc` is `if eitc_allowed then eitc_before_eligibility else 0`.
+  // J is no relation's member gate and no published output, so a $0 EITC from
+  // an unset taxpayer SSN fact (eitc_allowed ← eitc_identification_
+  // requirements_satisfied) used to carry no failed check at all. Each
+  // judgment conjunct of the condition counts. The `then` branch and a bare
+  // derived ref are followed: the rule equals them while its gates hold. A
+  // gate must hold in every formula version, or it may only select a branch
+  // in the period evaluated.
+  const zeroUnlessMemo = new Map<string, string[]>();
+  const zeroUnlessActive = new Set<string>();
+  const isZeroLiteral = (node: unknown) => {
+    const n = node as IRNode | undefined;
+    return n?.kind === "literal" && numericLiteral(n.value) === 0;
+  };
+  const conditionJudgments = (node: unknown): string[] => {
+    const n = node as IRNode | undefined;
+    if (n?.kind === "and") return ((n.items as unknown[] | undefined) ?? []).flatMap(conditionJudgments);
+    if (n?.kind === "derived" && typeof n.name === "string" && ruleByName.get(n.name)?.semantics === "judgment") {
+      return [n.name];
+    }
+    return [];
+  };
+  const zeroUnless = (ruleName: string): string[] => {
+    const memo = zeroUnlessMemo.get(ruleName);
+    if (memo) return memo;
+    const rule = ruleByName.get(ruleName);
+    if (!rule || rule.semantics === "judgment" || zeroUnlessActive.has(ruleName)) return [];
+    zeroUnlessActive.add(ruleName);
+    const gatesOf = (expr: unknown): string[] => {
+      const gates: string[] = [];
+      let node = expr as IRNode | undefined;
+      while (node?.kind === "if" && isZeroLiteral(node.else_expr)) {
+        gates.push(...conditionJudgments(node.condition));
+        node = node.then_expr as IRNode | undefined;
+      }
+      if (node?.kind === "derived" && typeof node.name === "string") gates.push(...zeroUnless(node.name));
+      return gates;
+    };
+    const [latest, ...older] = ruleExpressions(rule).filter((expr) => expr !== undefined).map(gatesOf);
+    const gates = [...new Set(latest ?? [])].filter((gate) => older.every((v) => v.includes(gate)));
+    zeroUnlessActive.delete(ruleName);
+    zeroUnlessMemo.set(ruleName, gates);
+    return gates;
+  };
+
+  // -- Negated sub-judgments -------------------------------------------------
+  // `failed_because` follows a failed judgment's not_holds sub-judgments down
+  // the trace. One read under `not` or as an `if` condition explains nothing
+  // when it fails: eitc_identification_requirements_satisfied is `taxpayer SSN
+  // AND (NOT married OR spouse SSN)`, so an unmarried filer missing the SSN
+  // fact shows taxpayer_married_under_general_rule as its only not_holds
+  // dependency. A sub-judgment read both ways stays followed.
+  const negatedJudgments = (rule: DerivedRule): string[] => {
+    const followed = new Set<string>();
+    const negated = new Set<string>();
+    // 1 = read as is, -1 = under an odd number of `not`s, 0 = in a condition.
+    const visit = (n: unknown, polarity: 1 | -1 | 0): void => {
+      if (Array.isArray(n)) {
+        for (const item of n) visit(item, polarity);
+        return;
+      }
+      if (n === null || typeof n !== "object") return;
+      const node = n as IRNode;
+      if (node.kind === "derived" && typeof node.name === "string") {
+        if (ruleByName.get(node.name)?.semantics === "judgment") (polarity === 1 ? followed : negated).add(node.name);
+        return;
+      }
+      if (node.kind === "not") {
+        visit(node.item, polarity === 0 ? 0 : polarity === 1 ? -1 : 1);
+        return;
+      }
+      if (node.kind === "if") {
+        visit(node.condition, 0);
+        visit(node.then_expr, polarity);
+        visit(node.else_expr, polarity);
+        return;
+      }
+      for (const value of Object.values(node)) visit(value, polarity);
+    };
+    for (const expr of ruleExpressions(rule)) visit(expr, 1);
+    return [...negated].filter((name) => !followed.has(name));
+  };
+
   // -- Outputs ---------------------------------------------------------------
   const outputs: CatalogOutput[] = rules.map((rule) => {
     const output: CatalogOutput = {
@@ -1458,6 +1567,11 @@ function analyzeProgram(
       if (anyOf.size > 0) output.requires_any = [...anyOf.values()].slice(0, ANY_CAP);
       const truncated = reqs.size > REQUIRES_CAP || anyOf.size > ANY_CAP;
       if ((output.requires || output.requires_any) && (partial || truncated)) output.requires_partial = true;
+      const negated = negatedJudgments(rule);
+      if (negated.length > 0) output.negated_judgments = negated;
+    } else {
+      const gates = zeroUnless(rule.name);
+      if (gates.length > 0) output.zero_unless = gates;
     }
     const due = annualUpdateDue(rule.name);
     if (due) output.annual_update_due = due;
