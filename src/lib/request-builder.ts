@@ -484,8 +484,9 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // $8,528 instead of $7,040 and the $420k CTC $0 instead of $3,400. Reject
   // rather than copy the member value to the unit: on Person it is that
   // individual's own return (§152(c)(1)(E) reads a child's joint return), so
-  // a member's value is not always the unit's, and a top-level value already
-  // reaches the unit and every member. Auxiliary slots get the warning below.
+  // a member's value is not always the unit's. The top-level facts stay the
+  // one place that sets the unit's value. Auxiliary slots get the warning
+  // below.
   const unitUnset = new Map<string, { paths: string[]; entities: string[] }>();
   for (const [index, member] of (options.members ?? []).entries()) {
     for (const name of Object.keys(member.facts ?? {})) {

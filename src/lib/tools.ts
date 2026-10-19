@@ -150,7 +150,7 @@ function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: st
       error: err.message,
       kind: err.kind,
       unset: err.unset,
-      hint: "Each slot listed is read on the unit as well as on each member, and a members[] value reaches only that member. Put the unit's value in the top-level facts (every member also takes it from there) and retry. Keep a member entry only for a member whose own value differs (e.g. a dependent's own return). If members gave different values, ask the user which one applies to the unit instead of picking one.",
+      hint: "Each slot listed is read on the unit as well as on each member, and a members[] value reaches only that member. Put the unit's value in the top-level facts and retry. Keep a member entry only for a member whose own value differs (e.g. a dependent's own return). If members gave different values, ask the user which one applies to the unit instead of picking one.",
     };
   }
   if (err instanceof UnknownInputError) {
