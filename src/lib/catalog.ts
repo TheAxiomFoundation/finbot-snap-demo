@@ -54,6 +54,10 @@ export interface CatalogInputSlot {
   default: boolean | number | string;
   /** Where the default came from; omitted for the plain dtype heuristic. */
   default_source?: "fixture" | "table_min" | "overlay";
+  /** Overlay default that changes on a date: `default` holds for periods
+   *  that start before `before`, `otherwise` from then on. Read the default
+   *  through slotDefaultAt. */
+  default_by_period?: { before: string; otherwise: boolean | number | string };
   /** Enum-coded input: value → label mined from the branch each code selects. */
   enum?: Record<string, string>;
   /** Values some rules compare this slot against for equality that the
@@ -119,6 +123,13 @@ const bySlug = new Map(catalog.programs.map((p) => [p.slug, p]));
 
 export function getProgram(slug: string): CatalogProgram | undefined {
   return bySlug.get(slug);
+}
+
+/** A slot's default for an evaluation period that starts on `periodStart`
+ *  (ISO date; ISO strings compare lexicographically). */
+export function slotDefaultAt(slot: CatalogInputSlot, periodStart: string): boolean | number | string {
+  const byPeriod = slot.default_by_period;
+  return byPeriod && periodStart >= byPeriod.before ? byPeriod.otherwise : slot.default;
 }
 
 /** Case-insensitive multi-token search across output names of every program.

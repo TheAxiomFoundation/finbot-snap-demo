@@ -62778,7 +62778,12 @@
      {
       "name": "taxable_year_begins_before_senior_deduction_termination",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay",
+      "default_by_period": {
+       "before": "2029-01-01",
+       "otherwise": false
+      }
      },
      {
       "name": "taxable_year_closed_by_reason_of_taxpayer_death",
