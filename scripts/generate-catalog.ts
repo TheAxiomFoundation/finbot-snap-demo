@@ -76,9 +76,16 @@ interface CatalogOutput {
   /** For judgments: input facts in the rule's unconditional conjunction
    *  chain (through derived refs, depth-capped) with the values that satisfy
    *  them. What the LLM needs to make the judgment hold — e.g. the CTC
-   *  qualifying-child SSN facts. Disjunctive/conditional branches are not
+   *  qualifying-child SSN facts. An entry with `op` is an ordering test
+   *  against a fixed threshold (`age gte 65`): it names the slot the rule
+   *  reads, not a value to set. Disjunctive/conditional branches are not
    *  descended; `requires_partial` marks truncation. */
-  requires?: Array<{ slot: string; value: boolean | number | string }>;
+  requires?: Array<{ slot: string; value: boolean | number | string; op?: "gt" | "gte" | "lt" | "lte" }>;
+  /** For judgments: one entry per `or` in the same chain — `rule` holds it,
+   *  and it is met when every entry of any one `any_of` group holds. */
+  requires_any?: Array<{ rule: string; any_of: Array<NonNullable<CatalogOutput["requires"]>> }>;
+  /** Logic beyond `requires` and `requires_any` (an `or` with a branch they
+   *  can't express, a `not`, a derived threshold). */
   requires_partial?: boolean;
   /** Earliest due date among annually reissued parameters this rule reaches. */
   annual_update_due?: string;
@@ -1197,21 +1204,140 @@ function analyzeProgram(
   // conjunction chain* (descending `and` nodes and derived refs, but never
   // `or`/`not`/`if` — those are disjunctive or conditional). These are the
   // facts that must hold for the judgment to hold, i.e. exactly what the LLM
-  // must set to make a member qualify.
+  // must set to make a member qualify. An ordering test of an input against a
+  // fixed threshold (`age >= senior_deduction_age_threshold`) is kept as
+  // `{slot, op, value}`: without it the model can't see which slot the rule
+  // reads, sets a lookalike, and the input sits at its 0 default.
+  //
+  // An `or` in that chain becomes one `requires_any` entry instead: its
+  // alternatives in disjunctive normal form, each group a conjunction of
+  // `requires`-shaped entries that is enough on its own. 26 USC 152(c)(3)
+  // `age_requirements_met` is `disabled OR (younger_than_taxpayer AND (age <
+  // 19 OR (student AND age < 24)))`; without it nothing names
+  // `individual_is_younger_than_taxpayer`, which defaults to false and fails
+  // every EITC qualifying child. An `or` is listed whole or not at all:
+  // dropping a branch it can't express could steer the model off a default
+  // that already holds (the tiebreaker's `NOT claimable by two taxpayers`).
   const REQUIRES_DEPTH = 5;
   const REQUIRES_CAP = 12;
-  const requiresMemo = new Map<string, { reqs: Map<string, boolean | number | string>; partial: boolean }>();
-  const conjunctiveRequirements = (
-    ruleName: string,
-    seen = new Set<string>()
-  ): { reqs: Map<string, boolean | number | string>; partial: boolean } => {
+  const ANY_CAP = 6; // `or` entries per judgment
+  const ANY_GROUPS_CAP = 4; // alternatives per `or`
+  const ANY_GROUP_CAP = 6; // entries per alternative
+  type Requirement = { slot: string; value: boolean | number | string; op?: OrderingOp };
+  type OrderingOp = "gt" | "gte" | "lt" | "lte";
+  const FLIPPED: Record<OrderingOp, OrderingOp> = { gt: "lt", gte: "lte", lt: "gt", lte: "gte" };
+  const isOrderingOp = (op: unknown): op is OrderingOp => typeof op === "string" && op in FLIPPED;
+  const numericLiteral = (lit: unknown): number | null => {
+    const { kind, value } = (lit ?? {}) as { kind?: string; value?: unknown };
+    if (kind !== "integer" && kind !== "decimal") return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
+  const paramByName = new Map(
+    (program.parameters as Array<{ name: string; versions?: Array<{ values?: Record<string, unknown> }> }>)
+      .map((p) => [p.name, p])
+  );
+  // A literal, or a scalar parameter with one value in every version. A
+  // threshold that changes by period has no single value to show — skipped.
+  const fixedThreshold = (node: IRNode | undefined): number | null => {
+    if (node?.kind === "literal") return numericLiteral(node.value);
+    if (node?.kind !== "parameter_lookup" || typeof node.parameter !== "string") return null;
+    const index = node.index as IRNode | undefined;
+    if (index?.kind !== "literal") return null;
+    const key = String((index.value as { value?: unknown } | undefined)?.value);
+    const values = new Set(
+      (paramByName.get(node.parameter)?.versions ?? []).map((v) => numericLiteral(v.values?.[key]))
+    );
+    const [only] = values;
+    return values.size === 1 && only !== null ? only : null;
+  };
+  const orderingRequirement = (cmp: IRNode): Requirement | null => {
+    if (!isOrderingOp(cmp.op)) return null;
+    for (const [inputSide, thresholdSide, flip] of [["left", "right", false], ["right", "left", true]] as const) {
+      const input = cmp[inputSide] as IRNode | undefined;
+      if (input?.kind !== "input" || typeof input.name !== "string") continue;
+      const value = fixedThreshold(cmp[thresholdSide] as IRNode | undefined);
+      if (value === null) return null;
+      return { slot: input.name, op: flip ? FLIPPED[cmp.op] : cmp.op, value };
+    }
+    return null;
+  };
+  const requirementKey = (r: Requirement) => (r.op ? `${r.slot} ${r.op}` : r.slot);
+  // One fact test: `input eq literal`, an ordering test, or (inside an
+  // alternative only) `NOT input eq bool`.
+  const simpleRequirement = (node: IRNode, negated = false): Requirement | null => {
+    if (node.kind === "not") {
+      const inner = node.item as IRNode | undefined;
+      return !negated && inner?.kind === "comparison" && inner.op === "eq" ? simpleRequirement(inner, true) : null;
+    }
+    if (node.kind !== "comparison") return null;
+    if (node.op === "eq") {
+      const hit = comparisonInputLiteral(node);
+      const kind = hit?.literal.kind;
+      const expressible = kind === "bool" || (!negated && (kind === "integer" || kind === "text"));
+      if (!hit || !expressible) return null;
+      const value = hit.literal.value as boolean | number | string;
+      return { slot: hit.input, value: negated ? !value : value };
+    }
+    return negated ? null : orderingRequirement(node);
+  };
+  // Conjoin two groups; null when they contradict (`x = true` and `x = false`).
+  // Two bounds on one slot keep the tighter (`age < 19` over `age < 24`).
+  const conjoin = (a: Requirement[], b: Requirement[]): Requirement[] | null => {
+    const out = new Map(a.map((r) => [requirementKey(r), r]));
+    for (const r of b) {
+      const key = requirementKey(r);
+      const prior = out.get(key);
+      if (!prior || prior.value === r.value) { out.set(key, r); continue; }
+      if (!r.op) return null;
+      const upper = r.op === "lt" || r.op === "lte";
+      if (((r.value as number) < (prior.value as number)) === upper) out.set(key, r);
+    }
+    return [...out.values()];
+  };
+  const alternativesMemo = new Map<string, Requirement[][] | null>();
+  // Disjunctive normal form of `n`, or null when some part can't be written
+  // as requirements or the form outgrows the caps.
+  const alternatives = (n: unknown, depth: number): Requirement[][] | null => {
+    if (n === null || typeof n !== "object" || depth > REQUIRES_DEPTH) return null;
+    const node = n as IRNode;
+    if (node.kind === "or" || node.kind === "and") {
+      let groups: Requirement[][] = node.kind === "or" ? [] : [[]];
+      for (const item of (node.items as unknown[] | undefined) ?? []) {
+        const sub = alternatives(item, depth);
+        if (!sub) return null;
+        groups = node.kind === "or"
+          ? [...groups, ...sub]
+          : groups.flatMap((g) => sub.map((s) => conjoin(g, s)).filter((c): c is Requirement[] => c !== null));
+        if (groups.length > ANY_GROUPS_CAP || groups.some((g) => g.length > ANY_GROUP_CAP)) return null;
+      }
+      return groups.length > 0 ? groups : null;
+    }
+    if (node.kind === "derived" && typeof node.name === "string") {
+      // Keyed by depth too: a visit near the depth cap gives up where a
+      // shallower one wouldn't.
+      const key = `${node.name}@${depth}`;
+      if (!alternativesMemo.has(key)) {
+        const rule = ruleByName.get(node.name);
+        alternativesMemo.set(key, rule ? alternatives(rule.expr, depth + 1) : null);
+      }
+      return alternativesMemo.get(key)!;
+    }
+    const req = simpleRequirement(node);
+    return req ? [[req]] : null;
+  };
+  type Alternatives = NonNullable<CatalogOutput["requires_any"]>[number];
+  type Mined = { reqs: Map<string, Requirement>; anyOf: Map<string, Alternatives>; partial: boolean };
+  const requiresMemo = new Map<string, Mined>();
+  const conjunctiveRequirements = (ruleName: string, seen = new Set<string>()): Mined => {
     const memo = requiresMemo.get(ruleName);
     if (memo) return memo;
-    if (seen.has(ruleName) || seen.size > REQUIRES_DEPTH) return { reqs: new Map(), partial: true };
+    if (seen.has(ruleName) || seen.size > REQUIRES_DEPTH) return { reqs: new Map(), anyOf: new Map(), partial: true };
     const rule = ruleByName.get(ruleName);
-    if (!rule) return { reqs: new Map(), partial: true };
+    if (!rule) return { reqs: new Map(), anyOf: new Map(), partial: true };
     seen.add(ruleName);
-    const reqs = new Map<string, boolean | number | string>();
+    const reqs = new Map<string, Requirement>();
+    const anyOf = new Map<string, Alternatives>();
     let partial = false;
     const visit = (n: unknown) => {
       if (Array.isArray(n)) { n.forEach(visit); return; }
@@ -1224,24 +1350,41 @@ function analyzeProgram(
       if (node.kind === "comparison" && node.op === "eq") {
         const hit = comparisonInputLiteral(node);
         if (hit && (hit.literal.kind === "bool" || hit.literal.kind === "integer" || hit.literal.kind === "text")) {
-          reqs.set(hit.input, hit.literal.value as boolean | number | string);
+          reqs.set(hit.input, { slot: hit.input, value: hit.literal.value as boolean | number | string });
           return;
         }
         partial = true;
         return;
       }
+      if (node.kind === "comparison") {
+        const req = orderingRequirement(node);
+        if (req) {
+          reqs.set(requirementKey(req), req);
+          return;
+        }
+        partial = true;
+        return;
+      }
+      if (node.kind === "or") {
+        const groups = alternatives(node, seen.size);
+        if (!groups) { partial = true; return; }
+        const entry = { rule: ruleName, any_of: groups };
+        anyOf.set(JSON.stringify(entry), entry);
+        return;
+      }
       if (node.kind === "derived" && typeof node.name === "string") {
         const sub = conjunctiveRequirements(node.name, new Set(seen));
-        for (const [slot, value] of sub.reqs) reqs.set(slot, value);
+        for (const [key, req] of sub.reqs) reqs.set(key, req);
+        for (const [key, entry] of sub.anyOf) anyOf.set(key, entry);
         if (sub.partial) partial = true;
         return;
       }
-      // Anything else (or/not/if/aggregators/arithmetic) is not an
+      // Anything else (not/if/aggregators/arithmetic) is not an
       // unconditional requirement — mark and stop descending.
       if (node.kind) partial = true;
     };
     visit(rule.expr);
-    const result = { reqs, partial };
+    const result = { reqs, anyOf, partial };
     requiresMemo.set(ruleName, result);
     return result;
   };
@@ -1261,11 +1404,11 @@ function analyzeProgram(
       acknowledged_incomplete: acknowledgedIncomplete.includes(rule.name),
     };
     if ((rule.semantics ?? "scalar") === "judgment") {
-      const { reqs, partial } = conjunctiveRequirements(rule.name);
-      if (reqs.size > 0 && reqs.size <= REQUIRES_CAP) {
-        output.requires = [...reqs.entries()].map(([slot, value]) => ({ slot, value }));
-        if (partial) output.requires_partial = true;
-      }
+      const { reqs, anyOf, partial } = conjunctiveRequirements(rule.name);
+      if (reqs.size > 0 && reqs.size <= REQUIRES_CAP) output.requires = [...reqs.values()];
+      if (anyOf.size > 0) output.requires_any = [...anyOf.values()].slice(0, ANY_CAP);
+      const truncated = reqs.size > REQUIRES_CAP || anyOf.size > ANY_CAP;
+      if ((output.requires || output.requires_any) && (partial || truncated)) output.requires_partial = true;
     }
     const due = annualUpdateDue(rule.name);
     if (due) output.annual_update_due = due;

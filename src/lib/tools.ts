@@ -388,8 +388,9 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
             semantics: meta.semantics,
             unit: meta.unit,
             value: value?.value ?? null,
-            ...(meta.semantics === "judgment" && meta.requires && {
-              requires: meta.requires,
+            ...(meta.semantics === "judgment" && (meta.requires || value?.requires_any) && {
+              ...(meta.requires && { requires: meta.requires }),
+              ...(value?.requires_any && { requires_any: value.requires_any }),
               ...(meta.requires_partial && { requires_partial: true }),
             }),
             published_output: meta.certified,
