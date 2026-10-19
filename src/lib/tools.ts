@@ -22,6 +22,8 @@ import {
   NotSettableInputError,
   NotMemberInputError,
   NoMemberEntityError,
+  UnitFactUnsetError,
+  UnknownRelationError,
   buildRequest,
   computeProgram,
   defaultPeriodFor,
@@ -49,7 +51,7 @@ const MembersSchema = z
         .array(z.string())
         .optional()
         .describe(
-          "Relation names linking this member to the primary entity (short names from describe_program, e.g. 'dependent_of_tax_unit'). Omit to link through every member relation."
+          "Relation names linking this member to the primary entity (short names from describe_program, e.g. 'dependent_of_tax_unit'); unknown names are refused. Omit to link through every member relation."
         ),
     })
   )
@@ -131,6 +133,24 @@ function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: st
       hint: err.conflicts.length > 0
         ? "members[] and the count fact give two different household sizes. Retry with one: set the count fact to the number of members, or drop members[] if the count is deliberately different (e.g. household members outside the assistance unit). If the user's description gives two sizes, ask which applies."
         : "members[] cannot change this program's result. Drop members[] and put every fact in the top-level facts. If the household size matters, set the program's own count fact from describe_program (inputs_search \"count\" or \"size\") and retry.",
+    };
+  }
+  if (err instanceof UnknownRelationError) {
+    return {
+      error: err.message,
+      kind: err.kind,
+      unknown: err.unknown,
+      hint: err.known.length > 0
+        ? `Use exact relation names from describe_program (${err.known.join(", ")}), or omit relations to link the member through every member relation (the usual case). Retry compute with corrected names.`
+        : "This program has no member relations. Drop relations from every members[] entry and retry.",
+    };
+  }
+  if (err instanceof UnitFactUnsetError) {
+    return {
+      error: err.message,
+      kind: err.kind,
+      unset: err.unset,
+      hint: "Each slot listed is read on the unit as well as on each member, and a members[] value reaches only that member. Put the unit's value in the top-level facts (every member also takes it from there) and retry. Keep a member entry only for a member whose own value differs (e.g. a dependent's own return). If members gave different values, ask the user which one applies to the unit instead of picking one.",
     };
   }
   if (err instanceof UnknownInputError) {
