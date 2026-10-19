@@ -693,9 +693,10 @@ export interface ShapedOutput {
   legal_id: string | null;
   /** Attached when a judgment came back not_holds: the facts (with values)
    *  its unconditional conjunction chain requires — what to set to make it
-   *  hold. `requires_partial` marks additional conditional/disjunctive logic
-   *  not captured here. */
-  requires?: Array<{ slot: string; value: boolean | number | string }>;
+   *  hold. An entry with `op` is a threshold the slot's real value must meet
+   *  (`age gte 65`). `requires_partial` marks additional
+   *  conditional/disjunctive logic not captured here. */
+  requires?: CatalogOutput["requires"];
   requires_partial?: boolean;
   /** Attached when a judgment came back not_holds and the explain trace
    *  shows why: the deepest sub-judgments on its failing path, with their

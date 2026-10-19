@@ -8,6 +8,9 @@
  */
 import rawCatalog from "./generated/catalog.json";
 
+/** Ordering test in a judgment's `requires`: slot `op` value. */
+export type RequirementOp = "gt" | "gte" | "lt" | "lte";
+
 export interface CatalogOutput {
   name: string;
   /** Legal id (`us:statutes/7/2017/a#snap_regular_month_allotment`); null for
@@ -22,8 +25,10 @@ export interface CatalogOutput {
   certified: boolean;
   acknowledged_incomplete: boolean;
   /** For judgments: facts in the rule's unconditional conjunction chain with
-   *  the values that satisfy them — what must be set for it to hold. */
-  requires?: Array<{ slot: string; value: boolean | number | string }>;
+   *  the values that satisfy them — what must be set for it to hold. An
+   *  entry with `op` is a threshold test on the slot's real value
+   *  (`age gte 65`), not a value to set. */
+  requires?: Array<{ slot: string; value: boolean | number | string; op?: RequirementOp }>;
   requires_partial?: boolean;
   /** Earliest `due` among the annually reissued parameters this output
    *  reaches (see CatalogAnnualUpdate); absent when it reaches none. */

@@ -76,9 +76,11 @@ interface CatalogOutput {
   /** For judgments: input facts in the rule's unconditional conjunction
    *  chain (through derived refs, depth-capped) with the values that satisfy
    *  them. What the LLM needs to make the judgment hold — e.g. the CTC
-   *  qualifying-child SSN facts. Disjunctive/conditional branches are not
+   *  qualifying-child SSN facts. An entry with `op` is an ordering test
+   *  against a fixed threshold (`age gte 65`): it names the slot the rule
+   *  reads, not a value to set. Disjunctive/conditional branches are not
    *  descended; `requires_partial` marks truncation. */
-  requires?: Array<{ slot: string; value: boolean | number | string }>;
+  requires?: Array<{ slot: string; value: boolean | number | string; op?: "gt" | "gte" | "lt" | "lte" }>;
   requires_partial?: boolean;
   /** Earliest due date among annually reissued parameters this rule reaches. */
   annual_update_due?: string;
@@ -1197,21 +1199,64 @@ function analyzeProgram(
   // conjunction chain* (descending `and` nodes and derived refs, but never
   // `or`/`not`/`if` — those are disjunctive or conditional). These are the
   // facts that must hold for the judgment to hold, i.e. exactly what the LLM
-  // must set to make a member qualify.
+  // must set to make a member qualify. An ordering test of an input against a
+  // fixed threshold (`age >= senior_deduction_age_threshold`) is kept as
+  // `{slot, op, value}`: without it the model can't see which slot the rule
+  // reads, sets a lookalike, and the input sits at its 0 default.
   const REQUIRES_DEPTH = 5;
   const REQUIRES_CAP = 12;
-  const requiresMemo = new Map<string, { reqs: Map<string, boolean | number | string>; partial: boolean }>();
+  type Requirement = { slot: string; value: boolean | number | string; op?: OrderingOp };
+  type OrderingOp = "gt" | "gte" | "lt" | "lte";
+  const FLIPPED: Record<OrderingOp, OrderingOp> = { gt: "lt", gte: "lte", lt: "gt", lte: "gte" };
+  const isOrderingOp = (op: unknown): op is OrderingOp => typeof op === "string" && op in FLIPPED;
+  const numericLiteral = (lit: unknown): number | null => {
+    const { kind, value } = (lit ?? {}) as { kind?: string; value?: unknown };
+    if (kind !== "integer" && kind !== "decimal") return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
+  const paramByName = new Map(
+    (program.parameters as Array<{ name: string; versions?: Array<{ values?: Record<string, unknown> }> }>)
+      .map((p) => [p.name, p])
+  );
+  // A literal, or a scalar parameter with one value in every version. A
+  // threshold that changes by period has no single value to show — skipped.
+  const fixedThreshold = (node: IRNode | undefined): number | null => {
+    if (node?.kind === "literal") return numericLiteral(node.value);
+    if (node?.kind !== "parameter_lookup" || typeof node.parameter !== "string") return null;
+    const index = node.index as IRNode | undefined;
+    if (index?.kind !== "literal") return null;
+    const key = String((index.value as { value?: unknown } | undefined)?.value);
+    const values = new Set(
+      (paramByName.get(node.parameter)?.versions ?? []).map((v) => numericLiteral(v.values?.[key]))
+    );
+    const [only] = values;
+    return values.size === 1 && only !== null ? only : null;
+  };
+  const orderingRequirement = (cmp: IRNode): Requirement | null => {
+    if (!isOrderingOp(cmp.op)) return null;
+    for (const [inputSide, thresholdSide, flip] of [["left", "right", false], ["right", "left", true]] as const) {
+      const input = cmp[inputSide] as IRNode | undefined;
+      if (input?.kind !== "input" || typeof input.name !== "string") continue;
+      const value = fixedThreshold(cmp[thresholdSide] as IRNode | undefined);
+      if (value === null) return null;
+      return { slot: input.name, op: flip ? FLIPPED[cmp.op] : cmp.op, value };
+    }
+    return null;
+  };
+  const requirementKey = (r: Requirement) => (r.op ? `${r.slot} ${r.op}` : r.slot);
+  const requiresMemo = new Map<string, { reqs: Map<string, Requirement>; partial: boolean }>();
   const conjunctiveRequirements = (
     ruleName: string,
     seen = new Set<string>()
-  ): { reqs: Map<string, boolean | number | string>; partial: boolean } => {
+  ): { reqs: Map<string, Requirement>; partial: boolean } => {
     const memo = requiresMemo.get(ruleName);
     if (memo) return memo;
     if (seen.has(ruleName) || seen.size > REQUIRES_DEPTH) return { reqs: new Map(), partial: true };
     const rule = ruleByName.get(ruleName);
     if (!rule) return { reqs: new Map(), partial: true };
     seen.add(ruleName);
-    const reqs = new Map<string, boolean | number | string>();
+    const reqs = new Map<string, Requirement>();
     let partial = false;
     const visit = (n: unknown) => {
       if (Array.isArray(n)) { n.forEach(visit); return; }
@@ -1224,7 +1269,16 @@ function analyzeProgram(
       if (node.kind === "comparison" && node.op === "eq") {
         const hit = comparisonInputLiteral(node);
         if (hit && (hit.literal.kind === "bool" || hit.literal.kind === "integer" || hit.literal.kind === "text")) {
-          reqs.set(hit.input, hit.literal.value as boolean | number | string);
+          reqs.set(hit.input, { slot: hit.input, value: hit.literal.value as boolean | number | string });
+          return;
+        }
+        partial = true;
+        return;
+      }
+      if (node.kind === "comparison") {
+        const req = orderingRequirement(node);
+        if (req) {
+          reqs.set(requirementKey(req), req);
           return;
         }
         partial = true;
@@ -1232,7 +1286,7 @@ function analyzeProgram(
       }
       if (node.kind === "derived" && typeof node.name === "string") {
         const sub = conjunctiveRequirements(node.name, new Set(seen));
-        for (const [slot, value] of sub.reqs) reqs.set(slot, value);
+        for (const [key, req] of sub.reqs) reqs.set(key, req);
         if (sub.partial) partial = true;
         return;
       }
@@ -1263,7 +1317,7 @@ function analyzeProgram(
     if ((rule.semantics ?? "scalar") === "judgment") {
       const { reqs, partial } = conjunctiveRequirements(rule.name);
       if (reqs.size > 0 && reqs.size <= REQUIRES_CAP) {
-        output.requires = [...reqs.entries()].map(([slot, value]) => ({ slot, value }));
+        output.requires = [...reqs.values()];
         if (partial) output.requires_partial = true;
       }
     }

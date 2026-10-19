@@ -107,6 +107,9 @@ function IncompleteBadge() {
   );
 }
 
+/** A `requires` entry with `op` is a threshold test (`age ≥ 65`). */
+const OP_SYMBOL: Record<string, string> = { gt: ">", gte: "≥", lt: "<", lte: "≤" };
+
 function displayValue(o: { value: unknown; unit?: string | null }): string {
   if (typeof o.value === "number") return formatValue(o.value, o.unit);
   if (o.value === "holds") return "✓ holds";
@@ -193,7 +196,7 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
               </div>
               {o.value === "not_holds" && o.requires && (
                 <div className="mono" style={{ fontSize: 10.5, color: "#92400e", marginTop: 2 }}>
-                  requires: {o.requires.map((r: any) => `${r.slot}=${r.value}`).join(" ")}
+                  requires: {o.requires.map((r: any) => `${r.slot}${OP_SYMBOL[r.op] ?? "="}${r.value}`).join(" ")}
                 </div>
               )}
             </div>
