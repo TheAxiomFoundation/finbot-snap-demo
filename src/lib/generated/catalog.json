@@ -73576,6 +73576,11 @@
       "name": "taxable_year_begins_after_exemption_amount_zero_start",
       "dtype": "bool",
       "default": false,
+      "default_source": "overlay",
+      "default_by_period": {
+       "before": "2018-01-01",
+       "otherwise": true
+      },
       "variant_switch": true
      },
      {
