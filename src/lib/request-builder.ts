@@ -16,6 +16,7 @@
  *     suggestions so the LLM can self-correct.
  */
 import {
+  type DerivedTraceNode,
   type ExecutionRequest,
   type ExecutionResponse,
   type FactScalar,
@@ -29,8 +30,9 @@ import {
   runCompiled,
   yearInterval,
 } from "./engine";
-import type { CatalogInputSlot, CatalogOutput, CatalogProgram } from "./catalog";
+import { getCatalog, type CatalogInputSlot, type CatalogOutput, type CatalogProgram } from "./catalog";
 import { legalIdToUrl } from "./legal-links";
+import artifactsLock from "../../artifacts.lock.json";
 
 export type Facts = Record<string, FactScalar>;
 
@@ -517,6 +519,80 @@ export interface ShapedOutput {
   requires_partial?: boolean;
 }
 
+/** One leaf of a rule's dependency closure: a parameter or an unconditioned
+ *  input the rule ultimately rests on. */
+export interface ProvenanceParameter {
+  legal_id: string | null;
+  name: string;
+  value: unknown;
+  source: string | null;
+}
+
+/** The derivation behind one output: every rule legal id the engine actually
+ *  fired to produce it (BFS order, root first) and the parameters/inputs at
+ *  the bottom of that chain. Derived from the `explain`-mode trace — see
+ *  `deriveRuleProvenance` — never derived from anywhere else. */
+export interface RuleProvenance {
+  rule_path: string[];
+  parameters_used: ProvenanceParameter[];
+}
+
+/** Reproducibility stamps for one compute: which corpus and engine build
+ *  produced it, and when. `release_tag`/`corpus_sha` come from the catalog
+ *  (itself pinned by `artifacts.lock.json` at catalog-generation time);
+ *  `engine_ref` is read from the same lock file directly since it isn't
+ *  otherwise threaded into the runtime. */
+export interface Stamps {
+  release_tag: string;
+  corpus_sha: string;
+  engine_ref: string;
+  evaluated_at: string;
+}
+
+export function computeStamps(): Stamps {
+  const catalog = getCatalog();
+  return {
+    release_tag: catalog.release_tag,
+    corpus_sha: catalog.corpus_sha,
+    engine_ref: (artifactsLock as { engine: { ref: string } }).engine.ref,
+    evaluated_at: new Date().toISOString(),
+  };
+}
+
+/** Walk a trace node's `dependencies` breadth-first from `rootKey`, collecting
+ *  every fired rule's legal id (`rule_path`) and the leaf nodes it ultimately
+ *  rests on (`parameters_used`). A dependency key absent from `trace` is a
+ *  short-circuited sibling branch the engine never evaluated — signal, not
+ *  error, so it's skipped rather than throwing. */
+export function deriveRuleProvenance(
+  trace: Record<string, DerivedTraceNode>,
+  rootKey: string
+): RuleProvenance {
+  const visited = new Set<string>();
+  const queue: string[] = [rootKey];
+  const rulePath: string[] = [];
+  const parametersUsed: ProvenanceParameter[] = [];
+  while (queue.length) {
+    const key = queue.shift()!;
+    if (visited.has(key)) continue;
+    visited.add(key);
+    const node = trace[key];
+    if (!node) continue; // short-circuited branch never evaluated
+    if (node.id) rulePath.push(node.id);
+    if (!node.dependencies || node.dependencies.length === 0) {
+      parametersUsed.push({
+        legal_id: node.id ?? null,
+        name: node.name,
+        value: node.kind === "judgment" ? node.outcome ?? null : node.value?.value ?? null,
+        source: node.source ?? null,
+      });
+    } else {
+      for (const dep of node.dependencies) queue.push(dep);
+    }
+  }
+  return { rule_path: rulePath, parameters_used: parametersUsed };
+}
+
 export interface ShapedResult {
   program: string;
   display_name: string;
@@ -530,6 +606,13 @@ export interface ShapedResult {
   applied: BuiltRequest["applied"];
   citations: Array<{ id: string; url: string }>;
   incomplete_note: string | null;
+  /** Per-output derivation, keyed by output name. Sized for a UI panel
+   *  (20–50 KB of raw trace collapses to a rule-id list + leaf parameters
+   *  per output) — never meant to ride in a tool result back to the model;
+   *  callers strip this before returning to the model and forward it
+   *  out-of-band instead (see route.ts's stream annotations). */
+  provenance: Record<string, RuleProvenance>;
+  stamps: Stamps;
 }
 
 export function labelFor(name: string): string {
@@ -543,10 +626,12 @@ export function shapeResult(
   response: ExecutionResponse
 ): ShapedResult {
   const merged = new Map<string, ReturnType<typeof readOutput> & { raw?: unknown }>();
+  const trace: Record<string, DerivedTraceNode> = {};
   for (const result of response.results) {
     for (const [key, value] of Object.entries(result.outputs ?? {})) {
       merged.set(key, readOutput(value));
     }
+    Object.assign(trace, result.trace ?? {});
   }
 
   const shaped: ShapedOutput[] = built.queried.map((output) => {
@@ -597,6 +682,13 @@ export function shapeResult(
     );
   }
 
+  const provenance: Record<string, RuleProvenance> = {};
+  for (const output of built.queried) {
+    const key = queryKey(output);
+    if (!trace[key]) continue; // no trace root — e.g. output never fired
+    provenance[output.name] = deriveRuleProvenance(trace, key);
+  }
+
   return {
     program: program.slug,
     display_name: program.display_name,
@@ -610,6 +702,8 @@ export function shapeResult(
     incomplete_note: incomplete.length
       ? `Outputs flagged acknowledged_incomplete by the rulespec authors (parts of the rule chain are known to be unfinished): ${incomplete.join(", ")}. Flag this to the user.`
       : null,
+    provenance,
+    stamps: computeStamps(),
   };
 }
 
