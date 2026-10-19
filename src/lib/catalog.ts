@@ -11,6 +11,21 @@ import rawCatalog from "./generated/catalog.json";
 /** Ordering test in a judgment's `requires`: slot `op` value. */
 export type RequirementOp = "gt" | "gte" | "lt" | "lte";
 
+/** One fact a judgment reads: `slot = value`, or with `op` a threshold test
+ *  on the slot's real value (`age gte 65`), not a value to set. */
+export interface Requirement {
+  slot: string;
+  value: boolean | number | string;
+  op?: RequirementOp;
+}
+
+/** An `or` in a judgment's chain, inside `rule`: met when every entry of any
+ *  one `any_of` group holds. */
+export interface RequirementAlternatives {
+  rule: string;
+  any_of: Requirement[][];
+}
+
 export interface CatalogOutput {
   name: string;
   /** Legal id (`us:statutes/7/2017/a#snap_regular_month_allotment`); null for
@@ -28,7 +43,12 @@ export interface CatalogOutput {
    *  the values that satisfy them — what must be set for it to hold. An
    *  entry with `op` is a threshold test on the slot's real value
    *  (`age gte 65`), not a value to set. */
-  requires?: Array<{ slot: string; value: boolean | number | string; op?: RequirementOp }>;
+  requires?: Requirement[];
+  /** For judgments: each `or` in that chain as alternative groups — e.g.
+   *  age_requirements_met: disabled, or younger than the taxpayer and under
+   *  19, or younger, a student and under 24. */
+  requires_any?: RequirementAlternatives[];
+  /** Logic beyond `requires` and `requires_any`. */
   requires_partial?: boolean;
   /** Earliest `due` among the annually reissued parameters this output
    *  reaches (see CatalogAnnualUpdate); absent when it reaches none. */
