@@ -235,6 +235,10 @@ export interface BuiltRequest {
     overlay_defaults_in_effect?: Facts;
     /** Factual companion slots derived from supplied income, not eligibility. */
     derived_facts?: Facts;
+    /** Facts assumed because the user didn't state them (e.g. U.S. citizenship
+     *  for SNAP members with no stated citizenship or immigration status).
+     *  The answer must disclose each and invite a correction. */
+    assumed_facts?: Array<{ slot: string; value: FactScalar; members: number[]; why: string }>;
     /** Instructions and diagnostics for the model; not shown to users. */
     notes: string[];
     /** User-facing limitations of this program's encoding, shown on the tool card. */
@@ -258,6 +262,18 @@ const MEMBER_COUNT_INPUTS = new Set([
 
 export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">): boolean {
   return MEMBER_COUNT_INPUTS.has(slot.name) && (slot.dtype === "integer" || slot.dtype === "decimal");
+}
+
+/** SNAP's per-member citizenship input, assumed true when nothing about the
+ *  member's citizenship or immigration status was stated (see buildRequest). */
+const ASSUMED_CITIZENSHIP_SLOT = "member_is_us_citizen";
+/** Fact names that state citizenship or immigration status; any of these on a
+ *  member (or at the top level) disables the citizenship assumption. */
+const IMMIGRATION_STATUS_FACT =
+  /citizen|national|alien|refugee|asylee|entrant|amerasian|immigra|lawful|parolee|compact|qualified_alien|qualifying_quarters|lawfully_residing/;
+
+function isSnapProgram(program: CatalogProgram): boolean {
+  return /-snap$/.test(program.slug);
 }
 
 export function buildRequest(options: BuildOptions): BuiltRequest {
@@ -492,6 +508,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // facts that name member-scope slots (so "member_age: 34" works without an
   // explicit members list).
   const relations: RelationRecord[] = [];
+  const assumedCitizenMembers: number[] = [];
   if (memberEntity && memberCount > 0) {
     const memberSlots = program.inputs[memberEntity] ?? [];
     const memberRelations = program.relations.filter(
@@ -505,11 +522,27 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     // across members); with synthesized members they go to member 1 only
     // (primary-applicant semantics, e.g. oldest_member_age).
     const explicitMembers = (options.members?.length ?? 0) > 0;
+    // SNAP: a member with no stated citizenship or immigration status is
+    // assumed to be a U.S. citizen — disclosed in applied.assumed_facts so the
+    // answer says so and invites a correction. Any stated status (on the
+    // member or at the top level) disables the assumption, so a stated
+    // refugee/asylee/LPR status is never overridden.
+    const citizenshipSlot = memberSlots.find((s) => s.name === ASSUMED_CITIZENSHIP_SLOT);
+    const statusStatedTopLevel = Object.keys(facts).some((n) => IMMIGRATION_STATUS_FACT.test(n));
+    const assumeCitizenship = (memberFacts: Facts): boolean =>
+      isSnapProgram(program) &&
+      citizenshipSlot !== undefined &&
+      !statusStatedTopLevel &&
+      !Object.keys(memberFacts).some((n) => IMMIGRATION_STATUS_FACT.test(n));
     for (let i = 0; i < memberCount; i++) {
       const memberId = instanceId(memberEntity, i + 1);
       const spec = options.members?.[i];
       const base = explicitMembers || i === 0 ? topLevelMemberFacts() : {};
       const memberFacts: Facts = { ...base, ...(spec?.facts ?? {}) };
+      if (assumeCitizenship(memberFacts)) {
+        memberFacts[ASSUMED_CITIZENSHIP_SLOT] = true;
+        assumedCitizenMembers.push(i + 1);
+      }
       for (const slot of memberSlots) {
         record(slot, memberEntity, memberId, memberFacts[slot.name]);
       }
@@ -552,6 +585,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       ...topLevelMemberFacts(),
       ...(options.members?.[0]?.facts ?? {}),
     };
+    if (assumedCitizenMembers.includes(1)) member1Facts[ASSUMED_CITIZENSHIP_SLOT] = true;
     for (const entityId of queryInstances.values()) {
       for (const slot of memberSlots) {
         if (nonMemberSlots.has(slot.name)) continue;
@@ -605,6 +639,16 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       member_count: memberCount,
       facts_applied: facts,
       ...(Object.keys(derivedFacts).length > 0 && { derived_facts: derivedFacts }),
+      ...(assumedCitizenMembers.length > 0 && {
+        assumed_facts: [
+          {
+            slot: ASSUMED_CITIZENSHIP_SLOT,
+            value: true,
+            members: assumedCitizenMembers,
+            why: "No citizenship or immigration status was stated, so these members are assumed to be U.S. citizens. Say so in Assumptions and invite the user to correct it.",
+          },
+        ],
+      }),
       defaulted_slots: defaultedSlots,
       ...(defaultedIncomeSlots.size > 0 && {
         defaulted_income_slots: [...defaultedIncomeSlots],

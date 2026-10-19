@@ -51,5 +51,48 @@ describe.skipIf(!engineAvailable())("refugee SNAP starter", () => {
     expect(gate?.value).toBe("not_holds");
     expect(gate?.failed_because?.map((f) => f.name)).toContain("snap_member_citizenship_or_alien_status_eligible");
     expect(numericOutput(result, "snap_benefit")).toBe(0);
+    // A stated status is never overridden by the citizenship assumption.
+    expect(result.applied.assumed_facts).toBeUndefined();
+  });
+});
+
+describe.skipIf(!engineAvailable())("assumed SNAP citizenship", () => {
+  const program = () => getProgram("us-fl-snap")!;
+  const household = { household_size: 3, snap_gross_monthly_earned_income: 1800, household_shelter_costs_incurred: 1100 };
+
+  it("assumes U.S. citizenship for members with no stated status, and discloses it", async () => {
+    const result = await computeProgram({
+      program: program(),
+      facts: household,
+      members: [{ facts: { member_age: 30 } }, { facts: { member_age: 8 } }, { facts: { member_age: 5 } }],
+    });
+    expect(result.applied.assumed_facts).toEqual([
+      expect.objectContaining({ slot: "member_is_us_citizen", value: true, members: [1, 2, 3] }),
+    ]);
+    expect(output(result, "snap_eligible")).toBe("holds");
+    expect(numericOutput(result, "snap_benefit")).toBeGreaterThan(0);
+  });
+
+  it("assumes it for synthesized members too", async () => {
+    const result = await computeProgram({ program: program(), facts: household });
+    expect(result.applied.assumed_facts?.[0]?.members.length).toBeGreaterThan(0);
+    expect(output(result, "snap_eligible")).toBe("holds");
+  });
+
+  it("does not assume it for a member whose status is stated", async () => {
+    const result = await computeProgram({
+      program: program(),
+      facts: household,
+      members: [{ facts: { member_age: 30, member_is_us_citizen: false, member_is_asylee: true } }, { facts: { member_age: 8 } }],
+    });
+    expect(result.applied.assumed_facts?.[0]?.members).toEqual([2]);
+  });
+
+  it("assumes nothing when a top-level fact states immigration status", async () => {
+    const result = await computeProgram({
+      program: program(),
+      facts: { ...household, member_is_refugee: true },
+    });
+    expect(result.applied.assumed_facts).toBeUndefined();
   });
 });
