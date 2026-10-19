@@ -11,6 +11,7 @@ import {
   memberCountSlotNames,
   shapeResult,
   type BuildOptions,
+  type Facts,
 } from "./request-builder";
 import { engineAvailable } from "../../scripts/snap-scenarios";
 
@@ -86,14 +87,24 @@ describe("members[] on programs with no member entity", () => {
       "us-ak-tanf": ["assistance_unit_size"],
       "us-al-tanf": ["assistance_unit_size"],
       "us-ar-tanf": ["assistance_unit_size"],
+      "us-de-tanf": ["assistance_unit_member_count"],
       "us-fl-tca": ["filing_unit_size"],
+      "us-ga-tanf": ["assistance_unit_member_count"],
+      "us-ks-tanf": ["assistance_plan_person_count"],
       "us-md-tca": ["household_size"],
       "us-me-tanf": ["tanf_household_size"],
       "us-ny-tanf": ["family_size", "number_of_persons_in_household"],
       "us-tx-tanf": ["tanf_family_size"],
       "us-ut-tanf": ["household_size"],
     });
-    expect(withoutCount.length).toBe(13);
+    expect(withoutCount.length).toBe(10);
+  });
+
+  it("keeps member-entity programs on the counts they already synthesize members from", () => {
+    // A count input on a member-entity program also synthesizes members, so a
+    // name added for the no-member TANF programs must not appear there.
+    const names = new Set(getCatalog().programs.filter((program) => program.member_entity).flatMap(memberCountSlotNames));
+    expect([...names].sort()).toEqual(["fns_unit_size", "household_size"]);
   });
 
   it("sets every count input from the list, building the request the count fact builds", () => {
@@ -164,8 +175,32 @@ describe.skipIf(!hasEngine)("real-engine members[] with no member entity", () =>
     expect(await value({ program, period: "2026-01", facts: countFacts(program, 3) })).toBe(389);
   }, 60_000);
 
+  it("a three-member list reaches the engine as the GA and KS assistance-unit count", async () => {
+    // The oracle households ga-tanf-family3 (PE 12 x $280) and ks-tanf-family3 (PE $386).
+    const cases: Array<{ slug: string; output: string; oneMember: number; threeMembers: number; facts: Facts }> = [
+      {
+        slug: "us-ga-tanf", output: "ga_tanf_annual_benefit", oneMember: 1860, threeMembers: 3360,
+        facts: { household_has_minor_or_pregnant_member: true, determination_is_at_application: true },
+      },
+      {
+        slug: "us-ks-tanf", output: "ks_tanf_prorated_cash_benefit", oneMember: 224, threeMembers: 386,
+        facts: { all_persons_in_home_in_same_assistance_plan: true, shelter_group_i_applies: true, days_in_month: 31, application_day_of_month: 1 },
+      },
+    ];
+    for (const { slug, output, oneMember, threeMembers, facts } of cases) {
+      const program = getProgram(slug)!;
+      const value = async (options: BuildOptions) =>
+        (await computeProgram(options)).outputs.find((o) => o.name === output)!.value as number;
+      expect(await value({ program, period: "2026-01", facts })).toBe(oneMember);
+      expect(await value({ program, period: "2026-01", facts, members: blank(3) })).toBe(threeMembers);
+      expect(await value({ program, period: "2026-01", facts: { ...facts, ...countFacts(program, 3) } })).toBe(threeMembers);
+    }
+  }, 60_000);
+
   it("a list with no count input to set is refused before the engine runs", async () => {
-    await expect(computeProgram({ program: getProgram("us-ga-tanf")!, members: blank(3) })).rejects.toBeInstanceOf(
+    // us-in-tanf has assistance_group_size, but its grant is indexed by
+    // participating_members, so the list would compute the one-person grant.
+    await expect(computeProgram({ program: getProgram("us-in-tanf")!, members: blank(3) })).rejects.toBeInstanceOf(
       NoMemberEntityError
     );
   });

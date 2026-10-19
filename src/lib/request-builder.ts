@@ -303,6 +303,17 @@ const MEMBER_COUNT_INPUTS = new Set([
   // us-ny-tanf only: indexes the grant table; its family_size indexes the
   // shelter allowance, so a household size must reach both.
   "number_of_persons_in_household",
+  // us-ga-tanf: au_size, the index of the standard of need, family maximum
+  // and gross income ceiling. us-de-tanf: number_people_in_budget, the index
+  // of the payment standard table (+$69 per person past 8).
+  "assistance_unit_member_count",
+  // us-ks-tanf only: indexes the basic allowance and the Table II shelter
+  // percentage.
+  "assistance_plan_person_count",
+  // Not assistance_group_size: us-in-tanf indexes its grant by
+  // participating_members, so setting the group size alone gives the
+  // one-person grant; on us-fl-tca the name is an auxiliary SNAP
+  // minimum-benefit size.
 ]);
 
 export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">): boolean {

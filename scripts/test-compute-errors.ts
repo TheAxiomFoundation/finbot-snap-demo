@@ -232,7 +232,7 @@ async function membersWithoutMemberEntity() {
 
   const cases = [
     { label: "count fact differs", call: { ...nyTanf, facts: { family_size: 4 }, members: three }, hint: /two different household sizes/ },
-    { label: "no count input", call: { program: "us-ga-tanf", members: three }, hint: /Drop members\[\]/ },
+    { label: "no count input", call: { program: "us-in-tanf", members: three }, hint: /Drop members\[\]/ },
   ];
   for (const { label, call, hint } of cases) {
     const result = (await tools.compute.execute!(call, CALL)) as { error?: unknown; kind?: unknown; hint?: unknown };
