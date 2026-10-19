@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { getProgram } from "./catalog";
 import { computeProgram } from "./request-builder";
-import { engineAvailable } from "../../scripts/snap-scenarios";
+import { engineAvailable, memberCheck } from "../../scripts/snap-scenarios";
 
 // 26 USC 151(d)(5)(C)(ii): a senior-deduction qualified individual has
 // attained age 65. The rule reads the `age` slot, not the EITC's
@@ -59,17 +59,17 @@ describe.skipIf(!hasEngine)("real-engine senior deduction age requirement", () =
 
   it("names `age` as unmet when only the lookalike age slot is set", async () => {
     const result = await compute({ individual_age_at_close_of_calendar_year: 70 });
-    const check = result.member_checks?.find((c) => c.name === CHECK);
-    expect(check?.value).toBe("not_holds");
-    expect(check?.requires).toContainEqual(AGE_TEST);
+    const check = memberCheck(result, 1, CHECK);
+    expect(check.value).toBe("not_holds");
+    expect(check.requires).toContainEqual(AGE_TEST);
     expect(seniorDeduction(result)).toBe(0);
   }, 30_000);
 
   it("computes $4,500 once `age` is set", async () => {
     const result = await compute({ age: 70 });
-    const check = result.member_checks?.find((c) => c.name === CHECK);
-    expect(check?.value).toBe("holds");
-    expect(check?.requires).toBeUndefined();
+    const check = memberCheck(result, 1, CHECK);
+    expect(check.value).toBe("holds");
+    expect(check.requires).toBeUndefined();
     // $6,000 − 6% × ($100,000 − $75,000) = $4,500 (26 USC 151(d)(5)(C)(iii)).
     expect(seniorDeduction(result)).toBe(4500);
   }, 30_000);
