@@ -14,6 +14,12 @@
  *    {error, hint} tool results. A throw ends the chat stream, and the user
  *    gets an empty reply instead of a retry or an explanation.
  *
+ * 3. A fact under members[].facts whose slot has no member scope comes back
+ *    as a not_member_input {error, hint}. gpt-6-luna put us-fiit's TaxUnit-only
+ *    taxpayer_includes_required_social_security_number_on_return under the
+ *    taxpayer's entry; the builder dropped it and EITC came back $0 for
+ *    HoH, two kids, $40,000 in 2026. The retry the hint asks for → $3,923.
+ *
  * Run: bun run test:compute-errors   (requires local engine or AXIOM_ENGINE_URL)
  */
 import assert from "node:assert/strict";
@@ -171,10 +177,51 @@ async function engineFailuresAreToolResults() {
   }
 }
 
+async function misplacedMemberFact() {
+  const ssn = "taxpayer_includes_required_social_security_number_on_return";
+  const child = (age: number) => ({
+    facts: {
+      age,
+      qualifying_child_principal_place_of_abode_is_in_united_states: true,
+      qualifying_child_name_age_and_tin_included_on_return: true,
+      individual_is_child_of_taxpayer_or_descendant_of_such_child: true,
+      individual_is_younger_than_taxpayer: true,
+      individual_principal_place_of_abode_with_taxpayer_fraction: 1,
+      individual_own_support_fraction_provided_by_individual: 0,
+    },
+  });
+  const facts = {
+    filing_status: 3,
+    adjusted_gross_income: 40000,
+    taxable_income: 15850,
+    employee_compensation_includible_in_gross_income: 40000,
+  };
+  const modelCall = { program: "us-fiit", period: "2026", facts, members: [{ facts: { age: 34, [ssn]: true } }, child(8), child(5)] };
+  for (const [label, run] of [
+    ["compute", () => tools.compute.execute!(modelCall, CALL)],
+    ["lookup_value", () => tools.lookup_value.execute!({ ...modelCall, output: "eitc" }, CALL)],
+  ] as const) {
+    const result = (await run()) as { error?: unknown; kind?: unknown; misplaced?: unknown; hint?: unknown };
+    assert.equal(result.kind, "not_member_input", `${label}: ${JSON.stringify(result)}`);
+    assert.match(result.error as string, /not Person inputs for us-fiit/);
+    assert.deepEqual(result.misplaced, [{ path: `members[0].facts.${ssn}`, slot: ssn, entities: ["TaxUnit"] }]);
+    assert.match(result.hint as string, /top-level facts/);
+    console.log(`ok   ${label}, TaxUnit fact under members[0] → not_member_input {error, hint}`);
+  }
+
+  const retry = await tools.compute.execute!(
+    { ...modelCall, facts: { ...facts, [ssn]: true }, members: [{ facts: { age: 34 } }, child(8), child(5)] },
+    CALL
+  );
+  assert.equal(Math.round(outputValue(retry, "eitc") as number), 3923);
+  console.log("ok   retry with the fact at the top level: EITC $3,923");
+}
+
 async function main() {
   memberInputsMirrored();
   await seniorDeduction();
   await engineFailuresAreToolResults();
+  await misplacedMemberFact();
   console.log("\ncompute error tests passed");
 }
 
