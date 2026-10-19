@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BBCE_STARTERS, STARTERS } from "../src/lib/starters";
 import { getProgram } from "../src/lib/catalog";
 import { computeProgram } from "../src/lib/request-builder";
-import { engineAvailable, numericOutput, output, starterScenario, STARTER_FIXTURES } from "./snap-scenarios";
+import { engineAvailable, memberCheck, numericOutput, output, starterScenario, STARTER_FIXTURES } from "./snap-scenarios";
 
 describe("BBCE starter candidates", () => {
   it("features one TANF, one federal tax and one SNAP starter", () => {
@@ -47,9 +47,9 @@ describe.skipIf(!engineAvailable())("refugee SNAP starter", () => {
       facts: { household_size: 1 },
       members: [{ facts: { member_age: 30, member_is_us_citizen: false, member_is_refugee: true } }],
     });
-    const gate = result.member_checks?.find((o) => o.name === "snap_member_eligible");
-    expect(gate?.value).toBe("not_holds");
-    expect(gate?.failed_because?.map((f) => f.name)).toContain("snap_member_citizenship_or_alien_status_eligible");
+    const gate = memberCheck(result, 1, "snap_member_eligible");
+    expect(gate.value).toBe("not_holds");
+    expect(gate.failed_because?.map((f) => f.name)).toContain("snap_member_citizenship_or_alien_status_eligible");
     expect(numericOutput(result, "snap_benefit")).toBe(0);
   });
 });
