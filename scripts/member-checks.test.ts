@@ -145,6 +145,67 @@ describe.skipIf(!engineAvailable())("real-engine member facts with no member sco
   });
 });
 
+// eitc-mfj3-50k: married filing jointly, kids 10, 7 and 4, $50,000 in wages
+// in 2026. us-fiit's filing_status is a TaxUnit and a Person slot. The
+// top-level filing_status: 1 used to reach every member, so each child "filed
+// a joint return" (§152(c)(1)(E)), failed the qualifying-child gate, and EITC
+// came back $0 on every married-joint return.
+const mfjTaxpayer: MemberSpec = { facts: { age: 38, is_taxpayer: true } };
+const mfjSpouse: MemberSpec = { facts: { age: 36, is_spouse_of_taxpayer: true } };
+const mfjThreeKids = (members: MemberSpec[] = [mfjTaxpayer, mfjSpouse, child(10), child(7), child(4)]): BuildOptions => ({
+  program: fiit(),
+  period: "2026",
+  facts: {
+    filing_status: 1,
+    adjusted_gross_income: 50000,
+    employee_compensation_includible_in_gross_income: 50000,
+    taxpayer_includes_required_social_security_number_on_return: true,
+  },
+  members,
+});
+
+describe("return-scoped member facts", () => {
+  it("record a top-level filing_status on the tax unit, taxpayer and spouse, not the children", () => {
+    const options = mfjThreeKids();
+    expect(recorded(options, "taxunit:1", "filing_status")).toEqual([1]);
+    expect(recorded(options, "person:1", "filing_status")).toEqual([1]);
+    expect(recorded(options, "person:2", "filing_status")).toEqual([1]);
+    for (const id of ["person:3", "person:4", "person:5"]) {
+      expect(recorded(options, id, "filing_status")).toEqual([0]);
+    }
+    expect(buildRequest(options).applied.notes.join("\n")).toContain("not on member(s) 3, 4, 5");
+  });
+
+  it("keep a member's own filing_status", () => {
+    const options = mfjThreeKids([mfjTaxpayer, mfjSpouse, { facts: { ...child(17).facts, filing_status: 1 } }, child(4)]);
+    expect(recorded(options, "person:3", "filing_status")).toEqual([1]);
+    expect(buildRequest(options).applied.notes.join("\n")).toContain("not on member(s) 4;");
+  });
+});
+
+describe.skipIf(!engineAvailable())("real-engine return-scoped member facts", () => {
+  it("MFJ, three kids, $50,000: the children qualify and EITC = $4,263", async () => {
+    const result = await computeProgram(mfjThreeKids());
+    // IRS Rev. Proc. 2025-32: $8,231 − 21.06% × ($50,000 − $31,160) = $4,263.30.
+    expect(Math.round(numericOutput(result, "eitc"))).toBe(4263);
+    for (const member of [3, 4, 5]) {
+      expect(memberCheck(result, member, "eitc_qualifying_child").value).toBe("holds");
+    }
+  });
+
+  it("the spouse's joint status still reaches the senior-deduction gate", async () => {
+    const senior = (facts: MemberSpec["facts"]): MemberSpec => ({
+      facts: { ...facts, age: 67, qualified_individual_social_security_number_included_on_return: true },
+    });
+    const result = await computeProgram(
+      mfjThreeKids([senior(mfjTaxpayer.facts), senior(mfjSpouse.facts), child(10)])
+    );
+    expect(memberCheck(result, 1, "senior_deduction_qualified_individual").value).toBe("holds");
+    expect(memberCheck(result, 2, "senior_deduction_qualified_individual").value).toBe("holds");
+    expect(memberCheck(result, 3, "senior_deduction_qualified_individual").value).toBe("not_holds");
+  });
+});
+
 describe.skipIf(!engineAvailable())("real-engine member checks", () => {
   it("taxpayer first: the children's EITC gate holds and EITC = $3,923", async () => {
     const result = await computeProgram(hohTwoKids([taxpayer, child(8), child(5)]));

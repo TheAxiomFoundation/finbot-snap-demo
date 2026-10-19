@@ -297,6 +297,19 @@ function isSnapProgram(program: CatalogProgram): boolean {
   return /-snap$/.test(program.slug);
 }
 
+/** Member-scope slots whose top-level value is the unit's own return, and the
+ *  member facts that put a member on that return. us-fiit records
+ *  filing_status on Person too: the status of the return the individual
+ *  filed. The spouse rules (§151(b) exemption, §151(d)(5) senior deduction)
+ *  read the joint status at the spouse; §152(c)(1)(E) reads it at each child
+ *  (a child who filed a joint return is no qualifying child). So with an
+ *  explicit members list, a top-level fact on such a slot reaches the members
+ *  marked with a filer role only. Spread to the children, MFJ failed every
+ *  EITC qualifying-child gate and EITC came back $0. */
+const RETURN_SCOPED_MEMBER_FACTS: Record<string, { slots: string[]; filerRoles: string[] }> = {
+  "us-fiit": { slots: ["filing_status"], filerRoles: ["is_taxpayer", "is_spouse_of_taxpayer"] },
+};
+
 export function buildRequest(options: BuildOptions): BuiltRequest {
   const { program } = options;
   const facts = { ...(options.facts ?? {}) };
@@ -568,9 +581,13 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     // Top-level facts that name member-scope slots: with an explicit
     // members[] they form the shared base for EVERY member (taxpayer-level
     // facts like SSN-on-return are member-scoped in the IR but identical
-    // across members); with synthesized members they go to member 1 only
-    // (primary-applicant semantics, e.g. oldest_member_age).
+    // across members) except return-scoped slots, which reach filer-role
+    // members only (RETURN_SCOPED_MEMBER_FACTS); with synthesized members
+    // they go to member 1 only (primary-applicant semantics, e.g.
+    // oldest_member_age).
     const explicitMembers = (options.members?.length ?? 0) > 0;
+    const returnScoped = explicitMembers ? RETURN_SCOPED_MEMBER_FACTS[program.slug] : undefined;
+    const withheld = new Map<string, number[]>(); // slot → members it did not reach
     // SNAP: a member with no stated citizenship or immigration status is
     // assumed to be a U.S. citizen — disclosed in applied.assumed_facts so the
     // answer says so and invites a correction. Any stated status (on the
@@ -587,6 +604,18 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       const memberId = instanceId(memberEntity, i + 1);
       const spec = options.members?.[i];
       const base = explicitMembers || i === 0 ? topLevelMemberFacts() : {};
+      if (returnScoped) {
+        const own = { ...base, ...(spec?.facts ?? {}) };
+        if (!returnScoped.filerRoles.some((role) => own[role] === true)) {
+          for (const slot of returnScoped.slots) {
+            if (!(slot in base)) continue;
+            delete base[slot];
+            if (spec?.facts?.[slot] !== undefined) continue; // the member's own value applies
+            if (!withheld.has(slot)) withheld.set(slot, []);
+            withheld.get(slot)!.push(i + 1);
+          }
+        }
+      }
       const memberFacts: Facts = { ...base, ...(spec?.facts ?? {}) };
       if (assumeCitizenship(memberFacts)) {
         memberFacts[ASSUMED_CITIZENSHIP_SLOT] = true;
@@ -609,6 +638,11 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
           : [primaryId, memberId];
         relations.push({ name: relation.name, tuple, interval: inputInterval });
       }
+    }
+    for (const [slot, members] of withheld) {
+      notes.push(
+        `top-level ${slot}=${facts[slot]} describes the ${program.primary_entity}'s own return, so it was recorded on members with ${returnScoped!.filerRoles.join(" or ")} true and not on member(s) ${members.join(", ")}; their own ${slot} stays at its default.`
+      );
     }
 
     function topLevelMemberFacts(): Facts {
