@@ -20,6 +20,12 @@
  *    taxpayer's entry; the builder dropped it and EITC came back $0 for
  *    HoH, two kids, $40,000 in 2026. The retry the hint asks for → $3,923.
  *
+ * 4. members[] on a program with no member entity (TANF/TCA, state income
+ *    tax) used to be ignored, so "a family of three" listed as members came
+ *    back at the count's default: us-ny-tanf $183.10 for one person instead
+ *    of $389 for three. The list now sets the verified count inputs, and is
+ *    refused as no_member_entity {error, hint} when that needs a guess.
+ *
  * Run: bun run test:compute-errors   (requires local engine or AXIOM_ENGINE_URL)
  */
 import assert from "node:assert/strict";
@@ -217,11 +223,32 @@ async function misplacedMemberFact() {
   console.log("ok   retry with the fact at the top level: EITC $3,923");
 }
 
+async function membersWithoutMemberEntity() {
+  const nyTanf = { program: "us-ny-tanf", period: "2026-01" };
+  const three = [{}, {}, {}];
+  const counted = await tools.compute.execute!({ ...nyTanf, members: three }, CALL);
+  assert.equal(outputValue(counted, "ny_tanf"), 389);
+  console.log("ok   us-ny-tanf members[] of 3 → family_size and number_of_persons_in_household = 3, $389");
+
+  const cases = [
+    { label: "count fact differs", call: { ...nyTanf, facts: { family_size: 4 }, members: three }, hint: /two different household sizes/ },
+    { label: "no count input", call: { program: "us-ga-tanf", members: three }, hint: /Drop members\[\]/ },
+  ];
+  for (const { label, call, hint } of cases) {
+    const result = (await tools.compute.execute!(call, CALL)) as { error?: unknown; kind?: unknown; hint?: unknown };
+    assert.equal(result.kind, "no_member_entity", `${label}: ${JSON.stringify(result)}`);
+    assert.equal(typeof result.error, "string");
+    assert.match(result.hint as string, hint);
+    console.log(`ok   ${label} → no_member_entity {error, hint}`);
+  }
+}
+
 async function main() {
   memberInputsMirrored();
   await seniorDeduction();
   await engineFailuresAreToolResults();
   await misplacedMemberFact();
+  await membersWithoutMemberEntity();
   console.log("\ncompute error tests passed");
 }
 
