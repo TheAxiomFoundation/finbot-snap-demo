@@ -265,7 +265,7 @@ describe("member facts on a slot the unit also reads", () => {
   });
 
   it("with a top-level value, a member's own value reaches that member only", () => {
-    const options = { ...hohTwoKids([taxpayer, { facts: { ...child(8).facts, filing_status: 0 } }]) };
+    const options = { ...hohTwoKids([{ facts: { age: 34, is_taxpayer: true } }, { facts: { ...child(8).facts, filing_status: 0 } }]) };
     options.facts = { ...options.facts, filing_status: 1 };
     expect(recorded(options, "taxunit:1", "filing_status")).toEqual([1]);
     expect(recorded(options, "person:1", "filing_status")).toEqual([1]);
