@@ -26,6 +26,16 @@
  *    of $389 for three. The list now sets the verified count inputs, and is
  *    refused as no_member_entity {error, hint} when that needs a guess.
  *
+ * 5. members[].relations names that match no member relation come back as
+ *    unknown_relation {error, hint} with nearest matches. They used to link
+ *    the member through no relation: relations ["dependent"] on the two
+ *    children gave EITC $0 instead of $3,923 (HoH, $40,000, 2026).
+ *
+ * 6. us-fiit filing_status under members[].facts with no top-level value
+ *    comes back as unit_fact_unset {error, hint}. Only the member's Person
+ *    record took it; the TaxUnit kept 0, so fiit-mfj-2kids regular tax came
+ *    out $8,528 instead of $7,040. The retry at the top level → $7,040.
+ *
  * Run: bun run test:compute-errors   (requires local engine or AXIOM_ENGINE_URL)
  */
 import assert from "node:assert/strict";
@@ -232,7 +242,7 @@ async function membersWithoutMemberEntity() {
 
   const cases = [
     { label: "count fact differs", call: { ...nyTanf, facts: { family_size: 4 }, members: three }, hint: /two different household sizes/ },
-    { label: "no count input", call: { program: "us-ga-tanf", members: three }, hint: /Drop members\[\]/ },
+    { label: "no count input", call: { program: "us-in-tanf", members: three }, hint: /Drop members\[\]/ },
   ];
   for (const { label, call, hint } of cases) {
     const result = (await tools.compute.execute!(call, CALL)) as { error?: unknown; kind?: unknown; hint?: unknown };
@@ -243,12 +253,107 @@ async function membersWithoutMemberEntity() {
   }
 }
 
+const EITC_CHILD = {
+  qualifying_child_principal_place_of_abode_is_in_united_states: true,
+  qualifying_child_name_age_and_tin_included_on_return: true,
+  individual_is_child_of_taxpayer_or_descendant_of_such_child: true,
+  individual_is_younger_than_taxpayer: true,
+  individual_principal_place_of_abode_with_taxpayer_fraction: 1,
+};
+const HOH_40K = {
+  filing_status: 3,
+  adjusted_gross_income: 40000,
+  taxable_income: 15850,
+  employee_compensation_includible_in_gross_income: 40000,
+  taxpayer_includes_required_social_security_number_on_return: true,
+};
+
+async function unknownRelation() {
+  const kid = (age: number, relations: string[]) => ({ facts: { ...EITC_CHILD, age }, relations });
+  const modelCall = {
+    program: "us-fiit",
+    period: "2026",
+    facts: HOH_40K,
+    members: [{ facts: { age: 34 } }, kid(8, ["dependent"]), kid(5, ["dependent"])],
+  };
+  for (const [label, run] of [
+    ["compute", () => tools.compute.execute!(modelCall, CALL)],
+    ["lookup_value", () => tools.lookup_value.execute!({ ...modelCall, output: "eitc" }, CALL)],
+  ] as const) {
+    const result = (await run()) as { error?: unknown; kind?: unknown; unknown?: unknown; hint?: unknown };
+    assert.equal(result.kind, "unknown_relation", `${label}: ${JSON.stringify(result)}`);
+    assert.match(result.error as string, /unknown relation "dependent" for us-fiit; closest relations: dependent_of_tax_unit/);
+    assert.deepEqual(
+      (result.unknown as Array<{ path: string }>).map((u) => u.path),
+      ["members[1].relations[0]", "members[2].relations[0]"]
+    );
+    assert.match(result.hint as string, /omit relations/);
+    console.log(`ok   ${label}, relations ["dependent"] → unknown_relation {error, hint}`);
+  }
+
+  const retry = await tools.compute.execute!(
+    { ...modelCall, members: [{ facts: { age: 34 } }, kid(8, ["dependent_of_tax_unit", "qualifying_child_of_tax_unit"]), kid(5, ["dependent_of_tax_unit", "qualifying_child_of_tax_unit"])] },
+    CALL
+  );
+  assert.equal(Math.round(outputValue(retry, "eitc") as number), 3923);
+  console.log("ok   retry with the suggested names: EITC $3,923");
+
+  const noRelations = (await tools.compute.execute!(
+    { program: "us-ny-tanf", period: "2026-01", members: [{ relations: ["member_of_household"] }] },
+    CALL
+  )) as { kind?: unknown; hint?: unknown };
+  assert.equal(noRelations.kind, "unknown_relation");
+  assert.match(noRelations.hint as string, /no member relations/);
+  console.log("ok   us-ny-tanf relations → unknown_relation {error, hint} (no member relations)");
+}
+
+async function filingStatusUnderMember() {
+  // fiit-mfj-2kids (scripts/oracle-cases.json): MFJ, $95k wages, kids 8 and 5.
+  const ctcChild = {
+    ctc_child_deduction_allowed: true,
+    ctc_child_satisfies_subsection_c: true,
+    ctc_child_satisfies_dependency_rules: true,
+    qualifying_child_ssn_included_on_return: true,
+    qualifying_child_ssn_is_valid_for_subsection_h: true,
+    taxpayer_or_spouse_ssn_included_on_return: true,
+    taxpayer_or_spouse_ssn_is_valid_for_subsection_h: true,
+  };
+  const kid = (age: number) => ({ facts: { ...ctcChild, age }, relations: ["ctc_qualifying_child_of_tax_unit", "dependent_of_tax_unit"] });
+  const facts = {
+    taxable_income: 62800,
+    adjusted_gross_income: 95000,
+    taxable_year_months: 12,
+    ctc_subsection_h_special_rules_apply: true,
+    ctc_phaseout_joint_threshold_applies: true,
+  };
+  const first = kid(8);
+  const modelCall = {
+    program: "us-fiit",
+    period: "2026",
+    facts,
+    members: [{ ...first, facts: { ...first.facts, filing_status: 1 } }, kid(5)],
+    extra_outputs: ["regular_tax_before_credits"],
+  };
+  const result = (await tools.compute.execute!(modelCall, CALL)) as { error?: unknown; kind?: unknown; unset?: unknown; hint?: unknown };
+  assert.equal(result.kind, "unit_fact_unset", JSON.stringify(result));
+  assert.match(result.error as string, /also reads filing_status on TaxUnit/);
+  assert.deepEqual(result.unset, [{ slot: "filing_status", paths: ["members[0].facts.filing_status"], entities: ["TaxUnit"] }]);
+  assert.match(result.hint as string, /top-level facts/);
+  console.log("ok   compute, filing_status under members[0] only → unit_fact_unset {error, hint}");
+
+  const retry = await tools.compute.execute!({ ...modelCall, facts: { ...facts, filing_status: 1 }, members: [kid(8), kid(5)] }, CALL);
+  assert.equal(outputValue(retry, "regular_tax_before_credits"), 7040);
+  console.log("ok   retry with filing_status at the top level: regular tax $7,040");
+}
+
 async function main() {
   memberInputsMirrored();
   await seniorDeduction();
   await engineFailuresAreToolResults();
   await misplacedMemberFact();
   await membersWithoutMemberEntity();
+  await unknownRelation();
+  await filingStatusUnderMember();
   console.log("\ncompute error tests passed");
 }
 
