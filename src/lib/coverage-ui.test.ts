@@ -63,6 +63,30 @@ describe("catalog coverage in tool cards", () => {
     for (const status of Object.values(statuses)) expect(html).toContain(status);
   });
 
+  it("shows the failed gate behind a $0 output", () => {
+    const gate = {
+      name: "eitc_allowed",
+      value: "not_holds",
+      legal_id: "us:statutes/26/32#eitc_allowed",
+      requires: [{ slot: "taxpayer_includes_required_social_security_number_on_return", value: true }],
+      requires_any: [{ rule: "eitc_demographic_eligible", any_of: [[{ slot: "eitc_child_count", op: "gt", value: 0, computed: true }]] }],
+    };
+    const invocation: ToolInvocation = {
+      state: "result", toolCallId: "compute", toolName: "compute", args: { program: "us-fiit" },
+      result: {
+        primary_output: "income_tax_before_refundable_credits", applied: {},
+        outputs: [
+          { name: "income_tax_before_refundable_credits", label: "Income tax", value: 1585, unit: "USD", semantics: "scalar" },
+          { name: "eitc", label: "Eitc", value: 0, unit: "USD", semantics: "scalar", zero_because: [gate] },
+        ],
+      },
+    };
+    const html = renderToStaticMarkup(ToolCallCard({ invocation, programCoverage: statuses }));
+    expect(html).toContain("0 because Eitc allowed ✗ does not hold");
+    expect(html).toContain("requires: taxpayer_includes_required_social_security_number_on_return=true");
+    expect(html).toContain("eitc_child_count&gt;0 (computed)");
+  });
+
   it("shows each request disclosure once and escapes text", () => {
     const note = "SNAP figures use FY2026 standards.";
     const invocation: ToolInvocation = {

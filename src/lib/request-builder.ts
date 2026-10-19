@@ -16,6 +16,7 @@
  *     suggestions so the LLM can self-correct.
  */
 import {
+  type DerivedTraceNode,
   type ExecutionRequest,
   type ExecutionResponse,
   type FactScalar,
@@ -29,8 +30,16 @@ import {
   runCompiled,
   yearInterval,
 } from "./engine";
-import type { CatalogInputSlot, CatalogOutput, CatalogProgram } from "./catalog";
+import {
+  getCatalog,
+  slotDefaultAt,
+  type CatalogInputSlot,
+  type CatalogOutput,
+  type CatalogProgram,
+  type Requirement,
+} from "./catalog";
 import { legalIdToUrl } from "./legal-links";
+import artifactsLock from "../../artifacts.lock.json";
 import { programDisclosures } from "./catalog-overlay";
 import { annualUpdateDisclosure, annualUpdateWarning, overdueAnnualUpdates } from "./annual-updates";
 
@@ -121,6 +130,91 @@ export class NotSettableInputError extends Error {
   readonly kind = "not_settable_input";
   constructor(readonly slot: string, readonly path: string, state: string, reason?: string) {
     super(`not settable by the assistant: Axiom's ${state} SNAP encoding ${reason ?? "does not yet determine categorical eligibility from income"}`);
+  }
+}
+
+/** Facts under members[].facts whose slots are not member-scoped. Member
+ *  instances record member-entity slots only, so the engine would never see
+ *  them and the answer would compute from their defaults. */
+export class NotMemberInputError extends Error {
+  readonly kind = "not_member_input";
+  constructor(
+    readonly misplaced: Array<{ path: string; slot: string; entities: string[] }>,
+    readonly memberEntity: string | null,
+    programSlug: string
+  ) {
+    const list = misplaced.map((m) => `${m.path} (${m.entities.join("/")})`).join(", ");
+    super(
+      memberEntity
+        ? `not ${memberEntity} inputs for ${programSlug}: ${list}; members[].facts take ${memberEntity}-scope slots only`
+        : `${programSlug} has no member entity, so members[].facts never apply: ${list}`
+    );
+  }
+}
+
+/** members[].relations names that match none of the program's member
+ *  relations. Linking keeps only the names that match, so a wrong name linked
+ *  the member through no relation and every aggregation over it lost that
+ *  member (us-fiit HoH, two kids, $40,000, relations ["dependent"]: EITC
+ *  $3,923 became $0). */
+export class UnknownRelationError extends Error {
+  readonly kind = "unknown_relation";
+  constructor(
+    readonly unknown: Array<{ path: string; relation: string; suggestions: string[] }>,
+    readonly known: string[],
+    programSlug: string
+  ) {
+    const names = [...new Set(unknown.map((u) => `"${u.relation}"`))];
+    const closest = [...new Set(unknown.flatMap((u) => u.suggestions))];
+    super(
+      known.length === 0
+        ? `${programSlug} has no member relations, so members[].relations cannot link anything: ${unknown.map((u) => u.path).join(", ")}`
+        : `unknown relation ${names.join(", ")} for ${programSlug}` +
+          (closest.length ? `; closest relations: ${closest.join(", ")}` : `; member relations: ${known.join(", ")}`)
+    );
+  }
+}
+
+/** Member facts on a slot the program reads on the member entity and on a
+ *  non-member entity too (us-fiit filing_status: Person and TaxUnit), with no
+ *  top-level value. The member's own record takes the fact; the non-member
+ *  instances read only the top-level facts, so they keep the default. */
+export class UnitFactUnsetError extends Error {
+  readonly kind = "unit_fact_unset";
+  constructor(
+    readonly unset: Array<{ slot: string; paths: string[]; entities: string[] }>,
+    readonly memberEntity: string,
+    programSlug: string
+  ) {
+    super(
+      unset
+        .map(
+          (u) =>
+            `${u.paths.join(", ")} set ${u.slot} on ${memberEntity} only; ${programSlug} also reads ${u.slot} on ${u.entities.join("/")}, which keeps its default because the top-level facts do not set it`
+        )
+        .join("; ")
+    );
+  }
+}
+
+/** members[] on a program with no member entity. No member instances exist,
+ *  so the list states a headcount only, which buildRequest writes to the
+ *  program's verified count inputs. Raised when that takes a silent choice:
+ *  the program has no verified count input (the list would be dropped), or
+ *  the caller set one to a different number (two household sizes). */
+export class NoMemberEntityError extends Error {
+  readonly kind = "no_member_entity";
+  constructor(
+    readonly memberCount: number,
+    readonly countInputs: string[],
+    readonly conflicts: Array<{ slot: string; value: FactScalar }>,
+    programSlug: string
+  ) {
+    super(
+      conflicts.length > 0
+        ? `members[] lists ${memberCount} entries but ${conflicts.map((c) => `${c.slot}=${c.value}`).join(", ")}; ${programSlug} has no member entity, so members[] only sets ${countInputs.join(", ")}`
+        : `${programSlug} has no member entity and no recognized household-count input, so members[] (${memberCount} entries) cannot reach the engine`
+    );
   }
 }
 
@@ -218,8 +312,10 @@ export function queryKey(output: CatalogOutput): string {
 export interface BuiltRequest {
   request: ExecutionRequest;
   queried: CatalogOutput[];
-  /** Member-gate judgments auto-queried at the first member instance. */
+  /** Member-gate judgments auto-queried at every checked member instance. */
   memberCheckNames: Set<string>;
+  /** Member instance ids the gates are queried at, in member order. */
+  memberCheckIds: string[];
   applied: {
     period: string;
     member_count: number;
@@ -233,6 +329,10 @@ export interface BuiltRequest {
     overlay_defaults_in_effect?: Facts;
     /** Factual companion slots derived from supplied income, not eligibility. */
     derived_facts?: Facts;
+    /** Facts assumed because the user didn't state them (e.g. U.S. citizenship
+     *  for SNAP members with no stated citizenship or immigration status).
+     *  The answer must disclose each and invite a correction. */
+    assumed_facts?: Array<{ slot: string; value: FactScalar; members: number[]; why: string }>;
     /** Instructions and diagnostics for the model; not shown to users. */
     notes: string[];
     /** User-facing limitations of this program's encoding, shown on the tool card. */
@@ -252,11 +352,110 @@ const MEMBER_COUNT_INPUTS = new Set([
   "fns_unit_size",
   "tanf_household_size",
   "tanf_family_size",
+  // us-ny-tanf only: indexes the grant table; its family_size indexes the
+  // shelter allowance, so a household size must reach both.
+  "number_of_persons_in_household",
+  // us-ga-tanf: au_size, the index of the standard of need, family maximum
+  // and gross income ceiling. us-de-tanf: number_people_in_budget, the index
+  // of the payment standard table (+$69 per person past 8).
+  "assistance_unit_member_count",
+  // us-ks-tanf only: indexes the basic allowance and the Table II shelter
+  // percentage.
+  "assistance_plan_person_count",
+  // us-ca-tanf only, three headcounts that must move together: the family
+  // count indexes the minimum basic standard (applicant income test), the
+  // same-home count indexes the monthly aid payment schedule (the grant), and
+  // persons_on_aid indexes the regional MAP tables (auxiliary). Setting the
+  // grant's count alone leaves the income test on the one-person standard.
+  "eligible_needy_person_count_in_family",
+  "eligible_needy_person_count_in_same_home",
+  "persons_on_aid",
+  // Not assistance_group_size: us-in-tanf indexes its grant by
+  // participating_members, so setting the group size alone gives the
+  // one-person grant; on us-fl-tca the name is an auxiliary SNAP
+  // minimum-benefit size.
+  // Not us-co-tanf's caretaker and child counts: its grant chart is indexed
+  // by both, so one list length cannot choose between 1+2 ($620) and 2+1
+  // ($649).
 ]);
 
 export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">): boolean {
   return MEMBER_COUNT_INPUTS.has(slot.name) && (slot.dtype === "integer" || slot.dtype === "decimal");
 }
+
+/** The program's verified count inputs, on any entity. */
+export function memberCountSlotNames(program: CatalogProgram): string[] {
+  const names = new Set<string>();
+  for (const slots of Object.values(program.inputs)) {
+    for (const slot of slots) if (isMemberCountSlot(slot)) names.add(slot.name);
+  }
+  return [...names];
+}
+
+/** Fact names that state citizenship or immigration status; any of these on a
+ *  member (or at the top level) disables the citizenship assumption. */
+const IMMIGRATION_STATUS_FACT =
+  /citizen|national|alien|refugee|asylee|entrant|amerasian|immigra|lawful|parolee|compact|qualified_alien|qualifying_quarters|lawfully_residing/;
+/** Fact names about an SSN or TIN on the return. */
+const SSN_FACT = /(^|_)(ssn|tin)(_|$)|social_security_number/;
+
+/** A member-scope fact the app assumes when the user stated nothing that
+ *  bears on it — disclosed in applied.assumed_facts so the answer says so and
+ *  invites a correction. */
+interface MemberAssumption {
+  slot: string;
+  value: FactScalar;
+  applies: (program: CatalogProgram) => boolean;
+  /** True when facts (a member's, or the top level's) already speak to
+   *  this one; the assumption then stays off for that member. */
+  stated: (facts: Facts) => boolean;
+  /** The member gate this fact feeds. When the compute checks that gate,
+   *  the disclosure keeps only members where it holds — elsewhere the
+   *  assumption changed nothing. Without one, it is always disclosed. */
+  gate?: string;
+  why: string;
+}
+
+const MEMBER_ASSUMPTIONS: MemberAssumption[] = [
+  {
+    // SNAP: a member with no stated citizenship or immigration status is
+    // assumed to be a U.S. citizen. A stated refugee/asylee/LPR status is
+    // never overridden.
+    slot: "member_is_us_citizen",
+    value: true,
+    applies: (program) => /-snap$/.test(program.slug),
+    stated: (facts) => Object.keys(facts).some((n) => IMMIGRATION_STATUS_FACT.test(n)),
+    why: "No citizenship or immigration status was stated, so these members are assumed to be U.S. citizens. Say so in Assumptions and invite the user to correct it.",
+  },
+  {
+    // 26 USC 151(d)(5)(C)(iv): the senior deduction needs the qualified
+    // individual's SSN on the return. Filers ordinarily include it, and a
+    // compute that omitted the fact headlined a $0 deduction. Setting the
+    // slot, or saying that some SSN on the return is missing (an SSN/TIN
+    // fact set false), keeps it off.
+    slot: "qualified_individual_social_security_number_included_on_return",
+    value: true,
+    applies: (program) => program.slug === "us-fiit",
+    stated: (facts) =>
+      "qualified_individual_social_security_number_included_on_return" in facts ||
+      Object.entries(facts).some(([n, v]) => SSN_FACT.test(n) && v === false),
+    gate: "senior_deduction_qualified_individual",
+    why: "Nothing was said about this person's SSN, so it is assumed to be on the return, as the senior deduction requires. Say so in Assumptions and invite the user to correct it (someone filing with an ITIN doesn't qualify).",
+  },
+];
+
+/** Member-scope slots whose top-level value is the unit's own return, and the
+ *  member facts that put a member on that return. us-fiit records
+ *  filing_status on Person too: the status of the return the individual
+ *  filed. The spouse rules (§151(b) exemption, §151(d)(5) senior deduction)
+ *  read the joint status at the spouse; §152(c)(1)(E) reads it at each child
+ *  (a child who filed a joint return is no qualifying child). So with an
+ *  explicit members list, a top-level fact on such a slot reaches the members
+ *  marked with a filer role only. Spread to the children, MFJ failed every
+ *  EITC qualifying-child gate and EITC came back $0. */
+const RETURN_SCOPED_MEMBER_FACTS: Record<string, { slots: string[]; filerRoles: string[] }> = {
+  "us-fiit": { slots: ["filing_status"], filerRoles: ["is_taxpayer", "is_spouse_of_taxpayer"] },
+};
 
 export function buildRequest(options: BuildOptions): BuiltRequest {
   const { program } = options;
@@ -310,6 +509,77 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       }
     }
   }
+  // Relation names, full or short, must name one of the member relations the
+  // members are linked through. An unknown name used to match nothing, so the
+  // member was linked through no relation and dropped from every aggregation.
+  const memberRelations = program.member_entity
+    ? program.relations.filter(
+        (r) => r.related_entity === program.member_entity && (r.used || program.relations.length === 1)
+      )
+    : [];
+  const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
+  const relationNames = new Set(memberRelations.flatMap((r) => [r.name, shortName(r.name)]));
+  const knownRelations = [...new Set(memberRelations.map((r) => shortName(r.name)))];
+  const unknownRelations: UnknownRelationError["unknown"] = [];
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const [position, relation] of (member.relations ?? []).entries()) {
+      if (relationNames.has(relation)) continue;
+      unknownRelations.push({
+        path: `members[${index}].relations[${position}]`,
+        relation,
+        suggestions: nearestNames(relation, knownRelations, 3),
+      });
+    }
+  }
+  if (unknownRelations.length > 0) throw new UnknownRelationError(unknownRelations, knownRelations, program.slug);
+  // Member instances record member-scope slots only, so a member fact on a
+  // slot with no member scope (us-fiit's TaxUnit-only
+  // taxpayer_includes_required_social_security_number_on_return) would be
+  // dropped and the answer computed from its default. Reject it instead of
+  // hoisting it to the top level: there it takes one value for the whole
+  // unit, and when members disagree with each other or with the top level,
+  // picking one is the user's call. A copy equal to the top-level value
+  // changes nothing and passes. Slots that also have a member scope keep
+  // their per-member records.
+  const memberScoped = new Set(
+    program.member_entity ? (program.inputs[program.member_entity] ?? []).map((s) => s.name) : []
+  );
+  const misplaced: NotMemberInputError["misplaced"] = [];
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const [name, value] of Object.entries(member.facts ?? {})) {
+      if (memberScoped.has(name) || options.facts?.[name] === value) continue;
+      misplaced.push({ path: `members[${index}].facts.${name}`, slot: name, entities: slotEntities.get(name)! });
+    }
+  }
+  if (misplaced.length > 0) throw new NotMemberInputError(misplaced, program.member_entity, program.slug);
+  // A slot read on the member entity and on a non-member entity takes a
+  // member fact on that member's record only; the non-member instances read
+  // the top-level facts. us-fiit filing_status is the one such non-aux slot:
+  // under members[0] alone, TaxUnit kept 0, so MFJ regular tax came out
+  // $8,528 instead of $7,040 and the $420k CTC $0 instead of $3,400. Reject
+  // rather than copy the member value to the unit: on Person it is that
+  // individual's own return (§152(c)(1)(E) reads a child's joint return), so
+  // a member's value is not always the unit's. The top-level facts stay the
+  // one place that sets the unit's value. Auxiliary slots get the warning
+  // below.
+  const unitUnset = new Map<string, { paths: string[]; entities: string[] }>();
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const name of Object.keys(member.facts ?? {})) {
+      if (!memberScoped.has(name) || slotsByName.get(name)!.aux || options.facts?.[name] !== undefined) continue;
+      const entities = slotEntities.get(name)!.filter((entity) => entity !== program.member_entity);
+      if (entities.length === 0) continue;
+      const entry = unitUnset.get(name) ?? { paths: [], entities };
+      entry.paths.push(`members[${index}].facts.${name}`);
+      unitUnset.set(name, entry);
+    }
+  }
+  if (unitUnset.size > 0) {
+    throw new UnitFactUnsetError(
+      [...unitUnset].map(([slot, entry]) => ({ slot, ...entry })),
+      program.member_entity!,
+      program.slug
+    );
+  }
 
   const derivedFacts: Facts = {};
   if (program.slug === "us-ny-snap") {
@@ -329,16 +599,24 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // output) silently do nothing to the headline — the classic trap is a
   // plausible sibling name (`countable_monthly_unearned_income` vs the live
   // `snap_total_monthly_unearned_income`). Surface it loudly in the applied
-  // report with the nearest on-path sibling.
+  // report with the nearest on-path sibling. Member facts get the same
+  // warning with their members[i] path; one warning per slot.
   const certifiedSlotNames = [...slotsByName.values()].filter((s) => !s.aux).map((s) => s.name);
-  for (const name of Object.keys(facts)) {
-    if (slotsByName.get(name)?.aux) {
-      const siblings = nearestNames(name, certifiedSlotNames, 3);
-      notes.push(
-        `WARNING: fact "${name}" targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
-          (siblings.length ? ` Did you mean: ${siblings.join(", ")}?` : "")
-      );
-    }
+  const auxPaths = new Map<string, string[]>();
+  const noteAux = (name: string, path: string) => {
+    if (slotsByName.get(name)?.aux) auxPaths.set(name, [...(auxPaths.get(name) ?? []), path]);
+  };
+  for (const name of Object.keys(facts)) noteAux(name, "facts");
+  for (const [index, member] of (options.members ?? []).entries()) {
+    for (const name of Object.keys(member.facts ?? {})) noteAux(name, `members[${index}].facts`);
+  }
+  for (const [name, paths] of auxPaths) {
+    const siblings = nearestNames(name, certifiedSlotNames, 3);
+    const where = paths.length === 1 && paths[0] === "facts" ? "" : ` (in ${paths.join(", ")})`;
+    notes.push(
+      `WARNING: fact "${name}"${where} targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
+        (siblings.length ? ` Did you mean: ${siblings.join(", ")}?` : "")
+    );
   }
 
   // -- Member count ----------------------------------------------------------
@@ -366,6 +644,29 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         }
       }
     }
+  } else if (options.members?.length) {
+    // No member entity: no member instances exist and member facts were
+    // rejected above, so the list states a headcount only. Write it to the
+    // verified count inputs as the member-entity path does, so a household
+    // given through members[] never computes at the count's default (us-ny-tanf
+    // gave $183.10 for one person, not $389 for three). Refuse when that takes
+    // a silent choice: with no count input the list would be dropped, and a
+    // count fact that differs from the list is a second household size only
+    // the caller can reconcile (an assistance unit can be smaller than the
+    // household).
+    const size = options.members.length;
+    const countInputs = memberCountSlotNames(program);
+    const conflicts = countInputs
+      .filter((name) => facts[name] !== undefined && Number(facts[name]) !== size)
+      .map((name) => ({ slot: name, value: facts[name] }));
+    if (countInputs.length === 0 || conflicts.length > 0) {
+      throw new NoMemberEntityError(size, countInputs, conflicts, program.slug);
+    }
+    for (const name of countInputs) {
+      if (facts[name] !== undefined) continue;
+      facts[name] = size;
+      notes.push(`set ${name}=${size} from members[]: ${program.slug} has no member entity, so members[] sets only the household count`);
+    }
   }
 
   // -- Resolve queried outputs ----------------------------------------------
@@ -387,9 +688,13 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
 
   // Member checks: the judgments that gate whether a member counts inside
   // relation aggregators (e.g. ctc_qualifying_child, snap_member_eligible).
-  // Auto-queried at the first member instance so a compute with members shows
-  // WHY a member did or didn't count — with `requires` attached on failure.
+  // Auto-queried per member so a compute with members shows WHY each member
+  // did or didn't count — with `requires` attached on failure. Every explicit
+  // member is checked: the taxpayer listed first fails the qualifying-child
+  // gate the children hold, so member 1 alone reads as "no qualifying child".
+  // Synthesized members past the first carry only defaults; check member 1.
   const memberCheckNames = new Set<string>();
+  const memberCheckIds: string[] = [];
   if (memberEntity && memberCount > 0 && !options.outputsOverride) {
     for (const relation of program.relations) {
       if (relation.related_entity !== memberEntity) continue;
@@ -400,6 +705,10 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
           addOutput(output);
         }
       }
+    }
+    if (memberCheckNames.size > 0) {
+      const checked = options.members?.length ? memberCount : 1;
+      for (let i = 1; i <= checked; i++) memberCheckIds.push(instanceId(memberEntity, i));
     }
   }
 
@@ -451,11 +760,15 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   const INCOME_SLOT = /(taxable|gross|earned|countable|unearned|net)_income/;
   const defaultedIncomeSlots = new Set<string>();
 
+  // Defaults that change on a date (a provision's sunset) resolve at the
+  // start of the evaluated period.
+  const defaultFor = (slot: CatalogInputSlot) => slotDefaultAt(slot, inputInterval.start);
+
   const record = (slot: CatalogInputSlot, entity: string, entityId: string, override?: FactScalar) => {
-    const value = override !== undefined ? override : slot.default;
+    const value = override !== undefined ? override : defaultFor(slot);
     if (override === undefined) {
       defaultedSlots++;
-      if (!slot.aux && slot.default === 0 && INCOME_SLOT.test(slot.name)) {
+      if (!slot.aux && value === 0 && INCOME_SLOT.test(slot.name)) {
         defaultedIncomeSlots.add(slot.name);
       }
     }
@@ -486,24 +799,53 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // facts that name member-scope slots (so "member_age: 34" works without an
   // explicit members list).
   const relations: RelationRecord[] = [];
+  /** Assumption → the 1-based members it was set on. */
+  const assumedMembers = new Map<MemberAssumption, number[]>();
   if (memberEntity && memberCount > 0) {
     const memberSlots = program.inputs[memberEntity] ?? [];
-    const memberRelations = program.relations.filter(
-      (r) => r.related_entity === memberEntity && (r.used || program.relations.length === 1)
-    );
-    const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
 
     // Top-level facts that name member-scope slots: with an explicit
     // members[] they form the shared base for EVERY member (taxpayer-level
     // facts like SSN-on-return are member-scoped in the IR but identical
-    // across members); with synthesized members they go to member 1 only
-    // (primary-applicant semantics, e.g. oldest_member_age).
+    // across members) except return-scoped slots, which reach filer-role
+    // members only (RETURN_SCOPED_MEMBER_FACTS); with synthesized members
+    // they go to member 1 only (primary-applicant semantics, e.g.
+    // oldest_member_age).
     const explicitMembers = (options.members?.length ?? 0) > 0;
+    const returnScoped = explicitMembers ? RETURN_SCOPED_MEMBER_FACTS[program.slug] : undefined;
+    const withheld = new Map<string, number[]>(); // slot → members it did not reach
+    // Facts the user never spoke to are assumed per member (see
+    // MEMBER_ASSUMPTIONS) and disclosed in applied.assumed_facts. A related
+    // fact on the member or at the top level keeps an assumption off.
+    const assumptions = MEMBER_ASSUMPTIONS.filter(
+      (a) => a.applies(program) && memberSlots.some((s) => s.name === a.slot) && !a.stated(facts)
+    );
+    const applyAssumptions = (memberFacts: Facts, member: number) => {
+      for (const assumption of assumptions) {
+        if (assumption.stated(memberFacts)) continue;
+        memberFacts[assumption.slot] = assumption.value;
+        if (!assumedMembers.has(assumption)) assumedMembers.set(assumption, []);
+        assumedMembers.get(assumption)!.push(member);
+      }
+    };
     for (let i = 0; i < memberCount; i++) {
       const memberId = instanceId(memberEntity, i + 1);
       const spec = options.members?.[i];
       const base = explicitMembers || i === 0 ? topLevelMemberFacts() : {};
+      if (returnScoped) {
+        const own = { ...base, ...(spec?.facts ?? {}) };
+        if (!returnScoped.filerRoles.some((role) => own[role] === true)) {
+          for (const slot of returnScoped.slots) {
+            if (!(slot in base)) continue;
+            delete base[slot];
+            if (spec?.facts?.[slot] !== undefined) continue; // the member's own value applies
+            if (!withheld.has(slot)) withheld.set(slot, []);
+            withheld.get(slot)!.push(i + 1);
+          }
+        }
+      }
       const memberFacts: Facts = { ...base, ...(spec?.facts ?? {}) };
+      applyAssumptions(memberFacts, i + 1);
       for (const slot of memberSlots) {
         record(slot, memberEntity, memberId, memberFacts[slot.name]);
       }
@@ -522,6 +864,11 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         relations.push({ name: relation.name, tuple, interval: inputInterval });
       }
     }
+    for (const [slot, members] of withheld) {
+      notes.push(
+        `top-level ${slot}=${facts[slot]} describes the ${program.primary_entity}'s own return, so it was recorded on members with ${returnScoped!.filerRoles.join(" or ")} true and not on member(s) ${members.join(", ")}; their own ${slot} stays at its default.`
+      );
+    }
 
     function topLevelMemberFacts(): Facts {
       const out: Facts = {};
@@ -534,17 +881,40 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       return out;
     }
 
-    // Member-check queries evaluate member-entity judgments at member 1; any
-    // household-scope inputs those rule chains read must resolve there too.
-    // Add the non-member union to member 1, excluding slots that already have
-    // member-scope records (duplicates with conflicting values would be
-    // ambiguous).
+    // The reverse direction: a non-member rule can read a member-entity rule
+    // directly, without a relation aggregator (us-fiit's senior-deduction
+    // MAGI, a TaxUnit rule, adds the §911 exclusion, a Person rule). The
+    // engine then evaluates that rule at the query instance itself, so its
+    // member-scope inputs must resolve there. Mirror member 1's values — the
+    // primary filer/applicant — onto every non-member query instance; slots
+    // that already have a non-member-scope record keep it. The records keep
+    // the slot's own entity: the engine resolves inputs by entity_id only.
+    const member1Facts: Facts = {
+      ...topLevelMemberFacts(),
+      ...(options.members?.[0]?.facts ?? {}),
+    };
+    for (const [assumption, members] of assumedMembers) {
+      if (members.includes(1)) member1Facts[assumption.slot] = assumption.value;
+    }
+    for (const entityId of queryInstances.values()) {
+      for (const slot of memberSlots) {
+        if (nonMemberSlots.has(slot.name)) continue;
+        record(slot, memberEntity, entityId, member1Facts[slot.name]);
+      }
+    }
+
+    // Member-check queries evaluate member-entity judgments at each checked
+    // member; any household-scope inputs those rule chains read must resolve
+    // there too. Add the non-member union to each checked member, excluding
+    // slots that already have member-scope records (duplicates with
+    // conflicting values would be ambiguous).
     if (memberCheckNames.size > 0) {
       const memberSlotNames = new Set(memberSlots.map((s) => s.name));
-      const member1 = instanceId(memberEntity, 1);
-      for (const slot of nonMemberSlots.values()) {
-        if (memberSlotNames.has(slot.name)) continue;
-        record(slot, memberEntity, member1, facts[slot.name]);
+      for (const memberId of memberCheckIds) {
+        for (const slot of nonMemberSlots.values()) {
+          if (memberSlotNames.has(slot.name)) continue;
+          record(slot, memberEntity, memberId, facts[slot.name]);
+        }
       }
     }
   }
@@ -553,15 +923,20 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   const queryGroups = new Map<string, QueryRequest>();
   for (const output of queried) {
     const { period } = periodForOutput(output, resolved, program);
-    const entityId =
-      output.entity === memberEntity && memberEntity
-        ? instanceId(memberEntity, 1)
-        : queryInstances.get(output.entity) ?? primaryId;
-    const key = `${entityId}|${period.period_kind}|${period.start}`;
-    if (!queryGroups.has(key)) {
-      queryGroups.set(key, { entity_id: entityId, period, outputs: [] });
+    const entityIds = memberCheckNames.has(output.name)
+      ? memberCheckIds
+      : [
+          output.entity === memberEntity && memberEntity
+            ? instanceId(memberEntity, 1)
+            : queryInstances.get(output.entity) ?? primaryId,
+        ];
+    for (const entityId of entityIds) {
+      const key = `${entityId}|${period.period_kind}|${period.start}`;
+      if (!queryGroups.has(key)) {
+        queryGroups.set(key, { entity_id: entityId, period, outputs: [] });
+      }
+      queryGroups.get(key)!.outputs.push(queryKey(output));
     }
-    queryGroups.get(key)!.outputs.push(queryKey(output));
   }
 
   // Member-scope inputs for member queries: if a queried output lives on the
@@ -575,11 +950,20 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     },
     queried,
     memberCheckNames,
+    memberCheckIds,
     applied: {
       period: resolved.label,
       member_count: memberCount,
       facts_applied: facts,
       ...(Object.keys(derivedFacts).length > 0 && { derived_facts: derivedFacts }),
+      ...(assumedMembers.size > 0 && {
+        assumed_facts: [...assumedMembers].map(([assumption, members]) => ({
+          slot: assumption.slot,
+          value: assumption.value,
+          members,
+          why: assumption.why,
+        })),
+      }),
       defaulted_slots: defaultedSlots,
       ...(defaultedIncomeSlots.size > 0 && {
         defaulted_income_slots: [...defaultedIncomeSlots],
@@ -595,7 +979,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         for (const slots of Object.values(program.inputs)) {
           for (const s of slots) {
             if (s.default_source === "overlay" && !s.aux && !userSet.has(s.name)) {
-              inEffect[s.name] = s.default as Facts[string];
+              inEffect[s.name] = defaultFor(s);
             }
           }
         }
@@ -624,10 +1008,189 @@ export interface ShapedOutput {
   legal_id: string | null;
   /** Attached when a judgment came back not_holds: the facts (with values)
    *  its unconditional conjunction chain requires — what to set to make it
-   *  hold. `requires_partial` marks additional conditional/disjunctive logic
-   *  not captured here. */
-  requires?: Array<{ slot: string; value: boolean | number | string }>;
+   *  hold. An entry with `op` is a threshold the slot's real value must meet
+   *  (`age gte 65`). `requires_partial` marks additional
+   *  conditional/disjunctive logic not captured here. */
+  requires?: CatalogOutput["requires"];
+  /** Attached with a not_holds judgment: the `or`s in its chain that are
+   *  still unmet — no alternative group holds on the recorded inputs and the
+   *  trace doesn't show the enclosing rule holding. */
+  requires_any?: CatalogOutput["requires_any"];
   requires_partial?: boolean;
+  /** Attached when a judgment came back not_holds and the explain trace
+   *  shows why: the deepest sub-judgments on its failing path, with their
+   *  legal ids and sources (e.g. snap_member_eligible ←
+   *  snap_member_citizenship_or_alien_status_eligible, 7 CFR 273.4(a)). */
+  failed_because?: Array<{ name: string; legal_id: string | null; source: string | null }>;
+  /** Attached when a scalar came back 0 because a judgment gating it failed
+   *  (the catalog's `zero_unless`: us-fiit `eitc` ← `eitc_allowed`). Each
+   *  entry reads like a failed judgment output. Member gates are left to
+   *  `member_checks`, and gates that are outputs of their own to their entry. */
+  zero_because?: GateCheck[];
+}
+
+/** One leaf of a rule's dependency closure: a parameter or an unconditioned
+ *  input the rule ultimately rests on. */
+export interface ProvenanceParameter {
+  legal_id: string | null;
+  name: string;
+  value: unknown;
+  source: string | null;
+}
+
+/** The derivation behind one output: every rule legal id the engine actually
+ *  fired to produce it (BFS order, root first) and the parameters/inputs at
+ *  the bottom of that chain. Derived from the `explain`-mode trace — see
+ *  `deriveRuleProvenance` — never derived from anywhere else. */
+export interface RuleProvenance {
+  rule_path: string[];
+  parameters_used: ProvenanceParameter[];
+}
+
+/** Reproducibility stamps for one compute: which corpus and engine build
+ *  produced it, and when. `release_tag`/`corpus_sha` come from the catalog
+ *  (itself pinned by `artifacts.lock.json` at catalog-generation time);
+ *  `engine_ref` is read from the same lock file directly since it isn't
+ *  otherwise threaded into the runtime. */
+export interface Stamps {
+  release_tag: string;
+  corpus_sha: string;
+  engine_ref: string;
+  evaluated_at: string;
+}
+
+export function computeStamps(): Stamps {
+  const catalog = getCatalog();
+  return {
+    release_tag: catalog.release_tag,
+    corpus_sha: catalog.corpus_sha,
+    engine_ref: (artifactsLock as { engine: { ref: string } }).engine.ref,
+    evaluated_at: new Date().toISOString(),
+  };
+}
+
+/** Walk a trace node's `dependencies` breadth-first from `rootKey`, collecting
+ *  every fired rule's legal id (`rule_path`) and the leaf nodes it ultimately
+ *  rests on (`parameters_used`). A dependency key absent from `trace` is a
+ *  short-circuited sibling branch the engine never evaluated — signal, not
+ *  error, so it's skipped rather than throwing. */
+export function deriveRuleProvenance(
+  trace: Record<string, DerivedTraceNode>,
+  rootKey: string
+): RuleProvenance {
+  const visited = new Set<string>();
+  const queue: string[] = [rootKey];
+  const rulePath: string[] = [];
+  const parametersUsed: ProvenanceParameter[] = [];
+  while (queue.length) {
+    const key = queue.shift()!;
+    if (visited.has(key)) continue;
+    visited.add(key);
+    const node = trace[key];
+    if (!node) continue; // short-circuited branch never evaluated
+    if (node.id) rulePath.push(node.id);
+    if (!node.dependencies || node.dependencies.length === 0) {
+      parametersUsed.push({
+        legal_id: node.id ?? null,
+        name: node.name,
+        value: node.kind === "judgment" ? node.outcome ?? null : node.value?.value ?? null,
+        source: node.source ?? null,
+      });
+    } else {
+      for (const dep of node.dependencies) queue.push(dep);
+    }
+  }
+  return { rule_path: rulePath, parameters_used: parametersUsed };
+}
+
+/** Follow a failed judgment's not_holds sub-judgments down the explain trace
+ *  and return the deepest ones — the conditions that actually failed, which
+ *  the top-level gate alone doesn't name. Empty when the trace doesn't reach
+ *  a failing sub-judgment (e.g. the judgment failed on an input directly).
+ *  A sub-judgment the parent reads negated (`negated`, from the catalog) is
+ *  skipped: its failing is no reason the parent failed. */
+function failingSubJudgments(
+  trace: Record<string, DerivedTraceNode>,
+  key: string,
+  name: string,
+  negated: (judgment: string) => readonly string[] | undefined,
+  limit = 5
+): NonNullable<ShapedOutput["failed_because"]> {
+  const rootKey = trace[key] ? key : trace[name] ? name : null;
+  if (!rootKey) return [];
+  const found: NonNullable<ShapedOutput["failed_because"]> = [];
+  const seen = new Set<string>();
+  const visit = (k: string) => {
+    if (seen.has(k) || found.length >= limit) return;
+    seen.add(k);
+    const node = trace[k];
+    if (!node) return;
+    const skipped = negated(node.name) ?? [];
+    const failing = node.dependencies.filter(
+      (d) => trace[d]?.kind === "judgment" && trace[d]?.outcome === "not_holds" && !skipped.includes(trace[d].name)
+    );
+    if (failing.length === 0) {
+      if (k !== rootKey && !found.some((f) => f.name === node.name)) {
+        found.push({ name: node.name, legal_id: node.id ?? null, source: node.source ?? null });
+      }
+      return;
+    }
+    failing.forEach(visit);
+  };
+  visit(rootKey);
+  return found;
+}
+
+/** Trace keys reachable from `rootKey` through `dependencies`. */
+function reachableKeys(trace: Record<string, DerivedTraceNode>, rootKey: string): Set<string> {
+  const reached = new Set<string>();
+  const queue = [rootKey];
+  while (queue.length) {
+    const key = queue.shift()!;
+    if (reached.has(key) || !trace[key]) continue;
+    reached.add(key);
+    queue.push(...trace[key].dependencies);
+  }
+  return reached;
+}
+
+/** Unmet `or`s shown per failed judgment; the catalog keeps up to six. */
+const OPEN_ALTERNATIVES_CAP = 3;
+
+/** One unpublished gate judgment (a member gate, or a gate that zeroed a
+ *  scalar), with the ShapedOutput fields that would repeat per gate (label,
+ *  unit, semantics, entity, ...) left out. */
+export type GateCheck = Pick<
+  ShapedOutput,
+  "name" | "value" | "legal_id" | "requires" | "requires_any" | "requires_partial" | "failed_because"
+>;
+
+/** One member-gate judgment at one member. */
+export type MemberCheck = GateCheck;
+
+function asGateCheck(shaped: ShapedOutput): GateCheck {
+  const { name, value, legal_id, requires, requires_any, requires_partial, failed_because } = shaped;
+  return {
+    name,
+    value,
+    legal_id,
+    ...(requires && { requires }),
+    ...(requires_any && { requires_any }),
+    ...(requires_partial && { requires_partial }),
+    ...(failed_because && { failed_because }),
+  };
+}
+
+/** Exactly one of `checks` / `same_as` is set: a member whose checks match
+ *  an earlier member's points at that member instead of repeating them
+ *  (siblings, or six identical SNAP members, would otherwise multiply the
+ *  payload). */
+export interface MemberChecks {
+  /** 1-based position in the request's members list. */
+  member: number;
+  checks?: MemberCheck[];
+  /** The earlier member whose checks this member's equal, value for value. */
+  same_as?: number;
 }
 
 export interface ShapedResult {
@@ -637,12 +1200,20 @@ export interface ShapedResult {
   member_count: number;
   primary_output: string;
   outputs: ShapedOutput[];
-  /** Judgments gating whether member 1 counts inside relation aggregators,
-   *  with `requires` (the facts to set) attached on failure. */
-  member_checks?: ShapedOutput[];
+  /** Per member, the judgments gating whether that member counts inside
+   *  relation aggregators, with `requires` (the facts to set) and
+   *  `failed_because` attached on failure. */
+  member_checks?: MemberChecks[];
   applied: BuiltRequest["applied"];
   citations: Array<{ id: string; url: string }>;
   incomplete_note: string | null;
+  /** Per-output derivation, keyed by output name. Sized for a UI panel
+   *  (20–50 KB of raw trace collapses to a rule-id list + leaf parameters
+   *  per output) — never meant to ride in a tool result back to the model;
+   *  callers strip this before returning to the model and forward it
+   *  out-of-band instead (see route.ts's stream annotations). */
+  provenance: Record<string, RuleProvenance>;
+  stamps: Stamps;
 }
 
 export function labelFor(name: string): string {
@@ -655,18 +1226,112 @@ export function shapeResult(
   built: BuiltRequest,
   response: ExecutionResponse
 ): ShapedResult {
-  const merged = new Map<string, ReturnType<typeof readOutput> & { raw?: unknown }>();
+  type ReadOutput = ReturnType<typeof readOutput>;
+  // Main outputs read one merged view. Members past the first carry only
+  // gate queries whose outputs and trace nodes share keys across members, so
+  // each checked member also gets its own scope.
+  const merged = new Map<string, ReadOutput>();
+  const trace: Record<string, DerivedTraceNode> = {};
+  const checkedIds = new Set(built.memberCheckIds);
+  const gateOnlyIds = new Set(built.memberCheckIds.slice(1));
+  const perMember = new Map<string, { outputs: Map<string, ReadOutput>; trace: Record<string, DerivedTraceNode> }>();
   for (const result of response.results) {
+    if (checkedIds.has(result.entity_id)) {
+      let scope = perMember.get(result.entity_id);
+      if (!scope) perMember.set(result.entity_id, (scope = { outputs: new Map(), trace: {} }));
+      for (const [key, value] of Object.entries(result.outputs ?? {})) scope.outputs.set(key, readOutput(value));
+      Object.assign(scope.trace, result.trace ?? {});
+    }
+    if (gateOnlyIds.has(result.entity_id)) continue;
     for (const [key, value] of Object.entries(result.outputs ?? {})) {
       merged.set(key, readOutput(value));
     }
+    Object.assign(trace, result.trace ?? {});
   }
 
-  const shaped: ShapedOutput[] = built.queried.map((output) => {
-    const r = merged.get(queryKey(output));
+  // Recorded input values by `entity_id|legal input id`, to tell which
+  // `requires_any` alternatives already hold. A slot recorded twice with
+  // different values counts as unknown.
+  const recorded = new Map<string, string | undefined>();
+  for (const input of built.request.dataset.inputs) {
+    const key = `${input.entity_id}|${input.name}`;
+    const value = String(input.value.value);
+    recorded.set(key, recorded.has(key) && recorded.get(key) !== value ? undefined : value);
+  }
+  // A `computed` entry names a derived value: read it from the trace (absent
+  // when the engine short-circuited it, so unknown).
+  const tracedValue = (scopeTrace: Record<string, DerivedTraceNode>, name: string): string | undefined => {
+    const node = Object.values(scopeTrace).find((n) => n.name === name && n.kind === "scalar");
+    return node?.value === undefined ? undefined : String(node.value.value);
+  };
+  const meets = (
+    entityId: string | undefined,
+    req: Requirement,
+    scopeTrace: Record<string, DerivedTraceNode>
+  ): boolean => {
+    const value = req.computed
+      ? tracedValue(scopeTrace, req.slot)
+      : recorded.get(`${entityId}|${legalInputId(program.slug, req.slot)}`);
+    if (value === undefined) return false;
+    if (!req.op) return value === String(req.value);
+    const [n, t] = [Number(value), Number(req.value)];
+    return req.op === "gt" ? n > t : req.op === "gte" ? n >= t : req.op === "lt" ? n < t : n <= t;
+  };
+  const openAlternatives = (
+    output: CatalogOutput,
+    entityId: string | undefined,
+    scopeTrace: Record<string, DerivedTraceNode>
+  ): NonNullable<ShapedOutput["requires_any"]> => {
+    if (!output.requires_any) return [];
+    const holding = new Set(Object.values(scopeTrace).filter((n) => n.outcome === "holds").map((n) => n.name));
+    return output.requires_any
+      .filter((alt) => !holding.has(alt.rule) && !alt.any_of.some((group) => group.every((req) => meets(entityId, req, scopeTrace))))
+      .slice(0, OPEN_ALTERNATIVES_CAP);
+  };
+  const mainEntityOf = new Map<string, string>();
+  for (const query of built.request.queries) {
+    if (gateOnlyIds.has(query.entity_id)) continue;
+    for (const key of query.outputs) if (!mainEntityOf.has(key)) mainEntityOf.set(key, query.entity_id);
+  }
+
+  // A scalar that is `if J then X else 0` comes back 0 with no failed check
+  // when J is neither an output nor a member gate: us-fiit's eitc fails
+  // eitc_allowed on an unset taxpayer SSN fact, and the result named nothing
+  // to set. Shape each failed J on the 0's own trace path like a failed
+  // judgment output.
+  const outputByName = new Map(program.outputs.map((o) => [o.name, o]));
+  const reported = new Set(built.queried.map((o) => o.name));
+  const failedZeroGates = (
+    output: CatalogOutput,
+    scopeTrace: Record<string, DerivedTraceNode>,
+    entityId: string | undefined
+  ): GateCheck[] => {
+    const reached = reachableKeys(scopeTrace, queryKey(output));
+    return (output.zero_unless ?? []).flatMap((name) => {
+      const gate = outputByName.get(name);
+      if (!gate || gate.entity === program.member_entity || reported.has(name)) return [];
+      const key = queryKey(gate);
+      if (!reached.has(key) || scopeTrace[key].outcome !== "not_holds") return [];
+      const outcome = new Map<string, ReadOutput>([[key, { kind: "judgment", outcome: "not_holds" }]]);
+      return [asGateCheck(shapeOne(gate, outcome, scopeTrace, entityId))];
+    });
+  };
+
+  const shapeOne = (
+    output: CatalogOutput,
+    outputs: Map<string, ReadOutput>,
+    scopeTrace: Record<string, DerivedTraceNode>,
+    entityId = mainEntityOf.get(queryKey(output))
+  ): ShapedOutput => {
+    const r = outputs.get(queryKey(output));
     let value: ShapedOutput["value"] = null;
     if (r) value = r.kind === "judgment" ? r.outcome ?? null : r.numeric ?? null;
     const failedJudgment = output.semantics === "judgment" && value === "not_holds";
+    const failedBecause = failedJudgment
+      ? failingSubJudgments(scopeTrace, queryKey(output), output.name, (name) => outputByName.get(name)?.negated_judgments)
+      : [];
+    const open = failedJudgment ? openAlternatives(output, entityId, scopeTrace) : [];
+    const zeroBecause = value === 0 ? failedZeroGates(output, scopeTrace, entityId) : [];
     return {
       name: output.name,
       label: labelFor(output.name),
@@ -677,15 +1342,56 @@ export function shapeResult(
       published_output: output.certified,
       acknowledged_incomplete: output.acknowledged_incomplete,
       legal_id: output.id,
-      ...(failedJudgment && output.requires && {
-        requires: output.requires,
-        ...(output.requires_partial && { requires_partial: true }),
+      ...(failedJudgment && output.requires && { requires: output.requires }),
+      ...(open.length > 0 && { requires_any: open }),
+      ...(failedJudgment && (output.requires || open.length > 0) && output.requires_partial && {
+        requires_partial: true,
       }),
+      ...(failedBecause.length > 0 && { failed_because: failedBecause }),
+      ...(zeroBecause.length > 0 && { zero_because: zeroBecause }),
     };
+  };
+
+  const mainOutputs = built.queried
+    .filter((o) => !built.memberCheckNames.has(o.name))
+    .map((o) => shapeOne(o, merged, trace));
+
+  const gates = built.queried.filter((o) => built.memberCheckNames.has(o.name));
+  const firstMemberWith = new Map<string, number>();
+  const heldAt = new Set<string>(); // `${gate}|${member}` for every gate that holds
+  const memberChecks: MemberChecks[] = built.memberCheckIds.map((id, index) => {
+    const member = index + 1;
+    const scope = perMember.get(id) ?? { outputs: new Map<string, ReadOutput>(), trace: {} };
+    const checks: MemberCheck[] = gates.map((gate) => {
+      const check = asGateCheck(shapeOne(gate, scope.outputs, scope.trace, id));
+      if (check.value === "holds") heldAt.add(`${check.name}|${member}`);
+      return check;
+    });
+    const signature = JSON.stringify(checks);
+    const sameAs = firstMemberWith.get(signature);
+    if (sameAs !== undefined) return { member, same_as: sameAs };
+    firstMemberWith.set(signature, member);
+    return { member, checks };
   });
 
-  const memberChecks = shaped.filter((o) => built.memberCheckNames.has(o.name));
-  const mainOutputs = shaped.filter((o) => !built.memberCheckNames.has(o.name));
+  // An assumption tied to a member gate changed nothing where that gate
+  // fails anyway (a 40-year-old's senior-deduction check), so disclose it
+  // only where the gate holds. Members whose gate wasn't checked (the
+  // lookup path, synthesized members past the first) stay disclosed.
+  if (built.applied.assumed_facts) {
+    const disclosed = built.applied.assumed_facts
+      .map((assumed) => {
+        const gate = MEMBER_ASSUMPTIONS.find((a) => a.slot === assumed.slot)?.gate;
+        if (!gate || !built.memberCheckNames.has(gate)) return assumed;
+        const members = assumed.members.filter(
+          (m) => m > built.memberCheckIds.length || heldAt.has(`${gate}|${m}`)
+        );
+        return { ...assumed, members };
+      })
+      .filter((assumed) => assumed.members.length > 0);
+    if (disclosed.length > 0) built.applied.assumed_facts = disclosed;
+    else delete built.applied.assumed_facts;
+  }
 
   // Primary first, then judgments, then remaining scalars.
   mainOutputs.sort((a, b) => {
@@ -710,6 +1416,13 @@ export function shapeResult(
     );
   }
 
+  const provenance: Record<string, RuleProvenance> = {};
+  for (const output of built.queried) {
+    const key = queryKey(output);
+    if (!trace[key]) continue; // no trace root — e.g. output never fired
+    provenance[output.name] = deriveRuleProvenance(trace, key);
+  }
+
   return {
     program: program.slug,
     display_name: program.display_name,
@@ -723,6 +1436,8 @@ export function shapeResult(
     incomplete_note: incomplete.length
       ? `Flagged in the program spec as not fully encoded: ${incomplete.join(", ")}.`
       : null,
+    provenance,
+    stamps: computeStamps(),
   };
 }
 

@@ -9,6 +9,9 @@ describe("modelDisplayName", () => {
     expect(modelDisplayName("gpt-5.5-pro")).toBe("GPT-5.5 Pro");
     expect(modelDisplayName("gpt-5.5-mini")).toBe("GPT-5.5 Mini");
     expect(modelDisplayName("gpt-6")).toBe("GPT-6");
+    expect(modelDisplayName("gpt-6-luna")).toBe("GPT-6 Luna");
+    expect(modelDisplayName("gpt-6.1-sol")).toBe("GPT-6.1 Sol");
+    expect(modelDisplayName("gpt-5.6-terra")).toBe("GPT-5.6 Terra");
   });
 
   it("shows unrecognized ids verbatim rather than guessing a name", () => {

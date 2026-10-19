@@ -8,6 +8,7 @@ import posthog from "posthog-js";
 import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import * as grounding from "./grounding";
 import { tools } from "./tools";
 
 vi.mock("posthog-js", () => ({ default: { init: vi.fn() } }));
@@ -81,7 +82,8 @@ describe("conversation privacy", () => {
       "@/lib/prefetch": { prefetchSection: () => null },
       "@/lib/prompts": { buildSystemPrompt: () => "offline test" },
       "@/lib/rate-limit": { enforceRateLimit: () => null },
-      "@/lib/tools": { tools },
+      "@/lib/tools": { tools, createTools: () => tools },
+      "@/lib/grounding": grounding,
     }, serverConsole);
     const response = await POST(new Request("http://localhost/api/chat", {
       method: "POST", body: JSON.stringify({ messages: [{ role: "user", content: "Compute my estimate." }] }),

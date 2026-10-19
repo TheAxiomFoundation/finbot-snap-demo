@@ -5,15 +5,15 @@
  * model gets the slot surface without spending an LLM round-trip on it.
  */
 import { annualUpdateNoticesAt, periodStartDate } from "./annual-updates";
-import type { CatalogProgram } from "./catalog";
+import { slotDefaultAt, type CatalogProgram } from "./catalog";
 import { programDisclosures } from "./catalog-overlay";
-import { defaultPeriodFor, isMemberCountSlot } from "./request-builder";
+import { defaultPeriodFor, isMemberCountSlot, memberCountSlotNames } from "./request-builder";
 
 /** Compact one-token slot description:
  *  `name:dtype`, `=default` when non-zero/false, `{1=joint,2=separate}` for
  *  enum codes (labels reduced to their distinctive tails), `(eq 12)` for
  *  equality-gate values, trailing `*` for branch-selector flags. */
-function describeSlot(s: CatalogProgram["inputs"][string][number]): string {
+function describeSlot(s: CatalogProgram["inputs"][string][number], periodStart: string): string {
   let out = `${s.name}:${s.dtype}`;
   if (s.enum) {
     const labels = Object.values(s.enum);
@@ -23,7 +23,8 @@ function describeSlot(s: CatalogProgram["inputs"][string][number]): string {
       .join(",");
     out += `{${entries}}`;
   }
-  if (!(s.default === false || s.default === 0 || s.default === "")) out += `=${s.default}`;
+  const value = slotDefaultAt(s, periodStart);
+  if (!(value === false || value === 0 || value === "")) out += `=${value}`;
   if (s.eq_hints?.length) out += `(eq ${s.eq_hints.join("|")})`;
   if (s.variant_switch) out += "*";
   if (s.aux) out = "~" + out;
@@ -44,6 +45,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
   const filter = inputsSearch?.toLowerCase();
   const inputs: Record<string, { slots: string[]; omitted: number; aux_hidden?: number }> = {};
   const defaultOverrides: Record<string, boolean | number | string> = {};
+  const periodStart = periodStartDate(defaultPeriodFor(program));
   for (const [entity, slots] of Object.entries(program.inputs)) {
     const matching = slots.filter((s) => !filter || s.name.toLowerCase().includes(filter));
     // Without a search filter, show only slots on the published-output
@@ -52,16 +54,18 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
     const relevant = filter ? matching : matching.filter((s) => !s.aux);
     const shown = relevant.slice(0, INPUT_CAP);
     inputs[entity] = {
-      slots: shown.map(describeSlot),
+      slots: shown.map((s) => describeSlot(s, periodStart)),
       omitted: relevant.length - shown.length,
       ...(filter ? {} : { aux_hidden: matching.length - relevant.length }),
     };
     for (const s of slots) {
-      if (s.default_source === "overlay") defaultOverrides[s.name] = s.default;
+      if (s.default_source === "overlay") defaultOverrides[s.name] = slotDefaultAt(s, periodStart);
     }
   }
   const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
   const memberCountSlots = (program.inputs[program.primary_entity] ?? []).filter(isMemberCountSlot).map((slot) => slot.name);
+  // With no member entity, members[] sets the count inputs on any entity.
+  const noMemberCountSlots = program.member_entity ? [] : memberCountSlotNames(program);
   return {
     slug: program.slug,
     display_name: program.display_name,
@@ -77,7 +81,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
     acknowledged_incomplete: program.acknowledged_incomplete,
     disclosures: [
       ...programDisclosures(program),
-      ...annualUpdateNoticesAt(program, periodStartDate(defaultPeriodFor(program))),
+      ...annualUpdateNoticesAt(program, periodStart),
     ],
     total_outputs: program.outputs.length,
     inputs,
@@ -93,7 +97,9 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
       "aux_hidden counts auxiliary slots not on the published-output path (they can't change the headline); pass inputs_search to see them.",
       program.member_entity
         ? `Members: pass members[] (facts use ${program.member_entity}-scope slots)${memberCountSlots.length ? `, or a count fact (${memberCountSlots.join(", ")}) to synthesize identical members` : ""}.`
-        : "This program has no member entity; only top-level facts apply.",
+        : noMemberCountSlots.length
+          ? `This program has no member entity; only top-level facts apply. State the household size in ${noMemberCountSlots.join(", ")} (members[] without facts sets it too).`
+          : "This program has no member entity; only top-level facts apply and members[] is refused.",
       "Any of the total_outputs encoded outputs can be read with lookup_value or compute extra_outputs.",
     ],
   };

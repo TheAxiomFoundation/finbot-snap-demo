@@ -40,10 +40,18 @@ describe("formula coverage at the tool boundary", () => {
     ), { numRuns: 24, seed: 1612 });
   });
 
-  it("preserves unrelated failures", async () => {
-    const error = new Error("engine connection failed");
-    vi.mocked(runCompiled).mockRejectedValue(error);
-    await expect(tools.lookup_value.execute!({ program, period: "2025-07", output }, context)).rejects.toBe(error);
-    await expect(tools.compute.execute!({ program, period: "2025-07" }, context)).rejects.toBe(error);
+  it("keeps unrelated failures distinct from formula gaps", async () => {
+    // Returned, not rethrown: a throw inside a tool executor ends the chat
+    // stream with an empty reply.
+    vi.mocked(runCompiled).mockRejectedValue(new Error("engine connection failed"));
+    for (const result of [
+      await tools.lookup_value.execute!({ program, period: "2025-07", output }, context),
+      await tools.compute.execute!({ program, period: "2025-07" }, context),
+    ]) {
+      expect(result).toMatchObject({ error: "calculation failed: engine connection failed", hint: expect.any(String) });
+      expect(result).not.toHaveProperty("kind");
+      expect(result).not.toHaveProperty("outputs");
+      expect(result).not.toHaveProperty("value");
+    }
   });
 });

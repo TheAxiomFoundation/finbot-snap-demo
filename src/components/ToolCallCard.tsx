@@ -107,12 +107,59 @@ function IncompleteBadge() {
   );
 }
 
+/** A `requires` entry with `op` is a threshold test (`age ≥ 65`). */
+const OP_SYMBOL: Record<string, string> = { gt: ">", gte: "≥", lt: "<", lte: "≤" };
+
+function requirementText(r: { slot: string; op?: string; value: unknown; computed?: boolean }): string {
+  return `${r.slot}${(r.op && OP_SYMBOL[r.op]) ?? "="}${r.value}${r.computed ? " (computed)" : ""}`;
+}
+
 function displayValue(o: { value: unknown; unit?: string | null }): string {
   if (typeof o.value === "number") return formatValue(o.value, o.unit);
   if (o.value === "holds") return "✓ holds";
   if (o.value === "not_holds") return "✗ does not hold";
   if (o.value === null || o.value === undefined) return "—";
   return String(o.value);
+}
+
+/** Same as request-builder's labelFor; member checks arrive without labels. */
+function checkLabel(name: string): string {
+  const words = name.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** What a failed gate check needs: its `requires` and unmet alternatives. */
+function FailedCheckNeeds({ check }: { check: any }) {
+  if (check.value !== "not_holds") return null;
+  return (
+    <>
+      {check.requires && (
+        <div className="mono" style={{ fontSize: 10.5, color: "#92400e", marginTop: 2 }}>
+          requires: {check.requires.map(requirementText).join(" ")}
+        </div>
+      )}
+      {check.requires_any?.map((alt: any, i: number) => (
+        <div key={`${alt.rule}-${i}`} className="mono" style={{ fontSize: 10.5, color: "#92400e", marginTop: 2 }}>
+          {alt.rule} needs one of: {alt.any_of.map((group: any[]) => group.map(requirementText).join(" ")).join(" | ")}
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** The failed gates that forced an output to 0 (`zero_because`). */
+function ZeroBecause({ output }: { output: any }) {
+  if (!output?.zero_because?.length) return null;
+  return (
+    <>
+      {output.zero_because.map((gate: any) => (
+        <div key={gate.name} style={{ fontSize: 11.5, color: "#374151", marginTop: 2 }}>
+          0 because {checkLabel(gate.name)} {displayValue(gate)}
+          <FailedCheckNeeds check={gate} />
+        </div>
+      ))}
+    </>
+  );
 }
 
 function Citations({ citations }: { citations?: Array<{ id: string; url: string }> }) {
@@ -164,10 +211,11 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
         {primary?.semantics === "judgment" && judgmentBadge(primary.value)}
         {primary?.acknowledged_incomplete && <IncompleteBadge />}
       </div>
+      <ZeroBecause output={primary} />
 
       {rest.length > 0 && (
         <div className="tool-rows">
-          {rest.map((o: any) => (
+          {rest.flatMap((o: any) => [
             <div key={o.name} className="tool-row">
               <span className="k">
                 {o.label}
@@ -176,28 +224,33 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
               <span className="v" style={o.semantics === "judgment" ? { color: o.value === "holds" ? "#065f46" : "#991b1b" } : undefined}>
                 {displayValue(o)}
               </span>
-            </div>
-          ))}
+            </div>,
+            <ZeroBecause key={`${o.name}-zero`} output={o} />,
+          ])}
         </div>
       )}
 
       {result.member_checks?.length > 0 && (
         <div className="tool-rows">
-          {result.member_checks.map((o: any) => (
-            <div key={o.name} style={{ padding: "4px 0", borderBottom: "1px dashed #eeeee8" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12 }}>
-                <span className="k" style={{ color: "#374151" }}>member check · {o.label}</span>
-                <span className="v mono" style={{ color: o.value === "holds" ? "#065f46" : "#991b1b" }}>
-                  {displayValue(o)}
-                </span>
+          {result.member_checks.map((m: any) =>
+            m.same_as ? (
+              <div key={m.member} style={{ padding: "4px 0", borderBottom: "1px dashed #eeeee8", fontSize: 12 }}>
+                <span className="k" style={{ color: "#374151" }}>member {m.member} · same checks as member {m.same_as}</span>
               </div>
-              {o.value === "not_holds" && o.requires && (
-                <div className="mono" style={{ fontSize: 10.5, color: "#92400e", marginTop: 2 }}>
-                  requires: {o.requires.map((r: any) => `${r.slot}=${r.value}`).join(" ")}
+            ) : (
+              (m.checks ?? []).map((o: any) => (
+                <div key={`${m.member}-${o.name}`} style={{ padding: "4px 0", borderBottom: "1px dashed #eeeee8" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12 }}>
+                    <span className="k" style={{ color: "#374151" }}>member {m.member} · {checkLabel(o.name)}</span>
+                    <span className="v mono" style={{ color: o.value === "holds" ? "#065f46" : "#991b1b" }}>
+                      {displayValue(o)}
+                    </span>
+                  </div>
+                  <FailedCheckNeeds check={o} />
                 </div>
-              )}
-            </div>
-          ))}
+              ))
+            )
+          )}
         </div>
       )}
       {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}

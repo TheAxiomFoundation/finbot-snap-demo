@@ -156,7 +156,13 @@ export default async function ProgramPage({ params }: PageProps) {
                   {slot.name}
                   <span style={{ color: "#6b7280" }}>
                     : {slot.dtype} = {JSON.stringify(slot.default)}
-                    {slot.default_source ? ` (${slot.default_source})` : ""}
+                    {slot.default_source
+                      ? ` (${slot.default_source}${
+                          slot.default_by_period
+                            ? `; ${JSON.stringify(slot.default_by_period.otherwise)} from ${slot.default_by_period.before}`
+                            : ""
+                        })`
+                      : ""}
                     {slot.enum
                       ? ` {${Object.entries(slot.enum)
                           .map(([v, label]) => `${v}${label ? `=${label}` : ""}`)

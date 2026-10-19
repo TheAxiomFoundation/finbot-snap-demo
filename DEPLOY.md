@@ -51,10 +51,14 @@ Set the env vars Vercel needs:
 ```bash
 vercel env add OPENAI_API_KEY
 vercel env add AXIOM_ENGINE_URL      # Modal URL from step 1
-# Optional model override. Default is gpt-5.5; see src/lib/model.ts. The
-# session notice names this model, and it is read at build time, so redeploy
-# after changing it (Vercel applies env changes only to new deployments).
-# vercel env add FINBOT_MODEL          # e.g. gpt-5.5-pro
+# Optional model override. Default is gpt-6-luna at the model's own default
+# settings; see src/lib/model.ts. The session notice names this model, and it
+# is read at build time, so redeploy after changing it (Vercel applies env
+# changes only to new deployments).
+# vercel env add FINBOT_MODEL          # e.g. gpt-5.5, gpt-6.1-sol
+# Optional reasoning-effort override (low|medium|high). Unset means the
+# model's default; it only reaches o*/gpt-5* ids (see src/lib/model.ts).
+# vercel env add FINBOT_REASONING
 ```
 
 Deploy:

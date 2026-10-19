@@ -9,6 +9,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { checkGrounding, dollarsIn } from "../src/lib/grounding";
+
 const ROOT = path.resolve(path.join(import.meta.dirname ?? __dirname, ".."));
 const BASE = process.env.FINBOT_EVAL_URL ?? "http://localhost:3947";
 const DEFAULT_BUDGET_MS = 45_000;
@@ -351,54 +353,6 @@ async function runTurn(messages: Message[]): Promise<{
   return { events, text, model };
 }
 
-function dollarsIn(text: string): number[] {
-  return [...text.matchAll(/\$\s?([\d,]+)(?:\.\d+)?/g)].map((m) => Number(m[1].replace(/,/g, "")));
-}
-
-/** Extend grounded numbers with simple shown-arithmetic combinations the
- *  reply may legitimately derive from them: pairwise sums/differences, the
- *  SNAP 30%-of-net figure, and per-unit divisions by small member counts
- *  ("$4,400 across 2 qualifying children" → $2,200). */
-function withDerivedCombinations(grounded: Set<number>): Set<number> {
-  const out = new Set(grounded);
-  const values = [...grounded].filter((n) => n >= 1 && n <= 1_000_000);
-  const cap = 250; // avoid quadratic blowup on huge result sets
-  const sample = values.slice(0, cap);
-  for (const a of sample) {
-    out.add(Math.round(a * 0.3));
-    out.add(Math.ceil(a * 0.3));
-    out.add(Math.floor(a * 0.3));
-    for (const count of [2, 3, 4, 5, 6, 12]) out.add(Math.round(a / count));
-    for (const b of sample) {
-      out.add(Math.abs(Math.round(a - b)));
-      out.add(Math.round(a + b));
-    }
-  }
-  return out;
-}
-
-function numbersInResults(results: unknown[]): Set<number> {
-  const out = new Set<number>();
-  const visit = (v: unknown) => {
-    if (typeof v === "number") { out.add(Math.round(v)); out.add(Math.floor(v)); out.add(Math.ceil(v)); }
-    else if (typeof v === "string" && /^-?[\d.]+$/.test(v)) out.add(Math.round(Number(v)));
-    else if (Array.isArray(v)) v.forEach(visit);
-    else if (v && typeof v === "object") Object.values(v).forEach(visit);
-  };
-  results.forEach(visit);
-  return out;
-}
-
-function derivableFromPrompt(prompt: string): Set<number> {
-  const numbers = [...prompt.matchAll(/\$?\s?([\d,]+(?:\.\d+)?)/g)].map((m) => Number(m[1].replace(/,/g, "")));
-  const allowed = new Set<number>(numbers.map(Math.round));
-  for (const a of numbers) {
-    for (const b of numbers) for (const p of [a * b, a * b * 4.33]) { allowed.add(Math.round(p)); allowed.add(Math.floor(p)); allowed.add(Math.ceil(p)); }
-    for (const c of [a * 4.33, a * 12, a / 12]) { allowed.add(Math.round(c)); allowed.add(Math.floor(c)); allowed.add(Math.ceil(c)); }
-  }
-  return allowed;
-}
-
 interface CaseReport {
   id: string;
   wall_ms: number;
@@ -434,8 +388,6 @@ async function evaluateCase(
   const error = turns.find((t) => t.error)?.error;
 
   const stated = dollarsIn(allText);
-  const grounded = withDerivedCombinations(numbersInResults(toolResults));
-  const derivable = derivableFromPrompt(c.turns.join(" "));
 
   const checks: CaseReport["checks"] = {};
   const check = (name: string, pass: boolean, note: string) => { checks[name] = { pass, note }; };
@@ -464,7 +416,7 @@ async function evaluateCase(
       check("value", hit, hit ? `matches $${c.expect_amounts.join("/$")}` : `expected $${c.expect_amounts.join("/$")}; stated: ${stated.map((n) => `$${n}`).join(", ") || "none"}`);
     }
     if (!c.skip_grounding) {
-      const invented = stated.filter((n) => !grounded.has(n) && !derivable.has(n) && n !== 0);
+      const { invented } = checkGrounding(allText, toolResults, c.turns.join(" "));
       check("grounded", invented.length === 0, invented.length ? `ungrounded: ${invented.map((n) => `$${n}`).join(", ")}` : "all figures grounded");
     }
     for (const source of c.expect_match ?? []) {

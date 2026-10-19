@@ -530,7 +530,9 @@ a.cite:hover { color: #0b1220; }
    ───────────────────────────────────────────────────────────────── */
 .starter-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* One equal column per starter, however many STARTERS lists. */
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 10px;
 }
 .compare-grid {
@@ -579,6 +581,7 @@ a.cite:hover { color: #0b1220; }
     gap: 12px;
   }
   .starter-grid {
+    grid-auto-flow: row;
     grid-template-columns: 1fr;
   }
   .result-grid {

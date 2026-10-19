@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { BBCE_STARTERS, STARTERS } from "../src/lib/starters";
+import { getProgram } from "../src/lib/catalog";
 import { computeProgram } from "../src/lib/request-builder";
-import { engineAvailable, numericOutput, output, starterScenario, STARTER_FIXTURES } from "./snap-scenarios";
+import { engineAvailable, memberCheck, numericOutput, output, starterScenario, STARTER_FIXTURES } from "./snap-scenarios";
 
 describe("BBCE starter candidates", () => {
-  it("keeps the existing TANF and CTC starters", () => {
-    expect(STARTERS[0]).toBe("What's the maximum TANF benefit for a family of 3 in Maryland?");
-    expect(STARTERS.at(-1)).toContain("child tax credit");
+  it("features one TANF, one federal tax and one SNAP starter", () => {
+    expect(STARTERS.filter((s) => s.includes("TANF"))).toHaveLength(1);
+    expect(STARTERS.some((s) => s.includes("EITC"))).toBe(true);
+    expect(STARTERS.some((s) => s.includes("SNAP"))).toBe(true);
     expect(STARTERS.some((s) => s.includes("New York"))).toBe(false);
   });
 
@@ -33,4 +35,64 @@ describe.skipIf(!engineAvailable())("real-engine starter outputs", () => {
       expect(numericOutput(result, "snap_benefit")).toBe(fixture.expectedBenefit);
     });
   }
+});
+
+describe.skipIf(!engineAvailable())("refugee SNAP starter", () => {
+  // P.L. 119-21 §10108: refugee status alone no longer confers SNAP
+  // eligibility. The member gate fails, and failed_because names the
+  // citizenship/immigration-status check so the answer can cite it.
+  it("fails Florida's citizenship/immigration-status check and says which one", async () => {
+    const result = await computeProgram({
+      program: getProgram("us-fl-snap")!,
+      facts: { household_size: 1 },
+      members: [{ facts: { member_age: 30, member_is_us_citizen: false, member_is_refugee: true } }],
+    });
+    const gate = memberCheck(result, 1, "snap_member_eligible");
+    expect(gate.value).toBe("not_holds");
+    expect(gate.failed_because?.map((f) => f.name)).toContain("snap_member_citizenship_or_alien_status_eligible");
+    expect(numericOutput(result, "snap_benefit")).toBe(0);
+    // A stated status is never overridden by the citizenship assumption.
+    expect(result.applied.assumed_facts).toBeUndefined();
+  });
+});
+
+describe.skipIf(!engineAvailable())("assumed SNAP citizenship", () => {
+  const program = () => getProgram("us-fl-snap")!;
+  const household = { household_size: 3, snap_gross_monthly_earned_income: 1800, household_shelter_costs_incurred: 1100 };
+
+  it("assumes U.S. citizenship for members with no stated status, and discloses it", async () => {
+    const result = await computeProgram({
+      program: program(),
+      facts: household,
+      members: [{ facts: { member_age: 30 } }, { facts: { member_age: 8 } }, { facts: { member_age: 5 } }],
+    });
+    expect(result.applied.assumed_facts).toEqual([
+      expect.objectContaining({ slot: "member_is_us_citizen", value: true, members: [1, 2, 3] }),
+    ]);
+    expect(output(result, "snap_eligible")).toBe("holds");
+    expect(numericOutput(result, "snap_benefit")).toBeGreaterThan(0);
+  });
+
+  it("assumes it for synthesized members too", async () => {
+    const result = await computeProgram({ program: program(), facts: household });
+    expect(result.applied.assumed_facts?.[0]?.members.length).toBeGreaterThan(0);
+    expect(output(result, "snap_eligible")).toBe("holds");
+  });
+
+  it("does not assume it for a member whose status is stated", async () => {
+    const result = await computeProgram({
+      program: program(),
+      facts: household,
+      members: [{ facts: { member_age: 30, member_is_us_citizen: false, member_is_asylee: true } }, { facts: { member_age: 8 } }],
+    });
+    expect(result.applied.assumed_facts?.[0]?.members).toEqual([2]);
+  });
+
+  it("assumes nothing when a top-level fact states immigration status", async () => {
+    const result = await computeProgram({
+      program: program(),
+      facts: { ...household, member_is_refugee: true },
+    });
+    expect(result.applied.assumed_facts).toBeUndefined();
+  });
 });
