@@ -3,7 +3,7 @@ import { accessSync, constants, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { getProgram, type CatalogProgram } from "../src/lib/catalog";
-import { computeProgram, type Facts, type MemberSpec, type ShapedResult } from "../src/lib/request-builder";
+import { computeProgram, type Facts, type MemberCheck, type MemberSpec, type ShapedResult } from "../src/lib/request-builder";
 
 export const SNAP_TEST_PERIOD = "2026-10";
 export const CHECKPOINT_DIR = path.resolve(".cache/bbce");
@@ -52,6 +52,16 @@ export function output(result: ShapedResult, name: string): number | string | bo
 export function numericOutput(result: ShapedResult, name: string): number {
   const found = output(result, name);
   if (typeof found !== "number" || !Number.isFinite(found)) throw new Error(`${name} is not numeric: ${found}`);
+  return found;
+}
+
+/** One member gate at member N (1-based, as listed in members[]),
+ *  following a `same_as` pointer to the earlier member it repeats. */
+export function memberCheck(result: ShapedResult, member: number, name: string): MemberCheck {
+  const entry = result.member_checks?.find((m) => m.member === member);
+  const resolved = entry?.same_as ? result.member_checks?.find((m) => m.member === entry.same_as) : entry;
+  const found = resolved?.checks?.find((c) => c.name === name);
+  if (!found) throw new Error(`${result.program}: no ${name} check for member ${member}`);
   return found;
 }
 

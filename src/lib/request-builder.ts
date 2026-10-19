@@ -220,8 +220,10 @@ export function queryKey(output: CatalogOutput): string {
 export interface BuiltRequest {
   request: ExecutionRequest;
   queried: CatalogOutput[];
-  /** Member-gate judgments auto-queried at the first member instance. */
+  /** Member-gate judgments auto-queried at every checked member instance. */
   memberCheckNames: Set<string>;
+  /** Member instance ids the gates are queried at, in member order. */
+  memberCheckIds: string[];
   applied: {
     period: string;
     member_count: number;
@@ -405,9 +407,13 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
 
   // Member checks: the judgments that gate whether a member counts inside
   // relation aggregators (e.g. ctc_qualifying_child, snap_member_eligible).
-  // Auto-queried at the first member instance so a compute with members shows
-  // WHY a member did or didn't count — with `requires` attached on failure.
+  // Auto-queried per member so a compute with members shows WHY each member
+  // did or didn't count — with `requires` attached on failure. Every explicit
+  // member is checked: the taxpayer listed first fails the qualifying-child
+  // gate the children hold, so member 1 alone reads as "no qualifying child".
+  // Synthesized members past the first carry only defaults; check member 1.
   const memberCheckNames = new Set<string>();
+  const memberCheckIds: string[] = [];
   if (memberEntity && memberCount > 0 && !options.outputsOverride) {
     for (const relation of program.relations) {
       if (relation.related_entity !== memberEntity) continue;
@@ -418,6 +424,10 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
           addOutput(output);
         }
       }
+    }
+    if (memberCheckNames.size > 0) {
+      const checked = options.members?.length ? memberCount : 1;
+      for (let i = 1; i <= checked; i++) memberCheckIds.push(instanceId(memberEntity, i));
     }
   }
 
@@ -593,17 +603,18 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       }
     }
 
-    // Member-check queries evaluate member-entity judgments at member 1; any
-    // household-scope inputs those rule chains read must resolve there too.
-    // Add the non-member union to member 1, excluding slots that already have
-    // member-scope records (duplicates with conflicting values would be
-    // ambiguous).
+    // Member-check queries evaluate member-entity judgments at each checked
+    // member; any household-scope inputs those rule chains read must resolve
+    // there too. Add the non-member union to each checked member, excluding
+    // slots that already have member-scope records (duplicates with
+    // conflicting values would be ambiguous).
     if (memberCheckNames.size > 0) {
       const memberSlotNames = new Set(memberSlots.map((s) => s.name));
-      const member1 = instanceId(memberEntity, 1);
-      for (const slot of nonMemberSlots.values()) {
-        if (memberSlotNames.has(slot.name)) continue;
-        record(slot, memberEntity, member1, facts[slot.name]);
+      for (const memberId of memberCheckIds) {
+        for (const slot of nonMemberSlots.values()) {
+          if (memberSlotNames.has(slot.name)) continue;
+          record(slot, memberEntity, memberId, facts[slot.name]);
+        }
       }
     }
   }
@@ -612,15 +623,20 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   const queryGroups = new Map<string, QueryRequest>();
   for (const output of queried) {
     const { period } = periodForOutput(output, resolved, program);
-    const entityId =
-      output.entity === memberEntity && memberEntity
-        ? instanceId(memberEntity, 1)
-        : queryInstances.get(output.entity) ?? primaryId;
-    const key = `${entityId}|${period.period_kind}|${period.start}`;
-    if (!queryGroups.has(key)) {
-      queryGroups.set(key, { entity_id: entityId, period, outputs: [] });
+    const entityIds = memberCheckNames.has(output.name)
+      ? memberCheckIds
+      : [
+          output.entity === memberEntity && memberEntity
+            ? instanceId(memberEntity, 1)
+            : queryInstances.get(output.entity) ?? primaryId,
+        ];
+    for (const entityId of entityIds) {
+      const key = `${entityId}|${period.period_kind}|${period.start}`;
+      if (!queryGroups.has(key)) {
+        queryGroups.set(key, { entity_id: entityId, period, outputs: [] });
+      }
+      queryGroups.get(key)!.outputs.push(queryKey(output));
     }
-    queryGroups.get(key)!.outputs.push(queryKey(output));
   }
 
   // Member-scope inputs for member queries: if a queried output lives on the
@@ -634,6 +650,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     },
     queried,
     memberCheckNames,
+    memberCheckIds,
     applied: {
       period: resolved.label,
       member_count: memberCount,
@@ -813,6 +830,26 @@ function failingSubJudgments(
   return found;
 }
 
+/** One member-gate judgment at one member. Gates are always unpublished
+ *  member-entity judgments, so the ShapedOutput fields that would repeat
+ *  per member (label, unit, semantics, entity, ...) are left out. */
+export type MemberCheck = Pick<
+  ShapedOutput,
+  "name" | "value" | "legal_id" | "requires" | "requires_partial" | "failed_because"
+>;
+
+/** Exactly one of `checks` / `same_as` is set: a member whose checks match
+ *  an earlier member's points at that member instead of repeating them
+ *  (siblings, or six identical SNAP members, would otherwise multiply the
+ *  payload). */
+export interface MemberChecks {
+  /** 1-based position in the request's members list. */
+  member: number;
+  checks?: MemberCheck[];
+  /** The earlier member whose checks this member's equal, value for value. */
+  same_as?: number;
+}
+
 export interface ShapedResult {
   program: string;
   display_name: string;
@@ -820,9 +857,10 @@ export interface ShapedResult {
   member_count: number;
   primary_output: string;
   outputs: ShapedOutput[];
-  /** Judgments gating whether member 1 counts inside relation aggregators,
-   *  with `requires` (the facts to set) attached on failure. */
-  member_checks?: ShapedOutput[];
+  /** Per member, the judgments gating whether that member counts inside
+   *  relation aggregators, with `requires` (the facts to set) and
+   *  `failed_because` attached on failure. */
+  member_checks?: MemberChecks[];
   applied: BuiltRequest["applied"];
   citations: Array<{ id: string; url: string }>;
   incomplete_note: string | null;
@@ -845,21 +883,39 @@ export function shapeResult(
   built: BuiltRequest,
   response: ExecutionResponse
 ): ShapedResult {
-  const merged = new Map<string, ReturnType<typeof readOutput> & { raw?: unknown }>();
+  type ReadOutput = ReturnType<typeof readOutput>;
+  // Main outputs read one merged view. Members past the first carry only
+  // gate queries whose outputs and trace nodes share keys across members, so
+  // each checked member also gets its own scope.
+  const merged = new Map<string, ReadOutput>();
   const trace: Record<string, DerivedTraceNode> = {};
+  const checkedIds = new Set(built.memberCheckIds);
+  const gateOnlyIds = new Set(built.memberCheckIds.slice(1));
+  const perMember = new Map<string, { outputs: Map<string, ReadOutput>; trace: Record<string, DerivedTraceNode> }>();
   for (const result of response.results) {
+    if (checkedIds.has(result.entity_id)) {
+      let scope = perMember.get(result.entity_id);
+      if (!scope) perMember.set(result.entity_id, (scope = { outputs: new Map(), trace: {} }));
+      for (const [key, value] of Object.entries(result.outputs ?? {})) scope.outputs.set(key, readOutput(value));
+      Object.assign(scope.trace, result.trace ?? {});
+    }
+    if (gateOnlyIds.has(result.entity_id)) continue;
     for (const [key, value] of Object.entries(result.outputs ?? {})) {
       merged.set(key, readOutput(value));
     }
     Object.assign(trace, result.trace ?? {});
   }
 
-  const shaped: ShapedOutput[] = built.queried.map((output) => {
-    const r = merged.get(queryKey(output));
+  const shapeOne = (
+    output: CatalogOutput,
+    outputs: Map<string, ReadOutput>,
+    scopeTrace: Record<string, DerivedTraceNode>
+  ): ShapedOutput => {
+    const r = outputs.get(queryKey(output));
     let value: ShapedOutput["value"] = null;
     if (r) value = r.kind === "judgment" ? r.outcome ?? null : r.numeric ?? null;
     const failedJudgment = output.semantics === "judgment" && value === "not_holds";
-    const failedBecause = failedJudgment ? failingSubJudgments(trace, queryKey(output), output.name) : [];
+    const failedBecause = failedJudgment ? failingSubJudgments(scopeTrace, queryKey(output), output.name) : [];
     return {
       name: output.name,
       label: labelFor(output.name),
@@ -876,10 +932,34 @@ export function shapeResult(
       }),
       ...(failedBecause.length > 0 && { failed_because: failedBecause }),
     };
-  });
+  };
 
-  const memberChecks = shaped.filter((o) => built.memberCheckNames.has(o.name));
-  const mainOutputs = shaped.filter((o) => !built.memberCheckNames.has(o.name));
+  const mainOutputs = built.queried
+    .filter((o) => !built.memberCheckNames.has(o.name))
+    .map((o) => shapeOne(o, merged, trace));
+
+  const gates = built.queried.filter((o) => built.memberCheckNames.has(o.name));
+  const firstMemberWith = new Map<string, number>();
+  const memberChecks: MemberChecks[] = built.memberCheckIds.map((id, index) => {
+    const member = index + 1;
+    const scope = perMember.get(id) ?? { outputs: new Map<string, ReadOutput>(), trace: {} };
+    const checks: MemberCheck[] = gates.map((gate) => {
+      const { name, value, legal_id, requires, requires_partial, failed_because } = shapeOne(gate, scope.outputs, scope.trace);
+      return {
+        name,
+        value,
+        legal_id,
+        ...(requires && { requires }),
+        ...(requires_partial && { requires_partial }),
+        ...(failed_because && { failed_because }),
+      };
+    });
+    const signature = JSON.stringify(checks);
+    const sameAs = firstMemberWith.get(signature);
+    if (sameAs !== undefined) return { member, same_as: sameAs };
+    firstMemberWith.set(signature, member);
+    return { member, checks };
+  });
 
   // Primary first, then judgments, then remaining scalars.
   mainOutputs.sort((a, b) => {

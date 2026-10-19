@@ -118,6 +118,12 @@ function displayValue(o: { value: unknown; unit?: string | null }): string {
   return String(o.value);
 }
 
+/** Same as request-builder's labelFor; member checks arrive without labels. */
+function checkLabel(name: string): string {
+  const words = name.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 function Citations({ citations }: { citations?: Array<{ id: string; url: string }> }) {
   if (!citations?.length) return null;
   const shown = citations.slice(0, 3);
@@ -186,21 +192,29 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
 
       {result.member_checks?.length > 0 && (
         <div className="tool-rows">
-          {result.member_checks.map((o: any) => (
-            <div key={o.name} style={{ padding: "4px 0", borderBottom: "1px dashed #eeeee8" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12 }}>
-                <span className="k" style={{ color: "#374151" }}>member check · {o.label}</span>
-                <span className="v mono" style={{ color: o.value === "holds" ? "#065f46" : "#991b1b" }}>
-                  {displayValue(o)}
-                </span>
+          {result.member_checks.map((m: any) =>
+            m.same_as ? (
+              <div key={m.member} style={{ padding: "4px 0", borderBottom: "1px dashed #eeeee8", fontSize: 12 }}>
+                <span className="k" style={{ color: "#374151" }}>member {m.member} · same checks as member {m.same_as}</span>
               </div>
-              {o.value === "not_holds" && o.requires && (
-                <div className="mono" style={{ fontSize: 10.5, color: "#92400e", marginTop: 2 }}>
-                  requires: {o.requires.map((r: any) => `${r.slot}${OP_SYMBOL[r.op] ?? "="}${r.value}`).join(" ")}
+            ) : (
+              (m.checks ?? []).map((o: any) => (
+                <div key={`${m.member}-${o.name}`} style={{ padding: "4px 0", borderBottom: "1px dashed #eeeee8" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12 }}>
+                    <span className="k" style={{ color: "#374151" }}>member {m.member} · {checkLabel(o.name)}</span>
+                    <span className="v mono" style={{ color: o.value === "holds" ? "#065f46" : "#991b1b" }}>
+                      {displayValue(o)}
+                    </span>
+                  </div>
+                  {o.value === "not_holds" && o.requires && (
+                    <div className="mono" style={{ fontSize: 10.5, color: "#92400e", marginTop: 2 }}>
+                      requires: {o.requires.map((r: any) => `${r.slot}${OP_SYMBOL[r.op] ?? "="}${r.value}`).join(" ")}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+              ))
+            )
+          )}
         </div>
       )}
       {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}
