@@ -109,6 +109,10 @@ export interface CatalogInputSlot {
    *  household_shelter_costs_incurred + az_applied_utility_allowance). The
    *  slot takes the costs the allowance does not stand in for. */
   added_allowances?: Array<{ rule: string; flags: string[] }>;
+  /** Flags that claim the added allowance, false by default: the encoding's
+   *  own test case sets them all true to get it (us-az-snap: billed
+   *  separately, obligated, verified, heating or cooling separately). */
+  allowance_claims?: string[];
 }
 
 export interface CatalogRelation {

@@ -136,6 +136,11 @@ interface CatalogInputSlot {
    *  household_shelter_costs_incurred, so that slot takes rent or mortgage
    *  without utilities; a utility figure added to it counts twice. */
   added_allowances?: Array<{ rule: string; flags: string[] }>;
+  /** On an added-allowance slot: the flags the encoding's own test case set
+   *  true to claim the allowance, now defaulted to false (see
+   *  claim-flag suppression in analyzeProgram). Setting them all true
+   *  restates that case: us-az-snap needs four facts for its heating SUA. */
+  allowance_claims?: string[];
 }
 
 interface CatalogRelation {
@@ -1169,6 +1174,7 @@ function analyzeProgram(
   const PARAMETER_LIKE =
     /allowance|allotment|standard|minimum|maximum|plan|limit|threshold|rate$/;
   const suppressedFixtureDefaults: string[] = [];
+  const suppressedClaimDefaults: string[] = [];
 
   const slotFor = (name: string): CatalogInputSlot => {
     const slot: CatalogInputSlot = { name, dtype: "bool", default: false };
@@ -1270,8 +1276,54 @@ function analyzeProgram(
       }));
     }
   }
+
+  // Claim flags: an allowance flag that reaches the certified outputs only
+  // through the added allowances states the household fact the allowance
+  // stands for — a utility obligation. 7 CFR 273.9(d)(6)(iii) gives the
+  // heating/cooling standard to households that "incur heating or cooling
+  // expenses separately from their rent or mortgage"; a fixture's true value
+  // is its scenario, not a default, and claimed the SUA for every household
+  // that said nothing about utilities (us-az-snap $323 from four flags,
+  // us-co-snap and us-ny-snap from the heating flag). Like the scenario
+  // quantities above, those defaults become false. Flags that other rules
+  // read too (elderly or disabled status) and branch selectors (New York
+  // City) keep theirs.
+  const allowanceRules = new Set([...addedAllowances.values()].flatMap((rules) => [...rules]));
+  const readOutsideAllowances = new Set<string>();
+  const visitedOutside = new Set<string>();
+  const visitOutside = (name: string) => {
+    if (visitedOutside.has(name) || allowanceRules.has(name)) return;
+    visitedOutside.add(name);
+    for (const input of ruleDirectInputs.get(name) ?? []) readOutsideAllowances.add(input);
+    for (const dep of ruleDirectDerived.get(name) ?? []) visitOutside(dep);
+  };
+  for (const outputName of manifestProgram.outputs) visitOutside(outputName);
+  const slotByName = new Map(Object.values(inputs).flat().map((s) => [s.name, s]));
+  for (const slot of slotByName.values()) {
+    if (!slot.added_allowances) continue;
+    const claims = [...new Set(slot.added_allowances.flatMap((a) => a.flags))].filter((name) => {
+      const flag = slotByName.get(name)!;
+      return (
+        flag.default_source === "fixture" &&
+        flag.default === true &&
+        !flag.variant_switch &&
+        !readOutsideAllowances.has(name)
+      );
+    });
+    if (claims.length === 0) continue;
+    for (const name of claims) {
+      const flag = slotByName.get(name)!;
+      flag.default = false;
+      delete flag.default_source;
+    }
+    slot.allowance_claims = claims.sort();
+    suppressedClaimDefaults.push(...claims);
+  }
   if (suppressedFixtureDefaults.length) {
     warn(`fixture scenario-quantity defaults suppressed to 0: ${suppressedFixtureDefaults.join(", ")}`);
+  }
+  if (suppressedClaimDefaults.length) {
+    warn(`fixture allowance-claim defaults suppressed to false: ${suppressedClaimDefaults.join(", ")}`);
   }
   for (const name of Object.keys(overlay.default_overrides ?? {})) {
     if (![...slotsSeen(inputs)].includes(name)) {

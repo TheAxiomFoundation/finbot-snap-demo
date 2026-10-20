@@ -43,7 +43,7 @@ import artifactsLock from "../../artifacts.lock.json";
 import { programDisclosures } from "./catalog-overlay";
 import type { AssumedMemberSlot } from "./assumed-slots";
 import { annualUpdateDisclosure, annualUpdateWarning, overdueAnnualUpdates, periodStartDate } from "./annual-updates";
-import { allowanceSlots, allowanceWarning, defaultedAllowanceFlags } from "./added-allowances";
+import { allowanceSlots, allowanceWarning, defaultedAllowanceFlags, noAllowanceNote } from "./added-allowances";
 
 export type Facts = Record<string, FactScalar>;
 
@@ -1449,14 +1449,25 @@ export function shapeResult(
   // user's words, not the numbers, so say what the rules added and let the
   // model check: "rent $900, utility allowance $323" sent as 1,223 got the
   // $323 a second time (us-az-snap $298 instead of $219).
+  //
+  // With no allowance added, an answer that read the allowance rules counted
+  // no utility costs: say which facts claim it (false by default) so a user
+  // who stated them gets one recompute and one who didn't hears it.
   const periodStart = periodStartDate(built.applied.period);
   for (const slot of allowanceSlots(program)) {
+    const traced = slot.added_allowances.map((a) => ({ rule: a.rule, value: tracedValue(trace, a.rule) }));
+    const added = traced
+      .map((a) => ({ rule: a.rule, amount: Number(a.value ?? 0) }))
+      .filter((a) => a.amount > 0);
+    if (added.length === 0) {
+      const note = traced.some((a) => a.value !== undefined)
+        ? noAllowanceNote(slot, built.applied.facts_applied)
+        : null;
+      if (note) built.applied.notes.push(note);
+      continue;
+    }
     const stated = built.applied.facts_applied[slot.name];
     if (stated === undefined) continue;
-    const added = slot.added_allowances
-      .map((a) => ({ rule: a.rule, amount: Number(tracedValue(trace, a.rule) ?? 0) }))
-      .filter((a) => a.amount > 0);
-    if (added.length === 0) continue;
     const defaults = defaultedAllowanceFlags(program, slot, periodStart, built.applied.facts_applied);
     (built.applied.added_allowances ??= []).push({ slot: slot.name, stated, added, defaults_read: defaults });
     built.applied.notes.push(allowanceWarning(slot, stated, added, defaults));
