@@ -31,11 +31,14 @@ import path from "node:path";
 import YAML from "yaml";
 
 import { classifyAnnualParameter, groupAnnualUpdates, type AnnualParameter } from "../src/lib/annual-updates";
+import { ASSUMED_MEMBER_SLOTS } from "../src/lib/assumed-slots";
 import type { CatalogAnnualUpdate } from "../src/lib/catalog";
 import { CATALOG_OVERLAY, GLOBAL_DEFAULT_OVERRIDES } from "../src/lib/catalog-overlay";
 
 /** Global override keys that matched at least one slot across all programs. */
 const matchedGlobalOverrides = new Set<string>();
+/** Slots that get a `read_by` list (see CatalogInputSlot). */
+const ASSUMED_SLOTS = new Set<string>(ASSUMED_MEMBER_SLOTS);
 
 const ROOT = path.resolve(path.join(import.meta.dirname ?? __dirname, ".."));
 const ARTIFACTS_DIR = path.join(ROOT, "engine", "artifacts");
@@ -122,6 +125,10 @@ interface CatalogInputSlot {
   /** Not reachable from any certified output — setting it cannot change the
    *  headline numbers (diagnostic/auxiliary chains only). */
   aux?: boolean;
+  /** Rules whose chain reads this slot (sorted). Listed only for
+   *  ASSUMED_MEMBER_SLOTS, so a lookup can tell whether its output depends
+   *  on an assumed fact; empty when no rule reads it. */
+  read_by?: string[];
 }
 
 interface CatalogRelation {
@@ -1189,6 +1196,9 @@ function analyzeProgram(
     }
     if (certifiedPathInputs.size > 0 && !certifiedPathInputs.has(name)) {
       slot.aux = true;
+    }
+    if (ASSUMED_SLOTS.has(name)) {
+      slot.read_by = rules.map((r) => r.name).filter((rule) => reachableInputs(rule).has(name)).sort();
     }
     return slot;
   };

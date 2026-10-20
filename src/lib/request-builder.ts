@@ -41,6 +41,7 @@ import {
 import { legalIdToUrl } from "./legal-links";
 import artifactsLock from "../../artifacts.lock.json";
 import { programDisclosures } from "./catalog-overlay";
+import type { AssumedMemberSlot } from "./assumed-slots";
 import { annualUpdateDisclosure, annualUpdateWarning, overdueAnnualUpdates } from "./annual-updates";
 
 export type Facts = Record<string, FactScalar>;
@@ -403,7 +404,9 @@ const SSN_FACT = /(^|_)(ssn|tin)(_|$)|social_security_number/;
  *  bears on it — disclosed in applied.assumed_facts so the answer says so and
  *  invites a correction. */
 interface MemberAssumption {
-  slot: string;
+  /** Listed in ASSUMED_MEMBER_SLOTS, so the catalog records which outputs
+   *  read it; a lookup whose output doesn't read it discloses nothing. */
+  slot: AssumedMemberSlot;
   value: FactScalar;
   applies: (program: CatalogProgram) => boolean;
   /** True when facts (a member's, or the top level's) already speak to
@@ -411,7 +414,7 @@ interface MemberAssumption {
   stated: (facts: Facts) => boolean;
   /** The member gate this fact feeds. When the compute checks that gate,
    *  the disclosure keeps only members where it holds — elsewhere the
-   *  assumption changed nothing. Without one, it is always disclosed. */
+   *  assumption changed nothing. Without one, a compute always discloses it. */
   gate?: string;
   why: string;
 }
@@ -942,6 +945,17 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // Member-scope inputs for member queries: if a queried output lives on the
   // member entity, the first member instance already has its slots.
 
+  // A lookup (outputsOverride) discloses an assumption only when a queried
+  // output's rule chain reads the slot (the catalog's read_by): every us-fiit
+  // lookup listed the SSN assumption, exemption_amount included, which never
+  // reads it. A slot without read_by stays disclosed. Computes keep every
+  // assumption here; shapeResult narrows them by the member gate.
+  const disclosedAssumptions = [...assumedMembers].filter(([assumption]) => {
+    if (!options.outputsOverride) return true;
+    const readers = program.inputs[memberEntity ?? ""]?.find((s) => s.name === assumption.slot)?.read_by;
+    return !readers || queried.some((o) => readers.includes(o.name));
+  });
+
   return {
     request: {
       mode: options.mode ?? "explain",
@@ -956,8 +970,8 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       member_count: memberCount,
       facts_applied: facts,
       ...(Object.keys(derivedFacts).length > 0 && { derived_facts: derivedFacts }),
-      ...(assumedMembers.size > 0 && {
-        assumed_facts: [...assumedMembers].map(([assumption, members]) => ({
+      ...(disclosedAssumptions.length > 0 && {
+        assumed_facts: disclosedAssumptions.map(([assumption, members]) => ({
           slot: assumption.slot,
           value: assumption.value,
           members,
@@ -1377,7 +1391,8 @@ export function shapeResult(
   // An assumption tied to a member gate changed nothing where that gate
   // fails anyway (a 40-year-old's senior-deduction check), so disclose it
   // only where the gate holds. Members whose gate wasn't checked (the
-  // lookup path, synthesized members past the first) stay disclosed.
+  // lookup path, synthesized members past the first) stay disclosed; a
+  // lookup already dropped assumptions its output doesn't read.
   if (built.applied.assumed_facts) {
     const disclosed = built.applied.assumed_facts
       .map((assumed) => {
