@@ -42,7 +42,8 @@ import { legalIdToUrl } from "./legal-links";
 import artifactsLock from "../../artifacts.lock.json";
 import { programDisclosures } from "./catalog-overlay";
 import type { AssumedMemberSlot } from "./assumed-slots";
-import { annualUpdateDisclosure, annualUpdateWarning, overdueAnnualUpdates } from "./annual-updates";
+import { annualUpdateDisclosure, annualUpdateWarning, overdueAnnualUpdates, periodStartDate } from "./annual-updates";
+import { allowanceSlots, allowanceWarning, defaultedAllowanceFlags } from "./added-allowances";
 
 export type Facts = Record<string, FactScalar>;
 
@@ -334,6 +335,17 @@ export interface BuiltRequest {
      *  for SNAP members with no stated citizenship or immigration status).
      *  The answer must disclose each and invite a correction. */
     assumed_facts?: Array<{ slot: string; value: FactScalar; members: number[]; why: string }>;
+    /** Computed allowances the rules added on top of a cost slot the caller
+     *  set (a SNAP standard utility allowance on
+     *  household_shelter_costs_incurred), with the defaults they read. The
+     *  amounts sit here as numbers so a reply that states them is grounded
+     *  in the tool result; the WARNING note says what to check. */
+    added_allowances?: Array<{
+      slot: string;
+      stated: FactScalar;
+      added: Array<{ rule: string; amount: number }>;
+      defaults_read: string[];
+    }>;
     /** Instructions and diagnostics for the model; not shown to users. */
     notes: string[];
     /** User-facing limitations of this program's encoding, shown on the tool card. */
@@ -1436,6 +1448,25 @@ export function shapeResult(
     built.applied.notes.push(
       `WARNING: ${program.primary_output} is $0, but income-like slot(s) ${suspects.join(", ")} stayed at their 0 defaults — the engine computed from zeros the user never asserted. Do NOT headline this $0. Derive the missing slot ONLY from values a tool returned in this conversation; if none exists, make asking for it your headline — never fill it from remembered law, even disclosed as an assumption. Only present $0 if the user's facts genuinely imply the slot is zero, and say so explicitly. Outputs that do NOT depend on the zeroed slot (e.g. credits computed from earned income or AGI) are still reliable — report those normally alongside the ask. (If this call was a variant run for a delta and your main computation already has the slot filled, the warning is expected — keep the main answer and do NOT rerun this variant.)`
     );
+  }
+
+  // A cost slot the rules add an allowance to (household_shelter_costs_incurred
+  // + a SNAP standard utility allowance) must not already hold the costs the
+  // allowance stands in for. Whether the caller's figure does is in the
+  // user's words, not the numbers, so say what the rules added and let the
+  // model check: "rent $900, utility allowance $323" sent as 1,223 got the
+  // $323 a second time (us-az-snap $298 instead of $219).
+  const periodStart = periodStartDate(built.applied.period);
+  for (const slot of allowanceSlots(program)) {
+    const stated = built.applied.facts_applied[slot.name];
+    if (stated === undefined) continue;
+    const added = slot.added_allowances
+      .map((a) => ({ rule: a.rule, amount: Number(tracedValue(trace, a.rule) ?? 0) }))
+      .filter((a) => a.amount > 0);
+    if (added.length === 0) continue;
+    const defaults = defaultedAllowanceFlags(program, slot, periodStart, built.applied.facts_applied);
+    (built.applied.added_allowances ??= []).push({ slot: slot.name, stated, added, defaults_read: defaults });
+    built.applied.notes.push(allowanceWarning(slot, stated, added, defaults));
   }
 
   const provenance: Record<string, RuleProvenance> = {};

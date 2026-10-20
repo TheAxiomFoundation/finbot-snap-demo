@@ -104,6 +104,11 @@ export interface CatalogInputSlot {
   /** Outputs whose rule chain reads this slot. Listed only for the slots
    *  the app assumes (ASSUMED_MEMBER_SLOTS); empty when no output reads it. */
   read_by?: string[];
+  /** Computed allowances the rules add to this slot's value, each with the
+   *  on-path bool slots its chain reads (us-az-snap
+   *  household_shelter_costs_incurred + az_applied_utility_allowance). The
+   *  slot takes the costs the allowance does not stand in for. */
+  added_allowances?: Array<{ rule: string; flags: string[] }>;
 }
 
 export interface CatalogRelation {

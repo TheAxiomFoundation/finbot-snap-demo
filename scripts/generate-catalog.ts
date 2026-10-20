@@ -129,6 +129,13 @@ interface CatalogInputSlot {
    *  ASSUMED_MEMBER_SLOTS, so a lookup can tell whether its output depends
    *  on an assumed fact; empty when no rule reads it. */
   read_by?: string[];
+  /** Computed allowances a certified-path rule adds to this slot's value
+   *  (`add(input, derived *allowance*)`), each with the on-path bool slots
+   *  its chain reads. SNAP's standard utility allowance stands in for actual
+   *  utility costs (7 CFR 273.9(d)(6)(iii)) on top of
+   *  household_shelter_costs_incurred, so that slot takes rent or mortgage
+   *  without utilities; a utility figure added to it counts twice. */
+  added_allowances?: Array<{ rule: string; flags: string[] }>;
 }
 
 interface CatalogRelation {
@@ -1117,6 +1124,46 @@ function analyzeProgram(
     for (const input of reachableInputs(outputName)) certifiedPathInputs.add(input);
   }
 
+  // Allowances added to an input slot: a certified-path `add` (nested adds
+  // flattened) that sums an input with a computed rule named *allowance*.
+  // us-az-snap shelter_costs = household_shelter_costs_incurred +
+  // az_applied_utility_allowance: the allowance stands in for utility costs,
+  // so the slot must hold shelter costs without them. Programs whose shelter
+  // sum is the slot alone (us-fl-snap) get nothing. Scalars only; a judgment
+  // is a condition, not an amount.
+  const certifiedRules = new Set<string>();
+  const visitRule = (name: string) => {
+    if (certifiedRules.has(name) || !ruleByName.has(name)) return;
+    certifiedRules.add(name);
+    for (const dep of ruleDirectDerived.get(name) ?? []) visitRule(dep);
+  };
+  for (const outputName of manifestProgram.outputs) visitRule(outputName);
+  const addedAllowances = new Map<string, Set<string>>();
+  const addTerms = (node: IRNode): unknown[] =>
+    (node.items as unknown[]).flatMap((item) =>
+      item !== null && typeof item === "object" && (item as IRNode).kind === "add" ? addTerms(item as IRNode) : [item]
+    );
+  for (const name of certifiedRules) {
+    for (const { node } of walkRefs(ruleExpressions(ruleByName.get(name)!), null, "", new Map())) {
+      if (node.kind !== "add" || !Array.isArray(node.items)) continue;
+      const terms = addTerms(node) as IRNode[];
+      const allowances = terms
+        .filter((t) => t?.kind === "derived" && /allowance/.test(t.name as string))
+        .map((t) => t.name as string)
+        .filter((rule) => {
+          const target = ruleByName.get(rule);
+          return !!target && target.semantics !== "judgment" && target.dtype !== "judgment";
+        });
+      if (allowances.length === 0) continue;
+      for (const t of terms) {
+        if (t?.kind !== "input") continue;
+        const set = addedAllowances.get(t.name as string) ?? new Set<string>();
+        for (const rule of allowances) set.add(rule);
+        addedAllowances.set(t.name as string, set);
+      }
+    }
+  }
+
   const SCENARIO_QUANTITY =
     /(earned|unearned|gross|countable)_.*income|_income$|income_received|wages|earnings|_expenses?$|_expenses?_|_costs?$|costs?_incurred|payments?_(received|for)|_payments$/;
   const PARAMETER_LIKE =
@@ -1206,6 +1253,22 @@ function analyzeProgram(
   const inputs: Record<string, CatalogInputSlot[]> = {};
   for (const [entity, names] of [...inputsByEntity.entries()].sort()) {
     inputs[entity] = [...names].sort().map(slotFor);
+  }
+  // After every slot is typed: an allowance's flags are the on-path bool
+  // slots its chain reads (us-az-snap: billed separately, obligated,
+  // verified, heating or cooling, LIHEAP, …).
+  const onPathBool = new Set(
+    Object.values(inputs).flatMap((slots) => slots.filter((s) => s.dtype === "bool" && !s.aux).map((s) => s.name))
+  );
+  for (const slots of Object.values(inputs)) {
+    for (const slot of slots) {
+      const rules = addedAllowances.get(slot.name);
+      if (!rules || slot.aux) continue;
+      slot.added_allowances = [...rules].sort().map((rule) => ({
+        rule,
+        flags: [...reachableInputs(rule)].filter((name) => onPathBool.has(name)).sort(),
+      }));
+    }
   }
   if (suppressedFixtureDefaults.length) {
     warn(`fixture scenario-quantity defaults suppressed to 0: ${suppressedFixtureDefaults.join(", ")}`);
