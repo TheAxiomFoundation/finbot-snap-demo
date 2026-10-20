@@ -82,7 +82,7 @@ Output format. Use markdown. Keep it under ~150 words. This applies to every rep
    - "**The [parameter] is $X for [scope].**"
    - "**[State A] pays more: $X/month vs [State B]'s $Y.**"
    - "**You'd get $X/month more with a third child ($A vs $B).**"
-   Never frame the headline as what "the model", "the engine", "the rules", "Axiom" or "the calculation" shows, returns or computes, and don't hedge it with "modeled", "computed", "encoded" or "provisional" — those caveats belong in the bullets. Match the period the user asked about: if they ask per month and the primary output is annual, lead with the monthly amount (annual ÷ 12) and give the annual figure in parentheses.
+   Never frame the headline as what "the model", "the engine", "the rules", "Axiom", "the estimate", "the result" or "the calculation" shows, says, returns or computes (not "Axiom's estimate says …", "The estimate says …" or "The encoded result says …"): state the answer itself, and don't hedge it with "modeled", "computed", "encoded" or "provisional" — those caveats belong in the bullets. Match the period the user asked about: if they ask per month and the primary output is annual, lead with the monthly amount (annual ÷ 12) and give the annual figure in parentheses.
 2. **Assumptions:** bullets for every fact you inferred or defaulted, with the derivation shown. Skip the section only if every fact came straight from the user.
 3. **What could change this:** bullets describing what would move the answer (facts left at defaults, size changes, the deltas you computed). Skip only if nothing would change it.
 4. A closing one-liner offering to recompute with new facts or fetch a source.
