@@ -380,6 +380,9 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
             provenance: shaped.provenance,
           });
           const value = shaped.outputs.find((o) => o.name === meta.name);
+          // A failed judgment names only what its inputs don't meet, as in
+          // compute; one that holds lists the rule's whole requirement.
+          const requires = value?.value === "not_holds" ? value.requires : meta.requires;
           return {
             program: program.slug,
             name: meta.name,
@@ -390,7 +393,7 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
             unit: meta.unit,
             value: value?.value ?? null,
             ...(meta.semantics === "judgment" && (meta.requires || value?.requires_any) && {
-              ...(meta.requires && { requires: meta.requires }),
+              ...(requires && { requires }),
               ...(value?.requires_any && { requires_any: value.requires_any }),
               ...(meta.requires_partial && { requires_partial: true }),
             }),
