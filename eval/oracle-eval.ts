@@ -235,6 +235,25 @@ const CASES: EvalCase[] = [
     expect: [{ pe_variable: "snap", label: "monthly SNAP" }],
   },
   {
+    // Utilities not stated, so no standard utility allowance: a heating or
+    // cooling allowance "may not be used" for a household that doesn't
+    // incur the expense (7 USC 2014(e)(6)(C)(ii)(I)). Fixture defaults used
+    // to claim Arizona's $323 SUA here ($298); rent alone gives $212. The
+    // reply has to say no utility allowance was counted.
+    id: "az-snap-no-utilities-nl",
+    turns: ["I live alone in Arizona and earn $1,000 a month at my job. My rent is $600. How much SNAP can I get?"],
+    expect_amounts: [212],
+    expect_match: ["utilit"],
+  },
+  {
+    // The same household in Colorado, where PR #12 once zeroed this default:
+    // $212, not $298 with a $594 HCUA nobody stated (10 CCR 2506-1 4.407.31).
+    id: "co-snap-no-utilities-nl",
+    turns: ["I live alone in Colorado and earn $1,000 a month at my job. My rent is $600. How much SNAP can I get?"],
+    expect_amounts: [212],
+    expect_match: ["utilit"],
+  },
+  {
     id: "eitc-childless-nl",
     turns: ["I'm 25, single, no kids, and earned $10,000 in 2026. How much EITC do I get?"],
     oracle_id: "fiit-eitc-childless-10k",
