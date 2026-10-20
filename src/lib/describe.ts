@@ -4,6 +4,7 @@
  * the pre-fetch injects this exact payload into the system prompt so the
  * model gets the slot surface without spending an LLM round-trip on it.
  */
+import { allowanceDescribeNote, allowanceSlots } from "./added-allowances";
 import { annualUpdateNoticesAt, periodStartDate } from "./annual-updates";
 import { slotDefaultAt, type CatalogProgram } from "./catalog";
 import { programDisclosures } from "./catalog-overlay";
@@ -12,7 +13,8 @@ import { defaultPeriodFor, isMemberCountSlot, memberCountSlotNames } from "./req
 /** Compact one-token slot description:
  *  `name:dtype`, `=default` when non-zero/false, `{1=joint,2=separate}` for
  *  enum codes (labels reduced to their distinctive tails), `(eq 12)` for
- *  equality-gate values, trailing `*` for branch-selector flags. */
+ *  equality-gate values, `(+rule)` for computed allowances the rules add
+ *  to the slot, trailing `*` for branch-selector flags. */
 function describeSlot(s: CatalogProgram["inputs"][string][number], periodStart: string): string {
   let out = `${s.name}:${s.dtype}`;
   if (s.enum) {
@@ -26,6 +28,7 @@ function describeSlot(s: CatalogProgram["inputs"][string][number], periodStart: 
   const value = slotDefaultAt(s, periodStart);
   if (!(value === false || value === 0 || value === "")) out += `=${value}`;
   if (s.eq_hints?.length) out += `(eq ${s.eq_hints.join("|")})`;
+  if (s.added_allowances?.length) out += `(+${s.added_allowances.map((a) => a.rule).join("+")})`;
   if (s.variant_switch) out += "*";
   if (s.aux) out = "~" + out;
   return out;
@@ -91,7 +94,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
         "Curated defaults for law-variant/administrative inputs (already applied; override only if the user's situation differs).",
     }),
     slot_legend:
-      "{1=a,2=b} enum codes (use ONLY listed codes; unlisted values fall through to the default branch) · (eq N) a value some rules require exactly — set it when ordinarily true and disclose · trailing * = branch selector that flips which rules apply, set deliberately · leading ~ = auxiliary slot NOT on the published-output path: setting it cannot change the headline, prefer the non-~ sibling",
+      "{1=a,2=b} enum codes (use ONLY listed codes; unlisted values fall through to the default branch) · (eq N) a value some rules require exactly — set it when ordinarily true and disclose · (+name) the rules add the computed allowance name to this slot, so the slot excludes the costs it stands in for (see notes) · trailing * = branch selector that flips which rules apply, set deliberately · leading ~ = auxiliary slot NOT on the published-output path: setting it cannot change the headline, prefer the non-~ sibling",
     notes: [
       "Facts you don't provide take the default shown after = (false/0 when none is shown) — state the defaults you rely on.",
       "aux_hidden counts auxiliary slots not on the published-output path (they can't change the headline); pass inputs_search to see them.",
@@ -101,6 +104,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
           ? `This program has no member entity; only top-level facts apply. State the household size in ${noMemberCountSlots.join(", ")} (members[] without facts sets it too).`
           : "This program has no member entity; only top-level facts apply and members[] is refused.",
       "Any of the total_outputs encoded outputs can be read with lookup_value or compute extra_outputs.",
+      ...allowanceSlots(program).map((slot) => allowanceDescribeNote(program, slot, periodStart)),
     ],
   };
 }
