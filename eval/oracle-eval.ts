@@ -13,6 +13,10 @@ import { checkGrounding, dollarsIn } from "../src/lib/grounding";
 
 const ROOT = path.resolve(path.join(import.meta.dirname ?? __dirname, ".."));
 const BASE = process.env.FINBOT_EVAL_URL ?? "http://localhost:3947";
+/** Comma-separated case ids to run (default: every case). */
+const ONLY = process.env.FINBOT_EVAL_CASES?.split(",").map((id) => id.trim()).filter(Boolean);
+/** Runs per case; with more than one, transcripts are `<case>-r<N>.md`. */
+const REPEAT = Math.max(1, Number(process.env.FINBOT_EVAL_REPEAT ?? 1) || 1);
 const DEFAULT_BUDGET_MS = 45_000;
 const DEFAULT_BUDGET_STEPS = 6;
 
@@ -480,10 +484,15 @@ async function main() {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const runDir = path.join(ROOT, "eval", "runs", `${stamp}-${model}`);
   mkdirSync(runDir, { recursive: true });
-  console.log(`run: ${path.relative(ROOT, runDir)} (model ${model}) · ${CASES.length} cases\n`);
+  const unknown = (ONLY ?? []).filter((id) => !CASES.some((c) => c.id === id));
+  if (unknown.length) throw new Error(`FINBOT_EVAL_CASES names unknown case(s): ${unknown.join(", ")}`);
+  const selected = CASES.filter((c) => !ONLY || ONLY.includes(c.id)).flatMap((c) =>
+    REPEAT === 1 ? [c] : Array.from({ length: REPEAT }, (_, i) => ({ ...c, id: `${c.id}-r${i + 1}` }))
+  );
+  console.log(`run: ${path.relative(ROOT, runDir)} (model ${model}) · ${selected.length} cases\n`);
 
   const reports: CaseReport[] = [];
-  for (const c of CASES) {
+  for (const c of selected) {
     const oracle = c.oracle_id ? oracleById.get(c.oracle_id) : undefined;
     if (c.oracle_id && !oracle) {
       console.log(`SKIP ${c.id}: oracle case ${c.oracle_id} not found`);

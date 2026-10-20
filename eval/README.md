@@ -11,6 +11,8 @@ oracle, and grade the answer's craft — not just its headline.
 # dev server must be running with OPENAI_API_KEY (bun run dev -- --port 3947)
 bun run eval:oracle                       # default model
 FINBOT_EVAL_URL=http://localhost:3947 bun run eval:oracle
+# selected cases, 5 runs each (transcripts <case>-r1.md … -r5.md)
+FINBOT_EVAL_CASES=az-snap-elderly,az-snap-medical-nl FINBOT_EVAL_REPEAT=5 bun run eval:oracle
 ```
 
 Each run writes `eval/runs/<timestamp>-<model>/`:
