@@ -1021,10 +1021,11 @@ export interface ShapedOutput {
   acknowledged_incomplete: boolean;
   legal_id: string | null;
   /** Attached when a judgment came back not_holds: the facts (with values)
-   *  its unconditional conjunction chain requires — what to set to make it
-   *  hold. An entry with `op` is a threshold the slot's real value must meet
-   *  (`age gte 65`). `requires_partial` marks additional
-   *  conditional/disjunctive logic not captured here. */
+   *  its unconditional conjunction chain requires that the inputs recorded
+   *  where it ran don't meet — what to set to make it hold. Entries already
+   *  met there are left out. An entry with `op` is a threshold the slot's
+   *  real value must meet (`age gte 65`). `requires_partial` marks
+   *  additional conditional/disjunctive logic not captured here. */
   requires?: CatalogOutput["requires"];
   /** Attached with a not_holds judgment: the `or`s in its chain that are
    *  still unmet — no alternative group holds on the recorded inputs and the
@@ -1345,6 +1346,12 @@ export function shapeResult(
       ? failingSubJudgments(scopeTrace, queryKey(output), output.name, (name) => outputByName.get(name)?.negated_judgments)
       : [];
     const open = failedJudgment ? openAlternatives(output, entityId, scopeTrace) : [];
+    // Name only the requirements this entity's own inputs fail. us-fiit's
+    // 24(h)(7) test reads the taxpayer/spouse SSN facts on each child's
+    // record; gpt-6-luna set them on the parents, saw all five SSN facts it
+    // had set somewhere listed, and accepted the $500 other-dependent credit
+    // (MFJ, two children, $420,000: $0 instead of $3,400).
+    const unmet = failedJudgment ? (output.requires ?? []).filter((req) => !meets(entityId, req, scopeTrace)) : [];
     const zeroBecause = value === 0 ? failedZeroGates(output, scopeTrace, entityId) : [];
     return {
       name: output.name,
@@ -1356,7 +1363,7 @@ export function shapeResult(
       published_output: output.certified,
       acknowledged_incomplete: output.acknowledged_incomplete,
       legal_id: output.id,
-      ...(failedJudgment && output.requires && { requires: output.requires }),
+      ...(unmet.length > 0 && { requires: unmet }),
       ...(open.length > 0 && { requires_any: open }),
       ...(failedJudgment && (output.requires || open.length > 0) && output.requires_partial && {
         requires_partial: true,

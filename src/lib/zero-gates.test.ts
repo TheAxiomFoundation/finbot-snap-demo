@@ -173,10 +173,9 @@ describe("zero_because on a hand-built response", () => {
         name: "eitc_allowed",
         value: "not_holds",
         legal_id: "us:statutes/26/32#eitc_allowed",
-        requires: [
-          { slot: SSN_ON_RETURN, value: true },
-          { slot: "eitc_relevant_investment_income", op: "lte", value: 12200 },
-        ],
+        // Not `eitc_relevant_investment_income lte 12200`: its recorded
+        // default, 0, already meets it.
+        requires: [{ slot: SSN_ON_RETURN, value: true }],
         requires_partial: true,
         // Not taxpayer_married_under_general_rule: the rule reads it negated,
         // and an unmarried head of household fails it as expected.
