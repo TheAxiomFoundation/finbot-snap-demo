@@ -335,6 +335,17 @@ export interface BuiltRequest {
      *  for SNAP members with no stated citizenship or immigration status).
      *  The answer must disclose each and invite a correction. */
     assumed_facts?: Array<{ slot: string; value: FactScalar; members: number[]; why: string }>;
+    /** Computed allowances the rules added on top of a cost slot the caller
+     *  set (a SNAP standard utility allowance on
+     *  household_shelter_costs_incurred), with the defaults they read. The
+     *  amounts sit here as numbers so a reply that states them is grounded
+     *  in the tool result; the WARNING note says what to check. */
+    added_allowances?: Array<{
+      slot: string;
+      stated: FactScalar;
+      added: Array<{ rule: string; amount: number }>;
+      defaults_read: string[];
+    }>;
     /** Instructions and diagnostics for the model; not shown to users. */
     notes: string[];
     /** User-facing limitations of this program's encoding, shown on the tool card. */
@@ -1443,10 +1454,11 @@ export function shapeResult(
     const stated = built.applied.facts_applied[slot.name];
     if (stated === undefined) continue;
     const added = slot.added_allowances
-      .map((a) => ({ rule: a.rule, value: Number(tracedValue(trace, a.rule) ?? 0) }))
-      .filter((a) => a.value > 0);
+      .map((a) => ({ rule: a.rule, amount: Number(tracedValue(trace, a.rule) ?? 0) }))
+      .filter((a) => a.amount > 0);
     if (added.length === 0) continue;
     const defaults = defaultedAllowanceFlags(program, slot, periodStart, built.applied.facts_applied);
+    (built.applied.added_allowances ??= []).push({ slot: slot.name, stated, added, defaults_read: defaults });
     built.applied.notes.push(allowanceWarning(slot, stated, added, defaults));
   }
 

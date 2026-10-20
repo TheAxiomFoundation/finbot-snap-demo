@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { allowanceSlots, allowanceWarning } from "./added-allowances";
 import { getCatalog, getProgram } from "./catalog";
 import { describeProgramPayload } from "./describe";
+import { checkGrounding } from "./grounding";
 import type { DerivedTraceNode, ExecutionResponse, OutputValue } from "./engine";
 import { buildSystemPrompt } from "./prompts";
 import { buildRequest, computeProgram, queryKey, shapeResult, type BuildOptions, type Facts } from "./request-builder";
@@ -133,7 +134,16 @@ describe("allowance warning in the applied report", () => {
   };
 
   it("names the added allowance, the stated figure and the defaults behind it", () => {
-    const [note] = allowanceNotes(synthetic(recordedCall(1223), 323).applied.notes);
+    const result = synthetic(recordedCall(1223), 323);
+    expect(result.applied.added_allowances).toEqual([
+      {
+        slot: SHELTER,
+        stated: 1223,
+        added: [{ rule: AZ_ALLOWANCE, amount: 323 }],
+        defaults_read: expect.arrayContaining([HEATING_OR_COOLING]),
+      },
+    ]);
+    const [note] = allowanceNotes(result.applied.notes);
     expect(note).toMatch(/^WARNING: the rules added az_applied_utility_allowance=323 on top of household_shelter_costs_incurred=1223/);
     expect(note).toContain(`${HEATING_OR_COOLING}=true`);
     expect(note).toContain("already includes a utility bill or a utility allowance, it counts twice");
@@ -147,6 +157,7 @@ describe("allowance warning in the applied report", () => {
   });
 
   it("stays silent when the slot is unset or no allowance was added", () => {
+    expect(synthetic(recordedCall(undefined), 323).applied.added_allowances).toBeUndefined();
     expect(allowanceNotes(synthetic(recordedCall(undefined), 323).applied.notes)).toEqual([]);
     expect(allowanceNotes(synthetic(recordedCall(1223), 0).applied.notes)).toEqual([]);
     expect(allowanceNotes(synthetic(recordedCall(1223), null).applied.notes)).toEqual([]);
@@ -154,7 +165,7 @@ describe("allowance warning in the applied report", () => {
 
   it("words a non-utility allowance without the utility advice", () => {
     const slot = { name: "x_costs", dtype: "decimal" as const, default: 0, added_allowances: [{ rule: "x_allowance", flags: [] }] };
-    const note = allowanceWarning(slot, 50, [{ rule: "x_allowance", value: 10 }], []);
+    const note = allowanceWarning(slot, 50, [{ rule: "x_allowance", amount: 10 }], []);
     expect(note).toContain("the costs that allowance stands in for");
     expect(note).not.toContain("utility");
   });
@@ -178,6 +189,32 @@ describe.skipIf(!hasEngine)("real-engine Arizona shelter costs with a stated uti
     expect(numericOutput(result, "snap_total_allowable_shelter_expenses")).toBe(1223);
     // Still disclosed, with the advice to keep a rent-only figure.
     expect(allowanceNotes(result.applied.notes)[0]).toContain("If 900 is only those costs, keep this result.");
+  });
+
+  it("a reply that states the allowance amount is grounded in the result (us-ny-snap)", async () => {
+    // The first live run named the warning's amount in Assumptions ("added a
+    // $1,062 standard heating/utility allowance"), but it sat only inside the
+    // note's text, which the grounding check doesn't read: ny-snap-family3,
+    // ca-snap-family4 and ma-snap-parent-1kid failed `grounded`.
+    const prompt =
+      "I'm a single parent in New York with two kids (8 and 5). I earn $2,078 a month, my rent is $1,300, and I pay heating separately from rent. What SNAP would we get?";
+    const { provenance, stamps, ...result } = await computeProgram({
+      program: getProgram("us-ny-snap")!,
+      facts: {
+        household_size: 3,
+        snap_gross_monthly_earned_income: 2078,
+        [SHELTER]: 1300,
+        household_incurred_or_anticipated_heating_or_cooling_costs_separate_from_rent_or_mortgage: true,
+      },
+    });
+    void provenance;
+    void stamps;
+    const [entry] = result.applied.added_allowances!;
+    const amount = entry.added.reduce((sum, a) => sum + a.amount, 0);
+    expect(entry.slot).toBe(SHELTER);
+    expect(amount).toBeGreaterThan(0);
+    const reply = `I treated $1,300 as rent only; the rules added a $${amount.toLocaleString("en-US")} standard utility allowance, for $${(1300 + amount).toLocaleString("en-US")} in shelter costs.`;
+    expect(checkGrounding(reply, [result], prompt).invented).toEqual([]);
   });
 
   it("no warning where the shelter sum has no allowance (us-fl-snap)", async () => {

@@ -63,17 +63,18 @@ export function allowanceDescribeNote(program: CatalogProgram, slot: AllowanceSl
 }
 
 /** Applied-report warning when the caller set an allowance slot and the
- *  rules added a nonzero allowance on top of it. The builder can't tell
- *  whether the stated figure already included the expense, so the model
- *  checks it against what the user said. */
+ *  rules added a nonzero allowance on top of it (the amounts also sit in
+ *  `applied.added_allowances` as numbers). The builder can't tell whether
+ *  the stated figure already included the expense, so the model checks it
+ *  against what the user said. */
 export function allowanceWarning(
   slot: AllowanceSlot,
   stated: unknown,
-  added: Array<{ rule: string; value: number }>,
+  added: Array<{ rule: string; amount: number }>,
   defaults: string[]
 ): string {
   const utility = isUtility(slot);
-  const sum = added.map((a) => `${a.rule}=${a.value}`).join(" + ");
+  const sum = added.map((a) => `${a.rule}=${a.amount}`).join(" + ");
   const why = utility ? " (a standard utility allowance stands in for actual utility costs, 7 CFR 273.9(d)(6)(iii))" : "";
   const reads = defaults.length ? `; it reads these defaults: ${defaults.map((f) => `${f}=true`).join(", ")}` : "";
   const included = utility ? "a utility bill or a utility allowance" : "the costs that allowance stands in for";
