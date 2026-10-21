@@ -103,6 +103,13 @@ export const SCENARIOS: Scenario[] = [
     truth_note: "PE eitc 3,923.23; IRS Rev. Proc. 2025-32 two-child 2026 parameters",
   },
   {
+    id: "eitc-dad2-40k-ssn",
+    area: "tax",
+    question: "Single dad, kids 8 and 5 with SSNs, $40,000 in wages in 2026. What's my EITC?",
+    truth: [3923],
+    truth_note: "the EITC starter (single dad); PE eitc 3,923.23; IRS Rev. Proc. 2025-32 two-child 2026 parameters",
+  },
+  {
     id: "il-elig-70k",
     area: "property-tax",
     question: "I'm 70 and own my home in Illinois. Our household income is $70,000. Can I defer my property taxes?",
