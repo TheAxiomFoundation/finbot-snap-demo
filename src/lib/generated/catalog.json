@@ -19073,8 +19073,7 @@
      {
       "name": "member_age",
       "dtype": "integer",
-      "default": 60,
-      "default_source": "fixture",
+      "default": 0,
       "aux": true
      },
      {
@@ -32050,8 +32049,7 @@
      {
       "name": "member_age",
       "dtype": "integer",
-      "default": 60,
-      "default_source": "fixture"
+      "default": 0
      },
      {
       "name": "member_age_16_or_17_is_not_household_head_or_attends_school_or_training_half_time",
@@ -66102,8 +66100,7 @@
      {
       "name": "member_age",
       "dtype": "integer",
-      "default": 60,
-      "default_source": "fixture"
+      "default": 0
      },
      {
       "name": "member_age_16_or_17_is_not_household_head_or_attends_school_or_training_half_time",
@@ -190503,8 +190500,7 @@
      {
       "name": "member_age",
       "dtype": "integer",
-      "default": 60,
-      "default_source": "fixture"
+      "default": 0
      },
      {
       "name": "member_age_16_or_17_is_not_household_head_or_attends_school_or_training_half_time",
