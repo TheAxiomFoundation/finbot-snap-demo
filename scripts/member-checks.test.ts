@@ -13,7 +13,7 @@ import {
 } from "../src/lib/request-builder";
 import { engineAvailable, memberCheck, numericOutput } from "./snap-scenarios";
 
-// The EITC starter: "Single mom, kids 8 and 5 with SSNs, $40,000 in wages in
+// The EITC starter: "Single dad, kids 8 and 5 with SSNs, $40,000 in wages in
 // 2026." The model often lists the taxpayer first. Member checks used to
 // cover member 1 only, so the taxpayer's own (expected) qualifying-child
 // failure read as "the children don't qualify" and the answer stopped at $0.
