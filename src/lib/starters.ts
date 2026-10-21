@@ -24,7 +24,9 @@ export const BBCE_STARTERS: readonly string[] = [
  *    phase-out from $23,890 at 21.06%) gives $3,923, matching the engine and
  *    PolicyEngine. Grounded 5/5 once failed judgments carry `failed_because`
  *    (it exposes the qualifying-child age check); the ages and SSNs in the
- *    question are needed.
+ *    question are needed. Asked as a single dad so the TANF and EITC
+ *    starters are not both single moms; the filing status (head of
+ *    household) and the answer are the same.
  *  - SNAP refugee: plain model says refugees can get SNAP right away in 9/10
  *    runs. Since P.L. 119-21 §10108 (2025-07-04), refugee status alone no
  *    longer qualifies — only citizens, LPRs, Cuban/Haitian entrants and COFA
@@ -52,6 +54,6 @@ export const BBCE_STARTERS: readonly string[] = [
  *  TANF lookups right; both compare-mode sides run without it. */
 export const STARTERS: readonly string[] = [
   "Single mom with two kids: does Alabama or Georgia pay more TANF?",
-  "Single mom, kids 8 and 5 with SSNs, $40,000 in wages in 2026. What's my EITC?",
+  "Single dad, kids 8 and 5 with SSNs, $40,000 in wages in 2026. What's my EITC?",
   "I have refugee status but no green card yet, and I live in Florida with no income. Can I get SNAP?",
 ];
