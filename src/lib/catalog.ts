@@ -29,6 +29,13 @@ export interface RequirementAlternatives {
   any_of: Requirement[][];
 }
 
+/** A rule's test of a member's age slot: slot `op` value. */
+export interface AgeTest {
+  slot: string;
+  op: RequirementOp;
+  value: number;
+}
+
 export interface CatalogOutput {
   name: string;
   /** Legal id (`us:statutes/7/2017/a#snap_regular_month_allotment`); null for
@@ -56,6 +63,10 @@ export interface CatalogOutput {
   /** For judgments: sub-judgments read only under `not` or as an `if`
    *  condition; `failed_because` does not follow them. */
   negated_judgments?: string[];
+  /** For judgments: the rule's own tests of a member's age slot against a
+   *  fixed threshold (`member_age lt 16`). An unstated age is 0, so every
+   *  `lt`/`lte` test here holds for it (src/lib/unstated-ages.ts). */
+  age_tests?: AgeTest[];
   /** For scalars: judgments whose failure makes this output 0 (us-fiit
    *  `eitc` is `if eitc_allowed then … else 0`). */
   zero_unless?: string[];

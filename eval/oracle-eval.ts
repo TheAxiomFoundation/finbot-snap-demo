@@ -38,6 +38,13 @@ interface EvalCase {
   budget_steps?: number;
 }
 
+/** The reply asks the adult's age or says what age its amount assumes. */
+const AGE_ASKED_OR_STATED = "how old|\\bages?\\b|years? old|under 1[68]|\\b1[68]\\s*(to|-|–|through)\\s*(59|64)\\b";
+/** A bold headline (a line that starts bold) with $298 that says nothing
+ *  about age. Not a bare "under": headlines say "under FY2026 standards". */
+const HEADLINE_298_WITHOUT_AGE =
+  "(^|\\n)\\s*\\*\\*(?![^*]*(\\bages?\\b|\\bold\\b|under (the )?(age (of )?)?\\d|older|younger|\\b1[68]\\b|\\b6[05]\\b))[^*]*\\$\\s?298[^*]*\\*\\*";
+
 const CASES: EvalCase[] = [
   // ── Oracle-anchored single-turn calculations ─────────────────────────────
   {
@@ -252,6 +259,25 @@ const CASES: EvalCase[] = [
     turns: ["I live alone in Colorado and earn $1,000 a month at my job. My rent is $600. How much SNAP can I get?"],
     expect_amounts: [212],
     expect_match: ["utilit"],
+  },
+  {
+    // No age stated, and a work rule decides the answer. An unstated age is
+    // 0, which passes the under-18 ABAWD exception (7 USC 2015(o)(3)(A)) and
+    // the under-16 work-requirement exemption (7 CFR 273.7(b)(1)(i)): $298,
+    // where an adult aged 18 to 59 gets $0. The reply has to ask the age or
+    // say the amount depends on it, and must not headline $298 without that.
+    id: "ca-snap-abawd-no-age-nl",
+    turns: ["I live alone in California. My only income is $300 a month in alimony and my rent is $600. I'm not working, and I've already gotten SNAP for 4 months in the last 3 years without meeting the work requirement. How much CalFresh can I get?"],
+    expect_match: [AGE_ASKED_OR_STATED],
+    expect_not_match: [HEADLINE_298_WITHOUT_AGE],
+  },
+  {
+    // The same household after quitting a job without good cause (7 CFR
+    // 273.7(j)): $298 with no age stated, $0 for an adult aged 18 to 59.
+    id: "ny-snap-quit-no-age-nl",
+    turns: ["I live alone in New York. I quit my job last month without a good reason. Now my only income is $300 a month in alimony, and my rent is $600. How much SNAP can I get?"],
+    expect_match: [AGE_ASKED_OR_STATED],
+    expect_not_match: [HEADLINE_298_WITHOUT_AGE],
   },
   {
     id: "eitc-childless-nl",

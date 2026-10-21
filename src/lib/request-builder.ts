@@ -44,6 +44,15 @@ import { programDisclosures } from "./catalog-overlay";
 import type { AssumedMemberSlot } from "./assumed-slots";
 import { annualUpdateDisclosure, annualUpdateWarning, overdueAnnualUpdates, periodStartDate } from "./annual-updates";
 import { allowanceSlots, allowanceWarning, defaultedAllowanceFlags, noAllowanceNote } from "./added-allowances";
+import {
+  ageRange,
+  describeTest,
+  rangeLabel,
+  tracedRules,
+  unstatedAgeNote,
+  unstatedAges,
+  type OutputValues,
+} from "./unstated-ages";
 
 export type Facts = Record<string, FactScalar>;
 
@@ -345,6 +354,16 @@ export interface BuiltRequest {
       stated: FactScalar;
       added: Array<{ rule: string; amount: number }>;
       defaults_read: string[];
+    }>;
+    /** Member 1's age slots nobody stated whose default (0) passed a rule's
+     *  "younger than" test, where a compute at the youngest age that passes
+     *  none of them changed a published output (src/lib/unstated-ages.ts):
+     *  the tests passed, and each result with the ages it holds for. */
+    unstated_ages?: Array<{
+      member: number;
+      slot: string;
+      passed: Array<{ rule: string; tests: string[]; source: string | null }>;
+      results: Array<{ ages: string; outputs: OutputValues }>;
     }>;
     /** Instructions and diagnostics for the model; not shown to users. */
     notes: string[];
@@ -1518,9 +1537,96 @@ function citationsFor(outputs: ShapedOutput[]): Array<{ id: string; url: string 
   return citations;
 }
 
-/** End-to-end compute: build → run → shape. */
+/** End-to-end compute: build → run → shape, then the unstated-age check. */
 export async function computeProgram(options: BuildOptions): Promise<ShapedResult> {
   const built = buildRequest(options);
   const response = await runCompiled(options.program.slug, built.request);
-  return shapeResult(options.program, built, response);
+  const shaped = shapeResult(options.program, built, response);
+  if (!options.outputsOverride) await checkUnstatedAges(options, response, shaped, built);
+  return shaped;
+}
+
+/** The trace of member 1's own queries (its member checks, or member-entity
+ *  outputs queried there). The primary entity's trace stops at the relation
+ *  aggregations, so member rules show up only here. */
+function memberOneTrace(program: CatalogProgram, built: BuiltRequest, response: ExecutionResponse) {
+  const id = built.memberCheckIds[0] ?? (program.member_entity ? instanceId(program.member_entity, 1) : null);
+  const trace: Record<string, DerivedTraceNode> = {};
+  for (const result of response.results) if (result.entity_id === id) Object.assign(trace, result.trace ?? {});
+  return trace;
+}
+
+/** An unstated age is 0, which passes every "younger than N" test
+ *  (src/lib/unstated-ages.ts). When a rule that held for member 1 passed
+ *  one, compute once more at the youngest age that passes none of them; if
+ *  a published output changes, report both results. A single California
+ *  adult with 4 countable ABAWD months got $298 at age 0 and gets $0 at 18
+ *  to 59. Member 1 is the applicant or filer; children's ages are set by
+ *  the model (prompts.ts) and other members are not probed. */
+async function checkUnstatedAges(
+  options: BuildOptions,
+  response: ExecutionResponse,
+  shaped: ShapedResult,
+  built: BuiltRequest
+): Promise<void> {
+  const { program } = options;
+  const memberEntity = program.member_entity;
+  if (!memberEntity) return;
+  const memberSlots = new Map((program.inputs[memberEntity] ?? []).map((s) => [s.name, s]));
+  const memberFacts = { ...(options.facts ?? {}), ...(options.members?.[0]?.facts ?? {}) };
+  const periodStart = periodStartDate(built.applied.period);
+  const trace = memberOneTrace(program, built, response);
+  const candidates = unstatedAges(
+    program,
+    trace,
+    (slot) => slot in memberFacts,
+    (slot) => (memberSlots.has(slot) ? slotDefaultAt(memberSlots.get(slot)!, periodStart) : undefined)
+  ).filter((entry) => entry.probe !== null);
+  if (candidates.length === 0) return;
+
+  const published = shaped.outputs.filter((o) => o.published_output || o.name === program.primary_output).map((o) => o.name);
+  const valuesOf = (outputs: ShapedOutput[]): OutputValues =>
+    Object.fromEntries(published.map((name) => [name, outputs.find((o) => o.name === name)?.value ?? null]));
+  const before = valuesOf(shaped.outputs);
+  const probes = await Promise.all(
+    candidates.map(async (entry) => {
+      const age = entry.probe!;
+      // Member 1 only: with synthesized members a top-level member fact
+      // reaches member 1 alone; with a members list it would reach all.
+      const probeOptions: BuildOptions = options.members?.length
+        ? { ...options, members: options.members.map((m, i) => (i === 0 ? { ...m, facts: { ...m.facts, [entry.slot]: age } } : m)) }
+        : { ...options, facts: { ...options.facts, [entry.slot]: age } };
+      try {
+        const probeBuilt = buildRequest(probeOptions);
+        const probeResponse = await runCompiled(program.slug, probeBuilt.request);
+        const after = valuesOf(shapeResult(program, probeBuilt, probeResponse).outputs);
+        return { entry, age, after, rules: tracedRules(memberOneTrace(program, probeBuilt, probeResponse)) };
+      } catch (err) {
+        console.error("[finbot] unstated-age probe failed:", err, "program:", program.slug, "slot:", entry.slot);
+        return null;
+      }
+    })
+  );
+  for (const probe of probes) {
+    if (!probe) continue;
+    const { entry, age, after } = probe;
+    const changed = published.filter((name) => before[name] !== after[name]);
+    if (changed.length === 0) continue;
+    const shown = [...new Set([program.primary_output, ...changed])].filter((name) => published.includes(name));
+    const pick = (values: OutputValues) => Object.fromEntries(shown.map((name) => [name, values[name]]));
+    // The ranges come from the age tests of every rule either run traced
+    // for member 1: through them alone does the slot reach the result.
+    const rules = new Set([...tracedRules(trace), ...probe.rules]);
+    const results = [
+      { ages: rangeLabel(ageRange(program, entry.slot, rules, entry.default, entry.default)), outputs: pick(before) },
+      { ages: rangeLabel(ageRange(program, entry.slot, rules, age, entry.default)), outputs: pick(after) },
+    ];
+    (shaped.applied.unstated_ages ??= []).push({
+      member: 1,
+      slot: entry.slot,
+      passed: entry.passed.map((p) => ({ rule: p.rule, tests: p.tests.map(describeTest), source: p.source })),
+      results,
+    });
+    shaped.applied.notes.push(unstatedAgeNote(entry, program.primary_output, results));
+  }
 }
