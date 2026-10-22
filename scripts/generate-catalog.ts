@@ -96,6 +96,10 @@ interface CatalogOutput {
    *  condition. One that fails is no reason this rule failed, so the trace
    *  walk behind `failed_because` does not follow it. */
   negated_judgments?: string[];
+  /** For judgments: the rule's own tests of a member's age slot against a
+   *  fixed threshold, reached through `and`/`or` only (`member_age lt 16`).
+   *  An unstated age is 0, so every `lt`/`lte` test here holds for it. */
+  age_tests?: Array<{ slot: string; value: number; op: "gt" | "gte" | "lt" | "lte" }>;
   /** For scalars: judgments whose failure makes the rule 0 — it is
    *  `if J then X else 0` (through its `then` branch and derived refs) in
    *  every formula version. */
@@ -1677,6 +1681,49 @@ function analyzeProgram(
     return [...negated].filter((name) => !followed.has(name));
   };
 
+  // -- Age tests -------------------------------------------------------------
+  // An age nobody stated is 0 (SCENARIO_AGE above), and 0 passes every
+  // "younger than N" test. In us-ca/co/ny-snap two of them are work-rule
+  // exemptions: snap_member_general_work_requirement_exempt (younger than 16,
+  // 7 CFR 273.7(b)(1)(i)) and snap_member_abawd_exception_applies (under 18,
+  // 7 USC 2015(o)(3)(A)). A single adult with 4 countable ABAWD months got
+  // $298, where an adult aged 18 to 59 gets $0. Each rule's own tests of a
+  // member's age slot against a fixed threshold are listed, so the request
+  // builder can tell when an unstated age decided the answer
+  // (src/lib/unstated-ages.ts). Only tests reached through `and`/`or` are
+  // listed; one under a `not` or an `if`, or against a threshold that
+  // changes by period, is a warning.
+  const ageSlots = new Set(
+    (memberEntity ? inputs[memberEntity] ?? [] : [])
+      .filter((s) => !s.aux && (s.dtype === "integer" || s.dtype === "decimal") && SCENARIO_AGE.test(s.name))
+      .map((s) => s.name)
+  );
+  type AgeTest = NonNullable<CatalogOutput["age_tests"]>[number];
+  const ageTests = (rule: DerivedRule): AgeTest[] => {
+    const tests = new Map<string, AgeTest>();
+    const visit = (n: unknown, plain: boolean): void => {
+      if (Array.isArray(n)) {
+        for (const item of n) visit(item, plain);
+        return;
+      }
+      if (n === null || typeof n !== "object") return;
+      const node = n as IRNode;
+      if (node.kind === "comparison") {
+        const sides = [node.left, node.right] as Array<IRNode | undefined>;
+        const slot = sides.find((s) => s?.kind === "input" && ageSlots.has(s.name as string))?.name as string | undefined;
+        if (!slot) return;
+        const req = orderingRequirement(node);
+        if (req?.op && plain) tests.set(`${req.slot} ${req.op} ${req.value}`, { slot: req.slot, op: req.op, value: req.value as number });
+        else warn(`${rule.name}: test of ${slot} not listed in age_tests (${req ? "under not/if" : "no fixed threshold"})`);
+        return;
+      }
+      const plainHere = plain && (node.kind === "and" || node.kind === "or");
+      for (const value of Object.values(node)) visit(value, plainHere);
+    };
+    for (const expr of ruleExpressions(rule)) visit(expr, true);
+    return [...tests.values()];
+  };
+
   // -- Outputs ---------------------------------------------------------------
   const outputs: CatalogOutput[] = rules.map((rule) => {
     const output: CatalogOutput = {
@@ -1699,6 +1746,8 @@ function analyzeProgram(
       if ((output.requires || output.requires_any) && (partial || truncated)) output.requires_partial = true;
       const negated = negatedJudgments(rule);
       if (negated.length > 0) output.negated_judgments = negated;
+      const ages = ageTests(rule);
+      if (ages.length > 0) output.age_tests = ages;
     } else {
       const gates = zeroUnless(rule.name);
       if (gates.length > 0) output.zero_unless = gates;
@@ -1827,6 +1876,13 @@ async function main() {
         `  ${p.slug.padEnd(20)} due ${u.due} (latest ${u.last_effective_from}${u.fiscal_year ? `, FY${u.fiscal_year}` : ""}) ${u.basis} · ${u.parameters.length} parameter(s)`
       );
     }
+  }
+
+  console.log("\nage tests (an unstated age is 0, which meets every lt/lte test):");
+  for (const p of programs) {
+    const tests = p.outputs.filter((o) => o.age_tests);
+    if (tests.length === 0) continue;
+    console.log(`  ${p.slug.padEnd(20)} ${tests.map((o) => `${o.name}[${o.age_tests!.map((t) => `${t.slot} ${t.op} ${t.value}`).join(", ")}]`).join(" ")}`);
   }
 
   console.log(`\ncorpus citation paths: ${Object.keys(corpusPaths).length}`);

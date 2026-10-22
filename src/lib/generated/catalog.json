@@ -700,6 +700,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -739,6 +751,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -757,6 +776,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -936,6 +962,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -1345,6 +1378,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -1437,6 +1477,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -1565,6 +1612,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -1672,6 +1726,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -1743,6 +1804,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -2904,6 +2972,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -3271,7 +3351,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -4068,6 +4160,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -4080,7 +4179,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
@@ -21638,6 +21749,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -21677,6 +21800,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -21695,6 +21825,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -21874,6 +22011,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -22283,6 +22427,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -22375,6 +22526,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -22503,6 +22661,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -22610,6 +22775,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -22681,6 +22853,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -23830,6 +24009,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -24197,7 +24388,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -24453,6 +24656,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -24465,7 +24675,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
@@ -35765,6 +35987,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -35804,6 +36038,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -35822,6 +36063,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -36001,6 +36249,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -36410,6 +36665,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -36502,6 +36764,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -36630,6 +36899,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -36737,6 +37013,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -36808,6 +37091,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -37957,6 +38247,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -38585,7 +38887,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -38701,6 +39015,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -38713,7 +39034,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
@@ -42545,7 +42878,19 @@
      "period": "Month",
      "source": "10 CCR 2506-1 section 4.311(A)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 55
+      }
+     ]
     },
     {
      "name": "colorado_abawd_fulfilling_work_requirement",
@@ -71436,7 +71781,14 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "age_tests": [
+      {
+       "slot": "age",
+       "op": "lt",
+       "value": 17
+      }
+     ]
     },
     {
      "name": "ctc_child_identification_requirement_satisfied",
@@ -71796,6 +72148,18 @@
          }
         ]
        ]
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "individual_age_at_close_of_calendar_year",
+       "op": "lt",
+       "value": 19
+      },
+      {
+       "slot": "individual_age_at_close_of_calendar_year",
+       "op": "lt",
+       "value": 24
       }
      ]
     },
@@ -72298,6 +72662,13 @@
          }
         ]
        ]
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -72894,6 +73265,18 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "age",
+       "op": "gte",
+       "value": 25
+      },
+      {
+       "slot": "age",
+       "op": "lt",
+       "value": 65
+      }
+     ],
+     "age_tests": [
       {
        "slot": "age",
        "op": "gte",
@@ -75050,6 +75433,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -75089,6 +75484,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -75107,6 +75509,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -75286,6 +75695,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -75695,6 +76111,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -75787,6 +76210,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -75915,6 +76345,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -76022,6 +76459,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -76093,6 +76537,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -77254,6 +77705,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -77621,7 +78084,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -78199,6 +78674,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -78211,7 +78693,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
@@ -114773,6 +115267,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -114812,6 +115318,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -114830,6 +115343,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -115009,6 +115529,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -115418,6 +115945,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -115510,6 +116044,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -115638,6 +116179,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -115745,6 +116293,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -115816,6 +116371,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -116977,6 +117539,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -117344,7 +117918,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -117931,6 +118517,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -117943,7 +118536,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
@@ -125228,6 +125833,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -125267,6 +125884,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -125285,6 +125909,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -125464,6 +126095,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -125873,6 +126511,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -125965,6 +126610,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -126093,6 +126745,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -126200,6 +126859,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -126271,6 +126937,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -127432,6 +128105,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -127799,7 +128484,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -128599,6 +129296,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -128611,7 +129315,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
@@ -140685,6 +141401,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -140724,6 +141452,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -140742,6 +141477,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -140921,6 +141663,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -141330,6 +142079,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -141422,6 +142178,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -141550,6 +142313,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -141657,6 +142427,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -141728,6 +142505,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -142889,6 +143673,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -143256,7 +144052,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -144053,6 +144861,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -144065,7 +144880,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
@@ -154663,7 +155490,14 @@
      "period": "Month",
      "source": "FNS 255.03",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "wages_below_required_minimum",
@@ -184423,6 +185257,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -184462,6 +185308,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -184480,6 +185333,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -184659,6 +185519,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -185068,6 +185935,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -185160,6 +186034,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -185288,6 +186169,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -185395,6 +186283,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -185466,6 +186361,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -186615,6 +187517,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -186982,7 +187896,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -187238,6 +188164,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -187250,7 +188183,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
@@ -193379,6 +194324,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -193418,6 +194375,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -193436,6 +194400,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -193615,6 +194586,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -194024,6 +195002,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -194116,6 +195101,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -194244,6 +195236,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -194351,6 +195350,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -194422,6 +195428,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -195583,6 +196596,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -195950,7 +196975,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -196747,6 +197784,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -196759,7 +197803,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
@@ -245073,6 +246129,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -245112,6 +246180,13 @@
        "slot": "military_child_was_dependent_on_veteran_before_eighteenth_birthday",
        "value": true
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 18
+      }
      ]
     },
     {
@@ -245130,6 +246205,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -245309,6 +246391,13 @@
        "slot": "member_was_subjected_to_severe_form_of_trafficking",
        "value": true
       },
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -245718,6 +246807,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -245810,6 +246906,13 @@
       {
        "slot": "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
        "value": true
+      }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
       }
      ]
     },
@@ -245938,6 +247041,13 @@
        "op": "lt",
        "value": 18
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
      ]
     },
     {
@@ -246045,6 +247155,13 @@
        "op": "lt",
        "value": 22
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 22
+      }
      ]
     },
     {
@@ -246116,6 +247233,13 @@
      "certified": false,
      "acknowledged_incomplete": false,
      "requires": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      }
+     ],
+     "age_tests": [
       {
        "slot": "member_age",
        "op": "lt",
@@ -247277,6 +248401,18 @@
         ]
        ]
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "student_age",
+       "op": "lte",
+       "value": 17
+      },
+      {
+       "slot": "student_age",
+       "op": "gte",
+       "value": 50
+      }
      ]
     },
     {
@@ -247644,7 +248780,19 @@
      "period": "Month",
      "source": "7 CFR 273.7(b)(1)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 16
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 60
+      }
+     ]
     },
     {
      "name": "snap_member_statutory_work_registration_exemption_applies",
@@ -248441,6 +249589,13 @@
        "op": "lt",
        "value": 14
       }
+     ],
+     "age_tests": [
+      {
+       "slot": "member_youngest_dependent_child_age",
+       "op": "lt",
+       "value": 14
+      }
      ]
     },
     {
@@ -248453,7 +249608,19 @@
      "period": "Month",
      "source": "7 U.S.C. 2015(o)(3) as amended by P.L. 119-21 section 10102(a)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "age_tests": [
+      {
+       "slot": "member_age",
+       "op": "lt",
+       "value": 18
+      },
+      {
+       "slot": "member_age",
+       "op": "gte",
+       "value": 65
+      }
+     ]
     },
     {
      "name": "snap_member_abawd_time_limit_inapplicable",
