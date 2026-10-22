@@ -1171,6 +1171,11 @@ function analyzeProgram(
 
   const SCENARIO_QUANTITY =
     /(earned|unearned|gross|countable)_.*income|_income$|income_received|wages|earnings|_expenses?$|_expenses?_|_costs?$|costs?_incurred|payments?_(received|for)|_payments$/;
+  // A person's age is a scenario fact too. The CA/CO/NY SNAP fixtures' 60
+  // gave every member with no stated age the 7 CFR 271.2 elderly age and the
+  // 273.7(b)(1)(i) "60 years of age or older" work exemption, and the model
+  // reported "the default age of 60". Age limits stay (PARAMETER_LIKE).
+  const SCENARIO_AGE = /(^|_)age(_|$)/;
   const PARAMETER_LIKE =
     /allowance|allotment|standard|minimum|maximum|plan|limit|threshold|rate$/;
   const suppressedFixtureDefaults: string[] = [];
@@ -1191,7 +1196,7 @@ function analyzeProgram(
         (fromFixture.dtype === "integer" || fromFixture.dtype === "decimal") &&
         typeof fromFixture.default === "number" &&
         fromFixture.default !== 0 &&
-        SCENARIO_QUANTITY.test(name) &&
+        (SCENARIO_QUANTITY.test(name) || SCENARIO_AGE.test(name)) &&
         !PARAMETER_LIKE.test(name);
       if (isQuantity) {
         suppressedFixtureDefaults.push(`${name}=${fromFixture.default}`);
