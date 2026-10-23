@@ -130,8 +130,9 @@ interface CatalogInputSlot {
    *  headline numbers (diagnostic/auxiliary chains only). */
   aux?: boolean;
   /** Rules whose chain reads this slot (sorted). Listed only for
-   *  ASSUMED_MEMBER_SLOTS, so a lookup can tell whether its output depends
-   *  on an assumed fact; empty when no rule reads it. */
+   *  ASSUMED_MEMBER_SLOTS and derived inputs, so a lookup can tell whether
+   *  its output depends on an assumed or derived fact; empty when no rule
+   *  reads it. */
   read_by?: string[];
   /** Computed allowances a certified-path rule adds to this slot's value
    *  (`add(input, derived *allowance*)`), each with the on-path bool slots
@@ -145,6 +146,9 @@ interface CatalogInputSlot {
    *  claim-flag suppression in analyzeProgram). Setting them all true
    *  restates that case: us-az-snap needs four facts for its heating SUA. */
   allowance_claims?: string[];
+  /** The output this slot restates (overlay derived_inputs): a compute that
+   *  leaves the slot unset reads the output first and sets the slot to it. */
+  derived_from?: string;
 }
 
 interface CatalogRelation {
@@ -1338,6 +1342,39 @@ function analyzeProgram(
     if (![...slotsSeen(inputs)].includes(name)) {
       warn(`overlay default_overrides names unknown slot: ${name}`);
     }
+  }
+  // Derived inputs: a slot that restates one of the program's own outputs
+  // takes that output's value at compute time. Copy only what is the same
+  // quantity on the same instance: a numeric, on-path slot and a numeric
+  // output on the slot's entity whose chain doesn't read the slot (it is
+  // computed before the slot is set).
+  for (const [name, { output }] of Object.entries(overlay.derived_inputs ?? {})) {
+    const entity = Object.keys(inputs).find((e) => inputs[e].some((s) => s.name === name));
+    const slot = entity ? inputs[entity].find((s) => s.name === name)! : undefined;
+    const rule = ruleByName.get(output);
+    const numeric = (dtype: string | null | undefined) => dtype === "integer" || dtype === "decimal";
+    const problem = !slot
+      ? "names unknown slot"
+      : slot.aux
+        ? "names an auxiliary slot"
+        : !numeric(slot.dtype)
+          ? `names a ${slot.dtype} slot`
+          : !rule
+            ? `names unknown output ${output}`
+            : !numeric(rule.dtype)
+              ? `output ${output} is not numeric`
+              : (rule.entity ?? "Household") !== entity
+                ? `output ${output} is on ${rule.entity}, the slot on ${entity}`
+                : reachableInputs(output).has(name)
+                  ? `output ${output} reads the slot itself`
+                  : null;
+    if (problem) {
+      warn(`overlay derived_inputs ${problem}: ${name}`);
+      continue;
+    }
+    slot!.derived_from = output;
+    // So a lookup whose output never reads the slot skips the derivation.
+    slot!.read_by = rules.map((r) => r.name).filter((r) => reachableInputs(r).has(name)).sort();
   }
   function* slotsSeen(byEntity: Record<string, CatalogInputSlot[]>) {
     for (const slots of Object.values(byEntity)) for (const s of slots) yield s.name;

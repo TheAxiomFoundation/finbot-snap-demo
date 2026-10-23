@@ -242,6 +242,32 @@ const CASES: EvalCase[] = [
     expect: [{ pe_variable: "snap", label: "monthly SNAP" }],
   },
   {
+    // SC SNAP Manual 4.1(D): gross income at or below 130% of poverty makes a
+    // household categorically eligible, with no net income test. $3,400 of
+    // unearned income is under the $3,483 limit for four, but net income
+    // ($3,177) is over the $2,680 net limit: $40 (FY2026 standards), where
+    // the 4.1(D) facts at their old false defaults gave $0.
+    id: "sc-snap-bbce-family4-nl",
+    turns: ["We're a family of four in South Carolina: my husband and me and our kids, 8 and 5. Our only income is $3,400 a month in unemployment benefits, and our rent is $500. How much SNAP can we get?"],
+    expect_amounts: [40],
+  },
+  {
+    // The same rule for two people: $2,000 unearned is under the $2,292
+    // gross limit, net $1,791 is over the $1,763 net limit, and a 1- or
+    // 2-person categorically eligible household gets the $24 minimum.
+    id: "sc-snap-bbce-couple-nl",
+    turns: ["My husband and I are both 45 and live in South Carolina. Our only income is $2,000 a month in unemployment benefits, and our rent is $400. How much SNAP can we get?"],
+    expect_amounts: [24],
+  },
+  {
+    // Control: $3,000 is over the 130% limit for two, so 4.1(D) doesn't
+    // apply and the household is not eligible. A positive headline fails.
+    id: "sc-snap-above-limit-nl",
+    turns: ["My husband and I are both 45 and live in South Carolina. Our only income is $3,000 a month in unemployment benefits, and our rent is $400. How much SNAP can we get?"],
+    expect_match: ["not eligible|isn'?t eligible|\\$0|don'?t qualify|do not qualify|wouldn'?t qualify|would not qualify|over the"],
+    expect_not_match: ["(get|receive|qualify for|eligible for|benefit of)[^.]{0,30}\\$\\s?[1-9]"],
+  },
+  {
     // Utilities not stated, so no standard utility allowance: a heating or
     // cooling allowance "may not be used" for a household that doesn't
     // incur the expense (7 USC 2014(e)(6)(C)(ii)(I)). Fixture defaults used
