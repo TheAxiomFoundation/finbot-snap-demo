@@ -22,7 +22,11 @@ vi.mock("./engine", async (importOriginal) => {
 // income (a 1-person household earning 307% of poverty: eligible, $24), and
 // gross income set with the poverty level at 0 failed at any income. Both
 // slots now take the program's own outputs: the 100% FPL column of the FY
-// income standards, and the composed gross income.
+// income standards, and the composed gross income. The Family Independence
+// facts default to true: every applicant is screened for the services
+// (Manual 4.4; USDA FNS BBCE chart, June 2026: "All households are
+// eligible"). Before, a household with net income above 100% of poverty got
+// $0 (4 people, $3,400 unearned: $40).
 const SC = "us-sc-snap";
 const FPL = "federal_poverty_level_for_household";
 const GROSS = "household_gross_income";
@@ -75,6 +79,17 @@ describe("derived inputs in the catalog", () => {
     const slots = describeProgramPayload(getProgram(SC)!).inputs.Household.slots;
     expect(slots).toContain(`${FPL}:decimal(from ${FPL_OUTPUT})`);
     expect(slots).toContain(`${GROSS}:decimal(from ${GROSS_OUTPUT})`);
+  });
+
+  it("defaults South Carolina's Family Independence facts and discloses them", () => {
+    const program = getProgram(SC)!;
+    for (const [name, value] of Object.entries(FI_FACTS)) {
+      expect(program.inputs.Household.find((s) => s.name === name)).toMatchObject({ default: value, default_source: "overlay" });
+      expect(describeProgramPayload(program).default_overrides?.[name]).toBe(value);
+    }
+    expect(buildRequest(household(4, {})).applied.overlay_defaults_in_effect).toMatchObject(FI_FACTS);
+    const stated = buildRequest(household(4, { household_meets_non_financial_snap_eligibility_criteria: false }));
+    expect(stated.applied.overlay_defaults_in_effect?.household_meets_non_financial_snap_eligibility_criteria).toBeUndefined();
   });
 
   it("sets derived values only where the caller left the slot unset", () => {
@@ -134,6 +149,23 @@ describe.skipIf(!hasEngine)("South Carolina categorical eligibility on the real 
       expect(Object.keys(result.applied.derived_facts ?? {}).sort()).toEqual([FPL, GROSS]);
     });
   }
+
+  for (const [label, size, facts, eligible, benefit] of CASES) {
+    it(`applies 4.1(D) at default inputs: ${label}`, async () => {
+      const result = await computeProgram(household(size, facts));
+      expect(output(result, "snap_eligible")).toBe(eligible);
+      expect(numericOutput(result, "snap_benefit")).toBe(benefit);
+      expect(result.applied.overlay_defaults_in_effect).toMatchObject(FI_FACTS);
+    });
+  }
+
+  it("applies the standard income tests when a Family Independence fact is false", async () => {
+    for (const name of Object.keys(FI_FACTS)) {
+      const result = await computeProgram(household(4, { snap_total_monthly_unearned_income: 3400, [name]: false }));
+      expect(output(result, "snap_eligible"), name).toBe("not_holds");
+      expect(numericOutput(result, "snap_benefit"), name).toBe(0);
+    }
+  });
 
   it("keeps a value the caller states", async () => {
     // The old defaults: 0 <= 1.3 * 0 holds at 307% of poverty.

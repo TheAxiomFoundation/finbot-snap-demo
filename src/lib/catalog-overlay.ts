@@ -124,6 +124,25 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
       // the 4.1(D) test reads it from a separate input.
       household_gross_income: { output: "snap_gross_monthly_income" },
     },
+    default_overrides: {
+      // USDA FNS BBCE chart, June 2026: South Carolina, "All households are
+      // eligible (pamphlet)", no asset limit, 130%. SNAP Manual 4.4: FI
+      // Information and Referral eligibility "will be determined prior to
+      // SNAP eligibility determination" for every applicant, from the
+      // applicant's statement of gross income; the 130% test stays in the
+      // rules (derived_inputs above). 4.2 EXCEPTION: it is "available to all
+      // eligible households, including those that contain an ineligible or
+      // disqualified member". Left false, a household with gross income at
+      // or below 130% and net income above 100% got $0 (4 people, $3,400
+      // unearned: $40).
+      // https://fns-prod.azureedge.us/sites/default/files/resource-files/BBCE-States-Chart-June2026.pdf
+      any_member_receives_or_authorized_family_independence_information_referral_services: true,
+      // 4.1(D) households "must meet the non-financial eligibility criteria".
+      // The composition tests those itself (snap_eligible_core: each
+      // member's citizenship or immigration status, SSN, work and student
+      // rules); this input restates them for 4.1(D) only.
+      household_meets_non_financial_snap_eligibility_criteria: true,
+    },
   },
   "us-az-snap": {
     notes: ["Axiom's Arizona SNAP encoding doesn't test eligibility yet: every household shows as eligible, so read the amount as \"if eligible\"."],

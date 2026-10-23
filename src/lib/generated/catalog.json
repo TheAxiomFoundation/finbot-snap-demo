@@ -229143,7 +229143,8 @@
      {
       "name": "any_member_receives_or_authorized_family_independence_information_referral_services",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "appliance_or_water_well_repair_or_replacement_due_to_wear_or_mechanical_problem",
@@ -232260,7 +232261,8 @@
      {
       "name": "household_meets_non_financial_snap_eligibility_criteria",
       "dtype": "bool",
-      "default": false
+      "default": true,
+      "default_source": "overlay"
      },
      {
       "name": "household_meets_resource_eligibility_for_ssi",
