@@ -68,3 +68,21 @@ The earlier comparison (3 people, $3,300 a month in earnings, $1,800 shelter) sh
 2. **Standards year.** For October 2026, PolicyEngine 1.822.5 projected FY2027 values (maximum $812.72); the pinned Axiom release has FY2026 standards only (maximum $785), and FNS's published FY2027 maximum for 3 people is $808.
 
 So the chatbot's answers depend on the household's heating fact, which the BBCE starter states explicitly, and on the FY2027 standards, which are not yet encoded.
+
+## South Carolina 4.1(D) (Family Independence Information and Referral)
+
+SNAP Manual Vol 73 (October 2026) 4.1(D) extends categorical eligibility to "all households in which any member receives, or is authorized to receive" Family Independence Information and Referral Services, which "are provided to households whose income falls at or below 130% of the Federal Poverty Level (FPL)". These households "are not subject to gross or net income limits". 4.4 screens every applicant for the services before the SNAP determination, and 4.2's EXCEPTION makes them available to households with an ineligible or disqualified member. The USDA FNS BBCE chart (June 2026) lists South Carolina as "All households are eligible (pamphlet)", no asset limit, 130%. [Manual, page 43](https://dss.sc.gov/media/llodk0kb/snap-manual-volume-73.pdf#page=43).
+
+The encoding (`expanded_categorically_eligible_household`) needs two facts, `any_member_receives_or_authorized_family_independence_information_referral_services` and `household_meets_non_financial_snap_eligibility_criteria`, and tests `household_gross_income <= 1.3 * federal_poverty_level_for_household`, with both amounts as inputs. All four defaulted to false or 0. With the two facts set, `0 <= 0` held at any income; with gross income set too, the test failed at any income.
+
+The overlay now derives both amounts from the program's own outputs (`derived_inputs`: `snap_net_income_limit_100_percent_fpl_48_states_dc` and `snap_gross_monthly_income`, read in one fast engine call before the compute and reported in `applied.derived_facts`) and defaults both facts to true. `snap_eligible` still requires `snap_eligible_core`, the per-member citizenship, SSN, work and student checks.
+
+Engine, release program-artifacts-16a667719019, period 2026-09, unearned income only, no shelter cost; PolicyEngine 1.808.0 for the same month:
+
+| Household | 130% / 100% FPL (FY2026) | Before | After | PolicyEngine |
+|---|---:|---:|---:|---:|
+| 2 people, $2,000 | $2,292 / $1,763 | $0 | $24 | $24.00 |
+| 4 people, $3,400 | $3,483 / $2,680 | $0 | $40 | $40.90 |
+| 6 people, $4,600 | $4,675 / $3,596 | $0 | $130 | $130.70 |
+| 2 people, $3,000 | $2,292 / $1,763 | $0 | $0 | $0 |
+| 1 person, $4,004 earned (307%), both facts set | $1,696 / $1,305 | holds, $24 | not_holds, $0 | — |
