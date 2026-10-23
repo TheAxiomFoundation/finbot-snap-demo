@@ -26,6 +26,7 @@ import {
   UnknownRelationError,
   buildRequest,
   computeProgram,
+  deriveInputs,
   defaultPeriodFor,
   labelFor,
   memberCountSlotNames,
@@ -363,13 +364,8 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
         if (isErr(program)) return program;
         try {
           const meta = resolveOutput(program, output);
-          const built = buildRequest({
-            program,
-            period,
-            facts,
-            members,
-            outputsOverride: [meta.name],
-          });
+          const options = { program, period, facts, members, outputsOverride: [meta.name] };
+          const built = buildRequest({ ...options, derivedInputs: await deriveInputs(options) });
           const response = await runCompiled(program.slug, built.request);
           const shaped = shapeResult(program, built, response);
           onProvenance?.({

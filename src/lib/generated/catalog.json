@@ -230518,7 +230518,19 @@
      {
       "name": "federal_poverty_level_for_household",
       "dtype": "decimal",
-      "default": 0
+      "default": 0,
+      "derived_from": "snap_net_income_limit_100_percent_fpl_48_states_dc",
+      "read_by": [
+       "categorically_eligible_household",
+       "expanded_categorical_income_limits_not_applied",
+       "expanded_categorical_resources_excluded",
+       "expanded_categorically_eligible_household",
+       "household_income_at_or_below_family_independence_fpl_limit",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_income_eligible",
+       "snap_regular_month_allotment"
+      ]
      },
      {
       "name": "first_month_certified_for_snap_after_period_of_more_than_one_month_not_certified",
@@ -231525,7 +231537,22 @@
      {
       "name": "household_gross_income",
       "dtype": "decimal",
-      "default": 0
+      "default": 0,
+      "derived_from": "snap_gross_monthly_income",
+      "read_by": [
+       "categorically_eligible_household",
+       "expanded_categorical_income_limits_not_applied",
+       "expanded_categorical_resources_excluded",
+       "expanded_categorically_eligible_household",
+       "household_gross_income_exceeds_reporting_threshold",
+       "household_income_at_or_below_family_independence_fpl_limit",
+       "mandatory_interim_change_report_required",
+       "simplified_reporting_household_must_report_interim_change",
+       "snap_benefit",
+       "snap_eligible",
+       "snap_income_eligible",
+       "snap_regular_month_allotment"
+      ]
      },
      {
       "name": "household_had_change_since_application_filing_before_certification_interview",

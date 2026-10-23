@@ -32,6 +32,16 @@ export interface ProgramOverlay {
    *  administrative facts. Never household-specific facts. Each entry should
    *  say why. Disclosed in describe_program and on /programs. */
   default_overrides?: Record<string, boolean | number | string | PeriodDefault>;
+  /** Inputs that restate a value the same program's rules compute: a law
+   *  value the encoding takes as an input (a poverty line by household
+   *  size), or a figure its composition already derives (gross income).
+   *  A fixed default can't be right for every household and year, so when
+   *  the caller leaves one unset the compute reads the named output on the
+   *  same facts and period first and sets the slot to it (validated in
+   *  scripts/generate-catalog.ts: same entity, numeric, and the output
+   *  doesn't read the slot). Reported in applied.derived_facts. Each entry
+   *  should say why the two are the same quantity. */
+  derived_inputs?: Record<string, { output: string }>;
   /** Limitations disclosed once on the relevant program's tool result. */
   notes?: string[];
 }
@@ -92,6 +102,28 @@ export const CATALOG_OVERLAY: Record<string, ProgramOverlay> = {
     // (10 CCR 2506-1 4.206(C)(2)(c)), including an active SNAP IPV exclusion.
     // https://fns-prod.azureedge.us/sites/default/files/resource-files/BBCE-States-Chart-June2026.pdf
     notes: ["Axiom can't apply Colorado's broad-based categorical eligibility yet. A $0 for a household with gross income above the 130% limit but within the state's higher BBCE limit is not a determination; it may still qualify."],
+  },
+  "us-sc-snap": {
+    // SNAP Manual 4.1(D) (Vol 73, October 2026): Family Independence
+    // Information and Referral Services "are provided to households whose
+    // income falls at or below 130% of the Federal Poverty Level (FPL)",
+    // and "Categorical eligibility for these households does not continue
+    // if gross income, upon verification, is above the identified FPL".
+    // The encoding tests household_gross_income <= 1.3 *
+    // federal_poverty_level_for_household and takes both as inputs. At
+    // their 0 defaults the test held at any income (0 <= 0: a 1-person
+    // household at 307% of poverty was eligible, $24); with gross income
+    // set and the poverty level at 0 it failed at any income.
+    // https://dss.sc.gov/media/llodk0kb/snap-manual-volume-73.pdf#page=43
+    derived_inputs: {
+      // The FY income eligibility standards' 100% column is the monthly
+      // federal poverty level for the household's size (7 U.S.C. 2014(c)),
+      // the figure the 130% gross limit beside it is computed from.
+      federal_poverty_level_for_household: { output: "snap_net_income_limit_100_percent_fpl_48_states_dc" },
+      // Gross income is the composition's own earned plus unearned income;
+      // the 4.1(D) test reads it from a separate input.
+      household_gross_income: { output: "snap_gross_monthly_income" },
+    },
   },
   "us-az-snap": {
     notes: ["Axiom's Arizona SNAP encoding doesn't test eligibility yet: every household shows as eligible, so read the amount as \"if eligible\"."],
