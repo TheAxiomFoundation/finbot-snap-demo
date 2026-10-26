@@ -3,6 +3,7 @@ import { BBCE_STARTERS, STARTERS } from "../src/lib/starters";
 import { getProgram } from "../src/lib/catalog";
 import { computeProgram } from "../src/lib/request-builder";
 import { engineAvailable, memberCheck, numericOutput, output, starterScenario, STARTER_FIXTURES } from "./snap-scenarios";
+import { SCENARIOS } from "../eval/preset-compare";
 
 describe("BBCE starter candidates", () => {
   it("features one TANF, one federal tax and one SNAP starter", () => {
@@ -10,6 +11,22 @@ describe("BBCE starter candidates", () => {
     expect(STARTERS.some((s) => s.includes("EITC"))).toBe(true);
     expect(STARTERS.some((s) => s.includes("SNAP"))).toBe(true);
     expect(STARTERS.some((s) => s.includes("New York"))).toBe(false);
+  });
+
+  it("keeps every featured starter in the compare-mode eval", () => {
+    const questions = new Set(SCENARIOS.map((s) => s.question));
+    for (const starter of STARTERS) expect(questions).toContain(starter);
+  });
+
+  it("asks the TANF starter about Utah, whose primary output carries no not-fully-encoded flag", () => {
+    // The engine's $662 for a household of three is pinned by the oracle
+    // case ut-tanf-family3. Utah's eligibility outputs stay flagged.
+    expect(STARTERS.find((s) => s.includes("TANF"))).toContain("Utah");
+    const utah = getProgram("us-ut-tanf")!;
+    expect(utah.primary_output).toBe("ut_fep_payment_standard_amount");
+    expect(utah.acknowledged_incomplete).not.toContain(utah.primary_output);
+    expect(utah.outputs.find((o) => o.name === utah.primary_output)?.acknowledged_incomplete).toBe(false);
+    expect(utah.acknowledged_incomplete).toContain("ut_fep_eligible");
   });
 
   it("stays between 130% and 200% under both poverty guideline years", () => {
