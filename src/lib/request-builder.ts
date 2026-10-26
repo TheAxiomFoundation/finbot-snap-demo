@@ -74,6 +74,9 @@ export interface BuildOptions {
   /** Query exactly these outputs instead of primary + certified (lookup path). */
   outputsOverride?: string[];
   mode?: "fast" | "explain";
+  /** Values for the program's derived inputs (deriveInputs), set on the
+   *  slots the caller left unset and reported in applied.derived_facts. */
+  derivedInputs?: Facts;
 }
 
 export class UnknownInputError extends Error {
@@ -616,6 +619,14 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   }
 
   const derivedFacts: Facts = {};
+  for (const [name, value] of Object.entries(options.derivedInputs ?? {})) {
+    if (facts[name] !== undefined) continue;
+    facts[name] = value;
+    derivedFacts[name] = value;
+    notes.push(
+      `Set ${name}=${value} from ${slotsByName.get(name)?.derived_from} on the same facts: this input restates that output of the rules. It is not an assumption about the household; don't list it in Assumptions.`
+    );
+  }
   if (program.slug === "us-ny-snap") {
     // New York's 150% path takes this factual companion input. Its actual
     // eligibility threshold remains entirely in the compiled rules engine.
@@ -1539,11 +1550,55 @@ function citationsFor(outputs: ShapedOutput[]): Array<{ id: string; url: string 
 
 /** End-to-end compute: build → run → shape, then the unstated-age check. */
 export async function computeProgram(options: BuildOptions): Promise<ShapedResult> {
-  const built = buildRequest(options);
+  const derived: BuildOptions = { ...options, derivedInputs: await deriveInputs(options) };
+  const built = buildRequest(derived);
   const response = await runCompiled(options.program.slug, built.request);
   const shaped = shapeResult(options.program, built, response);
-  if (!options.outputsOverride) await checkUnstatedAges(options, response, shaped, built);
+  if (!options.outputsOverride) await checkUnstatedAges(derived, response, shaped, built);
   return shaped;
+}
+
+/** Values for the derived inputs (catalog derived_from) the caller left
+ *  unset, read from their outputs on the same facts and period in one
+ *  engine call. A lookup derives only the slots its output reads. Invalid
+ *  facts throw here as in buildRequest; when the engine call fails the
+ *  slots keep their defaults and the compute that follows reports the
+ *  error. us-sc-snap's categorical-eligibility test read its poverty level
+ *  and gross income from inputs left at 0. */
+export async function deriveInputs(options: BuildOptions): Promise<Facts> {
+  const { program } = options;
+  const queried = options.outputsOverride?.map((ref) => resolveOutput(program, ref).name);
+  const pending = Object.values(program.inputs)
+    .flat()
+    .filter(
+      (slot) =>
+        slot.derived_from &&
+        options.facts?.[slot.name] === undefined &&
+        (!queried || queried.some((name) => slot.read_by?.includes(name)))
+    );
+  if (pending.length === 0) return {};
+  const sources = [...new Set(pending.map((slot) => slot.derived_from!))];
+  const built = buildRequest({ ...options, outputsOverride: sources, extraOutputs: undefined, mode: "fast", derivedInputs: undefined });
+  let response: ExecutionResponse;
+  try {
+    response = await runCompiled(program.slug, built.request);
+  } catch {
+    return {};
+  }
+  const values = new Map<string, number>();
+  for (const source of sources) {
+    const key = queryKey(resolveOutput(program, source));
+    for (const result of response?.results ?? []) {
+      const out = result.outputs[key];
+      if (out?.kind === "scalar" && Number.isFinite(Number(out.value.value))) values.set(source, Number(out.value.value));
+    }
+  }
+  const derived: Facts = {};
+  for (const slot of pending) {
+    const value = values.get(slot.derived_from!);
+    if (value !== undefined) derived[slot.name] = value;
+  }
+  return derived;
 }
 
 /** The trace of member 1's own queries (its member checks, or member-entity

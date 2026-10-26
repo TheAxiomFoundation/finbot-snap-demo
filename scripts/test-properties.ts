@@ -167,6 +167,34 @@ async function main() {
     save();
   }
 
+  // I6 (SC SNAP Manual 4.1(D)): gross income at or below 130% of the poverty
+  // line makes a household categorically eligible at default inputs, whatever
+  // its net income; 1–2 people get at least the minimum benefit. Unearned
+  // income has no 20% deduction, so most draws fail the net income test and
+  // only 4.1(D) makes them eligible. Above 130% (non-elderly) they are denied:
+  // the test's gross income and poverty level are derived, not 0.
+  const scCompute = async (size: number, unearned: number, shelter: number) => {
+    const program = snapProgram("sc");
+    const scenario = snapScenario(program, size, 0, shelter);
+    scenario.facts.snap_total_monthly_unearned_income = unearned;
+    const result = await computeProgram({ program, period: SNAP_TEST_PERIOD, ...scenario, mode: "explain" });
+    return { eligible: output(result, "snap_eligible"), benefit: numericOutput(result, "snap_benefit") };
+  };
+  await property("I6 SC: gross at or below 130% FPL eligible at default inputs", fc.record({
+    size: sizeArbitrary, percent: fc.integer({ min: 100, max: 130 }), shelter: fc.integer({ min: 0, max: 5000 }),
+  }), async ({ size, percent, shelter }) => {
+    const unearned = Math.floor(fpl.get(size)! * percent / 100);
+    const { eligible, benefit } = await scCompute(size, unearned, shelter);
+    return { pass: eligible === "holds" && (size > 2 || benefit > 0), size, unearned, shelter, eligible, benefit };
+  });
+  await property("I6b SC: gross above 130% FPL denied at default inputs", fc.record({
+    size: sizeArbitrary, percent: fc.integer({ min: 131, max: 400 }), shelter: fc.integer({ min: 0, max: 5000 }),
+  }), async ({ size, percent, shelter }) => {
+    const unearned = Math.ceil(fpl.get(size)! * percent / 100);
+    const { eligible, benefit } = await scCompute(size, unearned, shelter);
+    return { pass: eligible === "not_holds" && benefit === 0, size, unearned, shelter, eligible, benefit };
+  });
+
   await property("I5 deterministic outputs", general, async ({ state, size, earned, shelter }) => {
     const first = await compute(state, size, earned, shelter);
     const second = await compute(state, size, earned, shelter);

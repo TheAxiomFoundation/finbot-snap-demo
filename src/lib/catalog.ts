@@ -113,8 +113,13 @@ export interface CatalogInputSlot {
   /** Not reachable from any certified output — cannot change the headline. */
   aux?: boolean;
   /** Outputs whose rule chain reads this slot. Listed only for the slots
-   *  the app assumes (ASSUMED_MEMBER_SLOTS); empty when no output reads it. */
+   *  the app assumes (ASSUMED_MEMBER_SLOTS) or derives (derived_from);
+   *  empty when no output reads it. */
   read_by?: string[];
+  /** The output this slot restates (catalog-overlay derived_inputs). A
+   *  compute that leaves the slot unset reads the output on the same facts
+   *  first and sets the slot to it (deriveInputs in request-builder.ts). */
+  derived_from?: string;
   /** Computed allowances the rules add to this slot's value, each with the
    *  on-path bool slots its chain reads (us-az-snap
    *  household_shelter_costs_incurred + az_applied_utility_allowance). The
