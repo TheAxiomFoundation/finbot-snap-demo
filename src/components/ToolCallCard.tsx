@@ -96,10 +96,12 @@ function judgmentBadge(v: unknown) {
   return <span className="badge badge-range">unknown</span>;
 }
 
-function IncompleteBadge() {
+/** A quiet marker for outputs the program spec flags as not fully
+ *  encoded: an outlined badge on the headline, plain muted text on rows. */
+function IncompleteBadge({ inline = false }: { inline?: boolean }) {
   return (
     <span
-      className="badge badge-incomplete"
+      className={inline ? "incomplete-mark" : "badge badge-incomplete"}
       title="The program spec flags this output as not fully encoded yet."
     >
       incomplete
@@ -219,7 +221,7 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
             <div key={o.name} className="tool-row">
               <span className="k">
                 {o.label}
-                {o.acknowledged_incomplete && <> <IncompleteBadge /></>}
+                {o.acknowledged_incomplete && <IncompleteBadge inline />}
               </span>
               <span className="v" style={o.semantics === "judgment" ? { color: o.value === "holds" ? "#065f46" : "#991b1b" } : undefined}>
                 {displayValue(o)}
@@ -253,7 +255,7 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
           )}
         </div>
       )}
-      {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}
+      {result.incomplete_note && <div className="tool-note-quiet">{result.incomplete_note}</div>}
       <AppliedNotes notes={applied.disclosures} hiddenNotes={hiddenNotes} />
       <FactChips facts={applied.facts_applied} />
       <div className="tool-foot">
@@ -368,7 +370,7 @@ function LookupCard({ result, hiddenNotes }: { result: any; hiddenNotes: readonl
         <span className="badge badge-source" style={{ fontSize: 10 }}>{result.entity}</span>
         {result.acknowledged_incomplete && <IncompleteBadge />}
       </div>
-      {result.incomplete_note && <div className="tool-note">{result.incomplete_note}</div>}
+      {result.incomplete_note && <div className="tool-note-quiet">{result.incomplete_note}</div>}
       <AppliedNotes notes={result.applied?.disclosures} hiddenNotes={hiddenNotes} />
       <FactChips facts={result.applied?.facts_applied} />
       <div className="tool-foot">
