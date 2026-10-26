@@ -223,6 +223,13 @@ export const SCENARIOS: Scenario[] = [
     truth_note: "oracle ut-tanf-family3 (PE ut_fep_payment_standard 662)",
   },
   {
+    id: "ut-fep-max3-starter",
+    area: "tanf",
+    question: "What's the maximum monthly TANF cash benefit in Utah this month for a single parent with two children and no income?",
+    truth: [662],
+    truth_note: "the TANF starter; DWS Eligibility Manual Table 1 FEP maximum for a household of 3 (plain model: $498, an older table)",
+  },
+  {
     id: "tx-tanf-max",
     area: "tanf",
     question: "What's the maximum TANF benefit for a single parent with two kids in Texas?",
