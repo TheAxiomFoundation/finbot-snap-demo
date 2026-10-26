@@ -23,16 +23,18 @@ export const BBCE_STARTERS: readonly string[] = [
  *    can't confirm the current rate, 6 of them naming the wrong month. The
  *    engine says $662, DWS Eligibility Manual Table 1's FEP maximum for a
  *    household of three, 10/10. That output (ut_fep_payment_standard_amount)
- *    carries no "not fully encoded" flag; Utah's five eligibility outputs
- *    do, and every reply lists them and says eligibility isn't established
- *    (the question doesn't say the children attend school). It replaced
- *    "Single mom with two kids: does Alabama or Georgia pay more TANF?"
- *    after the 2026-10-25 Aspen dry run: both of that question's outputs
- *    were flagged, and it didn't say whether it meant the maximum or an
- *    average. Asked "in October 2026", the plain model qualified the
- *    October amount in 10/10 runs; asked with no month, it gave $498 with
- *    no rate caveat in 10/10, but then the question names no month. Same as
- *    the axiom.org/aspen live-demo question.
+ *    carries no "not fully encoded" flag; Utah's other five outputs (four
+ *    eligibility checks and the work-expense allowance) do, and every reply
+ *    lists them and says eligibility isn't established (the question doesn't
+ *    say, among other things, that the children attend school). It replaced
+ *    "Single mom with two kids: does Alabama or Georgia pay more TANF?" after
+ *    the 2026-10-25 Aspen dry run: both of that question's outputs were
+ *    flagged, and it didn't say whether it meant the maximum or an average.
+ *    Asked "in October 2026", the plain model qualified the October amount in
+ *    10/10 runs (5 called October 2026 future); asked with no month, it gave
+ *    $498 in 10/10 without saying it couldn't confirm the rate (4/10 still
+ *    suggest checking the current amount with DWS), but then the question
+ *    names no month. Same as the axiom.org/aspen live-demo question.
  *  - EITC: plain model answers "about $3,650" from the 2025 schedule or
  *    gives a range; IRS Rev. Proc. 2025-32 (two children: $7,316 maximum,
  *    phase-out from $23,890 at 21.06%) gives $3,923, matching the engine and
@@ -50,9 +52,9 @@ export const BBCE_STARTERS: readonly string[] = [
  *    a side: plain said yes 7/10, caught the 2025 change 2/10 and hedged
  *    1/10; the engine's check failed 10/10, but most replies hedged ("isn't
  *    established"), since the cited 7 CFR 273.4 text predates the change.
- *    "No green card yet" matters: the
- *    2026-09-17 D. Or. ruling makes LPRs who were refugees or asylees
- *    eligible without the five-year wait, which is a different case.
+ *    "No green card yet" matters: the 2026-09-17 D. Or. ruling makes LPRs
+ *    who were refugees or asylees eligible without the five-year wait,
+ *    which is a different case.
  *  Rejected, and why:
  *  - CTC (incl. the $420,000 phase-out), OASDI above the wage base, 2026
  *    brackets, senior deduction, capital-gains thresholds: the plain model

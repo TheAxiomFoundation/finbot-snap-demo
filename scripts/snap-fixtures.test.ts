@@ -18,9 +18,10 @@ describe("BBCE starter candidates", () => {
     for (const starter of STARTERS) expect(questions).toContain(starter);
   });
 
-  it("answers the Utah TANF starter from an output with no not-fully-encoded flag", () => {
+  it("asks the TANF starter about Utah, whose primary output carries no not-fully-encoded flag", () => {
     // The engine's $662 for a household of three is pinned by the oracle
     // case ut-tanf-family3. Utah's eligibility outputs stay flagged.
+    expect(STARTERS.find((s) => s.includes("TANF"))).toContain("Utah");
     const utah = getProgram("us-ut-tanf")!;
     expect(utah.primary_output).toBe("ut_fep_payment_standard_amount");
     expect(utah.acknowledged_incomplete).not.toContain(utah.primary_output);
