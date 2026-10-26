@@ -13,21 +13,26 @@ export const BBCE_STARTERS: readonly string[] = [
 /** Pre-written starter prompts: one TANF question, one federal tax
  *  question and one SNAP eligibility question, each short and phrased the
  *  way a real person asks. Chosen by eval/preset-compare.ts plus direct
- *  OpenAI API runs (2026-10-16 to 2026-10-19) against the app's model,
+ *  OpenAI API runs (2026-10-16 to 2026-10-19; the Utah starter by
+ *  production compare-mode runs on 2026-10-25) against the app's model,
  *  gpt-6-luna at its default settings, on program-artifacts-16a667719019,
  *  with every value checked against an outside source, not just the engine:
- *  - Utah TANF maximum: plain model says $498 (an older table) in 10/10
- *    compare-mode runs on production (2026-10-25); the engine says $662,
- *    DWS Eligibility Manual Table 1's FEP maximum for a household of three,
- *    10/10. The $662 output (ut_fep_payment_standard_amount) carries no
- *    "not fully encoded" flag; Utah's eligibility outputs do, and the reply
- *    lists them. It replaced "Single mom with two kids: does Alabama or
- *    Georgia pay more TANF?" after the 2026-10-25 Aspen dry run: both of
- *    that question's outputs were flagged, and it didn't say whether it
- *    meant the maximum or an average. "This month" names the month without
- *    a date: asked "in October 2026", the plain model hedged that the date
- *    is in the future in 9/10 runs; asked "this month", in 1/10. Same as the
- *    axiom.org/aspen live-demo question.
+ *  - Utah TANF maximum (compare mode on production, 2026-10-25, 10 runs a
+ *    side): the plain model puts the maximum at about $498 in 10/10 runs,
+ *    Utah's maximum in July 2013 (CRS R43634), though 7/10 add that they
+ *    can't confirm the current rate, 6 of them naming the wrong month. The
+ *    engine says $662, DWS Eligibility Manual Table 1's FEP maximum for a
+ *    household of three, 10/10. That output (ut_fep_payment_standard_amount)
+ *    carries no "not fully encoded" flag; Utah's five eligibility outputs
+ *    do, and every reply lists them and says eligibility isn't established
+ *    (the question doesn't say the children attend school). It replaced
+ *    "Single mom with two kids: does Alabama or Georgia pay more TANF?"
+ *    after the 2026-10-25 Aspen dry run: both of that question's outputs
+ *    were flagged, and it didn't say whether it meant the maximum or an
+ *    average. Asked "in October 2026", the plain model qualified the
+ *    October amount in 10/10 runs; asked with no month, it gave $498 with
+ *    no rate caveat in 10/10, but then the question names no month. Same as
+ *    the axiom.org/aspen live-demo question.
  *  - EITC: plain model answers "about $3,650" from the 2025 schedule or
  *    gives a range; IRS Rev. Proc. 2025-32 (two children: $7,316 maximum,
  *    phase-out from $23,890 at 21.06%) gives $3,923, matching the engine and

@@ -227,7 +227,7 @@ export const SCENARIOS: Scenario[] = [
     area: "tanf",
     question: "What's the maximum monthly TANF cash benefit in Utah this month for a single parent with two children and no income?",
     truth: [662],
-    truth_note: "the TANF starter; DWS Eligibility Manual Table 1 FEP maximum for a household of 3 (plain model: $498, an older table)",
+    truth_note: "the TANF starter; DWS Eligibility Manual Table 1 FEP maximum for a household of 3 (plain model: about $498, Utah's July 2013 maximum per CRS R43634)",
   },
   {
     id: "tx-tanf-max",
