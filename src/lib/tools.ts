@@ -383,7 +383,8 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
           // A failed judgment names only what its inputs don't meet, as in
           // compute; one that holds lists the rule's whole requirement.
           const requires = value?.value === "not_holds" ? value.requires : meta.requires;
-          const amended = lookupAmendment(program, meta, shaped.period);
+          // Name the law applied only for a value the engine returned.
+          const amended = value?.value != null ? lookupAmendment(program, meta, shaped.period) : undefined;
           return {
             program: program.slug,
             name: meta.name,
@@ -421,7 +422,7 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
 
     fetch_citation: tool({
       description:
-        "Pull the legal text behind a legal id returned by compute or lookup_value, e.g. 'us:statutes/7/2017/a' or 'us-co:regulations/10-ccr-2506-1/4.207.3'. Use when the user asks for the source of a number or rule. When the result carries `amended_by`, a later statute changed the law this text states and the encoded rules apply the amended provision for periods from its `applies_from`: for those periods, cite `amended_by` (its text, citation and enacting law) as the law the encoded rules applied.",
+        "Pull the legal text behind a legal id returned by compute or lookup_value, e.g. 'us:statutes/7/2017/a' or 'us-co:regulations/10-ccr-2506-1/4.207.3'. Use when the user asks for the source of a number or rule. When the result carries `amended_by`, a later statute amended the law behind this text and the encoded rules apply the amended provision for periods from its `applies_from`: for those periods, cite `amended_by` (its text, citation and enacting law) as the law the encoded rules applied.",
       parameters: z.object({
         legal_id: z
           .string()

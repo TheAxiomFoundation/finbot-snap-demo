@@ -160,14 +160,20 @@ async function amendedProvision(amendment: StatutoryAmendment, citedBody: string
   const applies =
     `Axiom's encoded ${module_citation} rules apply ${provision.citation} as amended by ${enacted_by} ` +
     `(effective ${effective}) for periods from ${encoded_from}`;
-  // The cited text is period-free; the amended provision is not. The
-  // amendment took effect before the encoded rules apply it (FNS: on
-  // enactment, for new applicants), so only periods that end before it
-  // are plainly under the cited text.
-  const earlier = `For periods that end before ${effective}, the ${module_citation} text states the law then in force.`;
+  // Only a cited text that still has the passage the amendment superseded
+  // is identifiably the earlier version: a revised regulation drops it, and
+  // an empty or missing body shows nothing. The amendment took effect
+  // before the encoded rules apply it (FNS: on enactment, for new
+  // applicants), so only periods that end before it are plainly under the
+  // earlier text.
+  const unrevised = citedBody?.includes(superseded.passage) ?? false;
+  const earlier = unrevised
+    ? `For periods that end before ${effective}, this ${module_citation} text states the law then in force.`
+    : `For periods that end before ${effective}, the law then in force was ${module_citation} as it stood before ${enacted_by}; ` +
+      `this result does not include that text.`;
   // Call the cited text out of date only while it still says what the
-  // amendment changed: a revised regulation drops the passage.
-  const note = citedBody?.includes(superseded.passage)
+  // amendment changed.
+  const note = unrevised
     ? `The ${module_citation} text in the corpus has not been updated for ${enacted_by}, which amended ${provision.citation} ` +
       `effective ${effective}: ${superseded.summary}. ${applies}, so for those periods cite ${provision.citation} as ` +
       `amended (amended_by) as the law the result applied, alongside ${module_citation}. ${earlier}`
