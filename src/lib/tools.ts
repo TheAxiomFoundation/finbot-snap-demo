@@ -24,18 +24,15 @@ import {
   NoMemberEntityError,
   UnitFactUnsetError,
   UnknownRelationError,
-  buildRequest,
   computeProgram,
   defaultPeriodFor,
   labelFor,
   memberCountSlotNames,
   nearestNames,
   resolveOutput,
-  shapeResult,
   type RuleProvenance,
   type Stamps,
 } from "./request-builder";
-import { runCompiled } from "./engine";
 
 const FactsSchema = z
   .record(z.union([z.boolean(), z.number(), z.string()]))
@@ -363,15 +360,13 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
         if (isErr(program)) return program;
         try {
           const meta = resolveOutput(program, output);
-          const built = buildRequest({
+          const shaped = await computeProgram({
             program,
             period,
             facts,
             members,
             outputsOverride: [meta.name],
           });
-          const response = await runCompiled(program.slug, built.request);
-          const shaped = shapeResult(program, built, response);
           onProvenance?.({
             type: "provenance",
             tool: "lookup_value",

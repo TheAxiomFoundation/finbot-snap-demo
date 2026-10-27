@@ -73,6 +73,9 @@ export interface BuildOptions {
   extraOutputs?: string[];
   /** Query exactly these outputs instead of primary + certified (lookup path). */
   outputsOverride?: string[];
+  /** Lookup path only: check these member gates at every listed member
+   *  (computeProgram's second pass, see lookupMemberChecks). */
+  memberChecks?: string[];
   mode?: "fast" | "explain";
 }
 
@@ -418,6 +421,21 @@ export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">
   return MEMBER_COUNT_INPUTS.has(slot.name) && (slot.dtype === "integer" || slot.dtype === "decimal");
 }
 
+/** Member-entity judgments that gate whether a member counts inside a
+ *  member relation's aggregations (ctc_qualifying_child,
+ *  snap_member_eligible), in relation order. */
+function memberGates(program: CatalogProgram): CatalogOutput[] {
+  const gates: CatalogOutput[] = [];
+  for (const relation of program.relations) {
+    if (relation.related_entity !== program.member_entity) continue;
+    for (const gate of relation.gate_judgments ?? []) {
+      const output = program.outputs.find((o) => o.name === gate);
+      if (output && output.entity === program.member_entity && !gates.includes(output)) gates.push(output);
+    }
+  }
+  return gates;
+}
+
 /** The program's verified count inputs, on any entity. */
 export function memberCountSlotNames(program: CatalogProgram): string[] {
   const names = new Set<string>();
@@ -749,23 +767,17 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // member is checked: the taxpayer listed first fails the qualifying-child
   // gate the children hold, so member 1 alone reads as "no qualifying child".
   // Synthesized members past the first carry only defaults; check member 1.
-  // A lookup checks members only when it lists them: a value read through a
-  // count of members (us-fiit eitc_maximum, through eitc_child_count) came
-  // back with no sign that none of the listed children counted, and
-  // gpt-6-luna headlined the childless $664 as the two-child maximum.
+  // A lookup checks only the gates options.memberChecks names, at every
+  // listed member (see lookupMemberChecks).
   const memberChecksScope = options.outputsOverride ? "counted" : "all";
   const memberCheckNames = new Set<string>();
   const memberCheckIds: string[] = [];
-  if (memberEntity && memberCount > 0 && (!options.outputsOverride || (options.members?.length ?? 0) > 0)) {
-    for (const relation of program.relations) {
-      if (relation.related_entity !== memberEntity) continue;
-      for (const gate of relation.gate_judgments ?? []) {
-        const output = program.outputs.find((o) => o.name === gate);
-        if (output && output.entity === memberEntity && !seen.has(output.name)) {
-          memberCheckNames.add(output.name);
-          addOutput(output);
-        }
-      }
+  const lookupGates = options.outputsOverride && options.members?.length ? options.memberChecks ?? [] : null;
+  if (memberEntity && memberCount > 0 && (!options.outputsOverride || lookupGates?.length)) {
+    for (const output of memberGates(program)) {
+      if (seen.has(output.name) || (lookupGates && !lookupGates.includes(output.name))) continue;
+      memberCheckNames.add(output.name);
+      addOutput(output);
     }
     if (memberCheckNames.size > 0) {
       const checked = options.members?.length ? memberCount : 1;
@@ -1617,13 +1629,49 @@ function citationsFor(outputs: ShapedOutput[]): Array<{ id: string; url: string 
   return citations;
 }
 
-/** End-to-end compute: build → run → shape, then the unstated-age check. */
+/** End-to-end compute: build → run → shape, then the unstated-age check
+ *  (a compute) or the member checks (a lookup with a members list). */
 export async function computeProgram(options: BuildOptions): Promise<ShapedResult> {
   const built = buildRequest(options);
   const response = await runCompiled(options.program.slug, built.request);
   const shaped = shapeResult(options.program, built, response);
   if (!options.outputsOverride) await checkUnstatedAges(options, response, shaped, built);
+  else if (options.members?.length && !options.memberChecks) {
+    return (await lookupMemberChecks(options, built, response, shaped)) ?? shaped;
+  }
   return shaped;
+}
+
+/** A lookup with a members list, run once more with the member gates its
+ *  value counts through checked at every member. A value read through a
+ *  count of members (us-fiit eitc_maximum, through eitc_child_count) came
+ *  back with no sign that none of the listed children counted, and
+ *  gpt-6-luna headlined the childless $664 as the two-child maximum. The
+ *  checks run separately so they can't fail or change the lookup: a gate
+ *  whose rules have no parameter value at a historical period fails the
+ *  whole engine run. Null when the value counts through no gate, or when
+ *  the checked run fails or gives different outputs. */
+async function lookupMemberChecks(
+  options: BuildOptions,
+  built: BuiltRequest,
+  response: ExecutionResponse,
+  shaped: ShapedResult
+): Promise<ShapedResult | null> {
+  const { program } = options;
+  const trace: Record<string, DerivedTraceNode> = {};
+  for (const result of response.results) Object.assign(trace, result.trace ?? {});
+  const counted = countedGates(trace, built.queried, memberGates(program));
+  if (counted.size === 0) return null;
+  try {
+    const checkedBuilt = buildRequest({ ...options, memberChecks: [...counted.keys()] });
+    const checked = shapeResult(program, checkedBuilt, await runCompiled(program.slug, checkedBuilt.request));
+    const values = (r: ShapedResult) => JSON.stringify(r.outputs.map((o) => [o.name, o.value]));
+    if (values(checked) === values(shaped)) return checked;
+    console.error("[finbot] lookup member checks changed the outputs; kept the plain lookup:", program.slug, values(shaped), values(checked));
+  } catch (err) {
+    console.error("[finbot] lookup member checks failed; kept the plain lookup:", err, "program:", program.slug);
+  }
+  return null;
 }
 
 /** The trace of member 1's own queries (its member checks, or member-entity

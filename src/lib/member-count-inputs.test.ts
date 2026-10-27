@@ -3,16 +3,14 @@ import { isDeepStrictEqual } from "node:util";
 import { describe, expect, it } from "vitest";
 
 import { getCatalog, getProgram, type CatalogProgram } from "./catalog";
-import { runCompiled, type ExecutionRequest } from "./engine";
+import { runCompiled } from "./engine";
 import {
   NoMemberEntityError,
   buildRequest,
   computeProgram,
   memberCountSlotNames,
-  queryKey,
   shapeResult,
   type BuildOptions,
-  type BuiltRequest,
   type Facts,
 } from "./request-builder";
 import { engineAvailable } from "../../scripts/snap-scenarios";
@@ -35,26 +33,6 @@ const refusal = (options: BuildOptions): NoMemberEntityError => {
   }
   throw new Error(`buildRequest accepted members[] on ${options.program.slug}`);
 };
-/** A lookup's request without its member checks: the gate queries at each
- *  listed member, and the non-member inputs recorded there for them. A
- *  members list adds those and nothing else. */
-const withoutMemberChecks = (program: CatalogProgram, built: BuiltRequest): ExecutionRequest => {
-  const gateKeys = new Set(built.queried.filter((o) => built.memberCheckNames.has(o.name)).map(queryKey));
-  const checked = new Set(built.memberCheckIds);
-  const memberSlots = new Set((program.inputs[program.member_entity ?? ""] ?? []).map((s) => s.name));
-  return {
-    ...built.request,
-    dataset: {
-      ...built.request.dataset,
-      inputs: built.request.dataset.inputs.filter(
-        (i) => !checked.has(i.entity_id) || memberSlots.has(i.name.split("#input.").pop()!)
-      ),
-    },
-    queries: built.request.queries
-      .map((q) => ({ ...q, outputs: q.outputs.filter((key) => !gateKeys.has(key)) }))
-      .filter((q) => q.outputs.length > 0),
-  };
-};
 const hasEngine = engineAvailable();
 if (process.env.REQUIRE_ENGINE === "1" && !hasEngine) {
   throw new Error("REQUIRE_ENGINE=1 but no hosted or local engine is available");
@@ -70,7 +48,7 @@ describe("household count inputs", () => {
       const options = { program, period: "2026-09", facts, outputsOverride: [INDIGENCE_OUTPUT] };
       const synthesized = buildRequest(options);
       const explicit = buildRequest({ ...options, members: Array.from({ length: size }, () => ({})) });
-      expect(isDeepStrictEqual(withoutMemberChecks(program, explicit), synthesized.request)).toBe(true);
+      expect(isDeepStrictEqual(explicit.request, synthesized.request)).toBe(true);
       expect(explicit.applied.facts_applied).not.toHaveProperty(POVERTY_SLOT);
       const povertyRecords = explicit.request.dataset.inputs.filter((record) => record.name.endsWith(`#input.${POVERTY_SLOT}`));
       expect(povertyRecords.length).toBeGreaterThan(0);
@@ -269,7 +247,7 @@ describe.skipIf(!hasEngine)("real-engine equivalent household representations", 
     const synthesizedResult = shapeResult(program, synthesized, await runCompiled(program.slug, synthesized.request));
     const explicitResult = shapeResult(program, explicit, await runCompiled(program.slug, explicit.request));
     expect(explicitResult.outputs).toEqual(synthesizedResult.outputs);
-    expect(withoutMemberChecks(program, explicit)).toEqual(synthesized.request);
+    expect(explicit.request).toEqual(synthesized.request);
     expect(explicitResult.outputs[0].value).toBe("not_holds");
   }, 60_000);
 });

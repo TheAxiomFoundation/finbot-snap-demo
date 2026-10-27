@@ -131,13 +131,17 @@ describe("the child-TIN assumption", () => {
 });
 
 describe("member checks on the lookup path", () => {
-  it("checks every listed member, and none when no list was given", () => {
-    const listed = buildRequest({ program: fiit, period: "2026", members: LOOKUP_AGE_ONLY.members, outputsOverride: ["eitc_maximum"] });
-    expect(listed.memberChecksScope).toBe("counted");
-    expect(listed.memberCheckIds).toEqual(["person:1", "person:2", "person:3"]);
-    expect(listed.memberCheckNames.has(GATE)).toBe(true);
+  it("leaves the lookup's own request as it was, and checks only the named gates at every listed member", () => {
+    const options = { program: fiit, period: "2026", members: LOOKUP_AGE_ONLY.members, outputsOverride: ["eitc_maximum"] };
+    // The first run is the plain lookup; member checks are a second run.
+    expect(buildRequest(options).memberCheckIds).toEqual([]);
 
-    const bare = buildRequest({ program: fiit, period: "2026", outputsOverride: ["eitc_maximum"] });
+    const checked = buildRequest({ ...options, memberChecks: [GATE] });
+    expect(checked.memberChecksScope).toBe("counted");
+    expect(checked.memberCheckIds).toEqual(["person:1", "person:2", "person:3"]);
+    expect([...checked.memberCheckNames]).toEqual([GATE]);
+
+    const bare = buildRequest({ program: fiit, period: "2026", outputsOverride: ["eitc_maximum"], memberChecks: [GATE] });
     expect(bare.memberCheckIds).toEqual([]);
   });
 });
