@@ -164,35 +164,55 @@ function ZeroBecause({ output }: { output: any }) {
   );
 }
 
+const memberList = (members: number[]) => `member${members.length === 1 ? "" : "s"} ${members.join(", ")}`;
+
+/** What the engine's earlier-formula run says about one check: on a
+ *  member's check or a lookup, `changed_outcome`; on a household-level
+ *  entry, the failing members each way. */
+function amendedOutcome(amended: any): string {
+  if (amended.changed_outcome === true) return " · the amendment changed this check's result";
+  if (amended.changed_outcome === false) return " · this check gives the same result under the earlier formula";
+  const parts = [
+    ...(amended.changed_for_members?.length ? [`the amendment changed this check for ${memberList(amended.changed_for_members)}`] : []),
+    ...(amended.unchanged_for_members?.length ? [`same under the earlier formula for ${memberList(amended.unchanged_for_members)}`] : []),
+  ];
+  return parts.length ? ` · ${parts.join("; ")}` : "";
+}
+
 /** One amended statute a check applied (`amended_by`), and whether the
- *  amendment changed the result (the engine's earlier-formula run). */
+ *  amendment changed that check's result. */
 function AmendedLine({ name, amended }: { name?: string; amended: any }) {
+  const when = amended.effective
+    ? ` (effective ${amended.effective}; encoded for periods from ${amended.applies_from})`
+    : ` (encoded for periods from ${amended.applies_from})`;
   return (
     <div className="mono" style={{ fontSize: 10.5, color: "#374151", marginTop: 2 }}>
       {name ? `${checkLabel(name)} applies ` : "Applies "}
       <a className="cite" style={{ fontSize: 10.5 }} href={amended.url} target="_blank" rel="noreferrer">
         {amended.citation}
       </a>
-      {` as amended by ${amended.enacted_by}, from ${amended.applies_from}`}
-      {amended.changed_outcome === true && " · the amendment changed this result"}
-      {amended.changed_outcome === false && " · same result under the earlier formula"}
+      {` as amended by ${amended.enacted_by}${when}`}
+      {amendedOutcome(amended)}
     </div>
   );
 }
 
 /** The `amended_by` entries under a set of failed checks, once per check
- *  and outcome: a household's outputs repeat the same failed sub-check. */
-function AmendedChecks({ checks }: { checks: any[] }) {
+ *  and outcome: a household's outputs repeat the same failed sub-check.
+ *  Checks in `shownPerMember` are left out: the member rows show them. */
+function AmendedChecks({ checks, shownPerMember }: { checks: any[]; shownPerMember?: Set<string> }) {
   const seen = new Set<string>();
   const lines = checks
     .flatMap((check) => check?.failed_because ?? [])
-    .filter((f: any) => {
-      const key = `${f.name}|${f.amended_by?.changed_outcome}`;
-      if (!f.amended_by || seen.has(key)) return false;
+    .flatMap((f: any) => {
+      if (!f.amended_by || shownPerMember?.has(f.name)) return [];
+      const { changed_outcome, changed_for_members, unchanged_for_members } = f.amended_by;
+      const key = `${f.name}|${JSON.stringify([changed_outcome, changed_for_members, unchanged_for_members])}`;
+      if (seen.has(key)) return [];
       seen.add(key);
-      return true;
+      return [{ key, f }];
     });
-  return <>{lines.map((f: any) => <AmendedLine key={`${f.name}|${f.amended_by.changed_outcome}`} name={f.name} amended={f.amended_by} />)}</>;
+  return <>{lines.map(({ key, f }) => <AmendedLine key={key} name={f.name} amended={f.amended_by} />)}</>;
 }
 
 function Citations({ citations }: { citations?: Array<{ id: string; url: string }> }) {
@@ -262,7 +282,16 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
           ])}
         </div>
       )}
-      <AmendedChecks checks={outputs.flatMap((o: any) => [o, ...(o.zero_because ?? [])])} />
+      <AmendedChecks
+        checks={outputs.flatMap((o: any) => [o, ...(o.zero_because ?? [])])}
+        shownPerMember={
+          new Set(
+            (result.member_checks ?? []).flatMap((m: any) =>
+              (m.checks ?? []).flatMap((c: any) => (c.failed_because ?? []).filter((f: any) => f.amended_by).map((f: any) => f.name))
+            )
+          )
+        }
+      />
 
       {result.member_checks?.length > 0 && (
         <div className="tool-rows">

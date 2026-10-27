@@ -160,8 +160,11 @@ async function amendedProvision(amendment: StatutoryAmendment, citedBody: string
   const applies =
     `Axiom's encoded ${module_citation} rules apply ${provision.citation} as amended by ${enacted_by} ` +
     `(effective ${effective}) for periods from ${encoded_from}`;
-  // The cited text is period-free; the amended provision is not.
-  const earlier = `Periods that start before ${encoded_from} do not use the amended provision.`;
+  // The cited text is period-free; the amended provision is not. The
+  // amendment took effect before the encoded rules apply it (FNS: on
+  // enactment, for new applicants), so only periods that end before it
+  // are plainly under the cited text.
+  const earlier = `For periods that end before ${effective}, the ${module_citation} text states the law then in force.`;
   // Call the cited text out of date only while it still says what the
   // amendment changed: a revised regulation drops the passage.
   const note = citedBody?.includes(superseded.passage)

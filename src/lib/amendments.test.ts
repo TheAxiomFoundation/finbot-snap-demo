@@ -10,6 +10,7 @@ import {
   earlierFormulaEnd,
   formulaVersionAt,
   withEarlierOutcome,
+  withMemberOutcomes,
 } from "./amendments";
 
 const CITIZENSHIP_CHECK = "snap_member_citizenship_or_alien_status_eligible";
@@ -137,6 +138,22 @@ describe("statutory amendments registry", () => {
     );
   });
 
+  it("names, for each earlier-formula gap, a versioned rule of the module and member inputs it reads", () => {
+    for (const amendment of STATUTORY_AMENDMENTS) {
+      for (const gap of amendment.earlier_formula_gaps ?? []) {
+        const presenting = getCatalog().programs.filter((p) => p.outputs.some((o) => o.name === gap.rule));
+        expect(presenting.length, gap.rule).toBeGreaterThan(0);
+        for (const program of presenting) {
+          const rule = program.outputs.find((o) => o.name === gap.rule)!;
+          expect(moduleOf(rule), `${program.slug} ${gap.rule}`).toBe(amendment.module);
+          expect(rule.versions && earlierFormulaEnd(rule, amendment), `${program.slug} ${gap.rule}`).toBeTruthy();
+          const memberInputs = new Set((program.inputs[program.member_entity ?? ""] ?? []).map((s) => s.name));
+          for (const slot of gap.inputs) expect(memberInputs.has(slot), `${program.slug} ${slot}`).toBe(true);
+        }
+      }
+    }
+  });
+
   it("marks the Florida refugee check from August 2025, and not before", () => {
     const rule = getProgram("us-fl-snap")!.outputs.find((o) => o.name === CITIZENSHIP_CHECK)!;
     const amendment = amendmentForModule(rule.id!)!;
@@ -172,6 +189,22 @@ describe("the earlier-formula run behind changed_outcome", () => {
     }
   });
 
+  it("isolates the formula change: no program presenting an amended module has a period-dependent default", () => {
+    // The earlier-formula run keeps the request's facts and moves only the
+    // period, so a slot whose default differs between the two periods could
+    // make changed_outcome report the default's change as the amendment's.
+    // The catalog records which rules read a slot only for assumed slots,
+    // so check every slot: a dated default here needs a look at what reads it.
+    for (const amendment of STATUTORY_AMENDMENTS) {
+      const presenting = getCatalog().programs.filter((p) => p.outputs.some((o) => moduleOf(o) === amendment.module));
+      expect(presenting.length).toBeGreaterThan(0);
+      for (const program of presenting) {
+        const dated = Object.values(program.inputs).flat().filter((slot) => slot.default_by_period);
+        expect(dated.map((slot) => slot.name), program.slug).toEqual([]);
+      }
+    }
+  });
+
   const amendment = STATUTORY_AMENDMENTS[0];
   const value = fc.oneof(fc.constantFrom("holds", "not_holds"), fc.integer({ min: 0, max: 2000 }));
 
@@ -203,5 +236,43 @@ describe("the earlier-formula run behind changed_outcome", () => {
     expect(withEarlierOutcome(ref, 0, { period: "2025-06", value: 298 }).note).toMatch(
       /the same facts gave 298, so the amendment changed this result\.$/
     );
+  });
+});
+
+describe("household-level outcomes", () => {
+  const amendment = STATUTORY_AMENDMENTS[0];
+  const ref = amendmentRef(amendment, "https://example.test/x");
+  const members = fc.uniqueArray(fc.integer({ min: 1, max: 12 }), { maxLength: 12 });
+
+  it("list each member once, keep the citation, and add one sentence", () => {
+    fc.assert(
+      fc.property(members, fc.integer({ min: 0, max: 12 }), (all, cut) => {
+        const changed = all.slice(0, cut);
+        const unchanged = all.slice(cut);
+        const out = withMemberOutcomes(ref, "2025-06", changed, unchanged);
+        if (all.length === 0) {
+          expect(out).toBe(ref);
+          return;
+        }
+        expect(out.changed_for_members).toEqual(changed);
+        expect(out.unchanged_for_members).toEqual(unchanged);
+        expect(out).not.toHaveProperty("changed_outcome");
+        const { note, changed_for_members: _c, unchanged_for_members: _u, ...rest } = out;
+        const { note: refNote, ...refRest } = ref;
+        expect(rest).toEqual(refRest);
+        expect(note.startsWith(`${refNote} Under the formula in force before the amendment (run for 2025-06), `)).toBe(true);
+        expect(note.includes("so the amendment is why")).toBe(changed.length > 0);
+        expect(note.includes("failed it then too")).toBe(unchanged.length > 0);
+      }),
+      { seed: 20261026, numRuns: 300 }
+    );
+  });
+
+  it("name the members in the sentence", () => {
+    expect(withMemberOutcomes(ref, "2025-06", [1], [2]).note).toMatch(
+      /member 1 met this check, so the amendment is why that member fails it now; member 2 failed it then too\.$/
+    );
+    expect(withMemberOutcomes(ref, "2025-06", [1, 3], []).note).toMatch(/members 1 and 3 met this check, so the amendment is why they fail it now\.$/);
+    expect(withMemberOutcomes(ref, "2025-06", [], [1, 2, 4]).note).toMatch(/members 1, 2, 4 failed it then too\.$/);
   });
 });

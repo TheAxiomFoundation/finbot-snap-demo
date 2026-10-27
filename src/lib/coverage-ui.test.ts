@@ -116,38 +116,46 @@ describe("catalog coverage in tool cards", () => {
   it("shows the amended statute a compute's failed check applied, in the card and in Sources", () => {
     // The shape computeProgram returns for the Florida refugee starter.
     const statute = "https://app.axiom-foundation.org/us/statute/7/2015/f";
-    const amended = (changed_outcome?: boolean) => ({
+    const amended = (outcome: Record<string, unknown> = {}) => ({
       legal_id: "us:statutes/7/2015/f", citation: "7 U.S.C. 2015(f)", enacted_by: "P.L. 119-21, §10108",
-      effective: "2025-07-04", applies_from: "2025-08-01", url: statute, note: "…",
-      ...(changed_outcome !== undefined && { changed_outcome }),
+      effective: "2025-07-04", applies_from: "2025-08-01", url: statute, note: "…", ...outcome,
     });
-    const failed = (changed_outcome?: boolean) => [{
+    const failed = (outcome?: Record<string, unknown>) => [{
       name: "snap_member_citizenship_or_alien_status_eligible", source: "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
-      legal_id: "us:regulations/7-cfr/273/4#snap_member_citizenship_or_alien_status_eligible", amended_by: amended(changed_outcome),
+      legal_id: "us:regulations/7-cfr/273/4#snap_member_citizenship_or_alien_status_eligible", amended_by: amended(outcome),
     }];
-    const invocation: ToolInvocation = {
+    const perMember = { changed_for_members: [1], unchanged_for_members: [2] };
+    const compute = (member_checks?: unknown[]): ToolInvocation => ({
       state: "result", toolCallId: "compute", toolName: "compute", args: { program: "us-fl-snap" },
       result: {
         program: "us-fl-snap", primary_output: "snap_benefit", applied: {}, member_count: 2,
         outputs: [
           { name: "snap_benefit", label: "Snap benefit", value: 0, unit: "USD", semantics: "scalar" },
-          { name: "snap_eligible", label: "Snap eligible", value: "not_holds", semantics: "judgment", failed_because: failed() },
-          { name: "snap_eligible_core", label: "Snap eligible core", value: "not_holds", semantics: "judgment", failed_because: failed() },
+          { name: "snap_eligible", label: "Snap eligible", value: "not_holds", semantics: "judgment", failed_because: failed(perMember) },
+          { name: "snap_eligible_core", label: "Snap eligible core", value: "not_holds", semantics: "judgment", failed_because: failed(perMember) },
         ],
-        member_checks: [
-          { member: 1, checks: [{ name: "snap_member_eligible", value: "not_holds", failed_because: failed(true) }] },
-          { member: 2, checks: [{ name: "snap_member_eligible", value: "not_holds", failed_because: failed(false) }] },
-        ],
+        ...(member_checks && { member_checks }),
         citations: [{ id: "us:statutes/7/2015/f", url: statute }],
       },
-    };
+    });
+    const invocation = compute([
+      { member: 1, checks: [{ name: "snap_member_eligible", value: "not_holds", failed_because: failed({ changed_outcome: true }) }] },
+      { member: 2, checks: [{ name: "snap_member_eligible", value: "not_holds", failed_because: failed({ changed_outcome: false }) }] },
+    ]);
     const html = renderToStaticMarkup(ToolCallCard({ invocation, programCoverage: statuses }));
     expect(html).toContain(`href="${statute}"`);
-    expect(html).toContain("as amended by P.L. 119-21, §10108, from 2025-08-01");
-    // Once for the household's two failed outputs, once per member.
-    expect(html.split("Snap member citizenship or alien status eligible applies")).toHaveLength(4);
-    expect(html).toContain("the amendment changed this result");
-    expect(html).toContain("same result under the earlier formula");
+    expect(html).toContain("as amended by P.L. 119-21, §10108 (effective 2025-07-04; encoded for periods from 2025-08-01)");
+    // Once per member: the member rows carry it, so the household line,
+    // which would repeat them, is left out.
+    expect(html.split("Snap member citizenship or alien status eligible applies")).toHaveLength(3);
+    expect(html).toContain("the amendment changed this check&#x27;s result");
+    expect(html).toContain("this check gives the same result under the earlier formula");
+    expect(html).not.toContain("changed this result");
+
+    // With no member checks (us-co-snap), the household line says it per member.
+    const household = renderToStaticMarkup(ToolCallCard({ invocation: compute(), programCoverage: statuses }));
+    expect(household.split("Snap member citizenship or alien status eligible applies")).toHaveLength(2);
+    expect(household).toContain("the amendment changed this check for member 1; same under the earlier formula for member 2");
 
     const turn = renderToStaticMarkup(AssistantTurn({ toolInvocations: [invocation], programCoverage: statuses }));
     expect(turn.split("Sources:")[1]).toContain(`href="${statute}"`);
@@ -168,7 +176,7 @@ describe("catalog coverage in tool cards", () => {
     };
     const html = renderToStaticMarkup(ToolCallCard({ invocation, programCoverage: statuses }));
     expect(html).toContain("Applies <a");
-    expect(html).toContain("same result under the earlier formula");
+    expect(html).toContain("(encoded for periods from 2025-08-01) · this check gives the same result under the earlier formula");
   });
 });
 

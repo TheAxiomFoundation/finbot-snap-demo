@@ -42,6 +42,11 @@ export interface StatutoryAmendment {
   /** Corpus text behind `enacted_by`, `effective` and `provision`, quoted
    *  exactly. */
   evidence: Array<{ citation_path: string; excerpt: string }>;
+  /** Inputs a rule's formula from before the amendment accepts on their own,
+   *  though the law accepts them only together with a status. The
+   *  earlier-formula run (request-builder.ts) does not count a "holds" that
+   *  needed one of them as evidence the amendment changed the result. */
+  earlier_formula_gaps?: ReadonlyArray<{ rule: string; inputs: readonly string[]; why: string }>;
 }
 
 export const STATUTORY_AMENDMENTS: readonly StatutoryAmendment[] = [
@@ -70,6 +75,19 @@ export const STATUTORY_AMENDMENTS: readonly StatutoryAmendment[] = [
         citation_path: "us/guidance/usda/fns/snap-obbb-alien-eligibility-implementation-memo/page-3",
         excerpt:
           "Section 10108 of the OBBB was effective upon enactment, July 4, 2025. State agencies must immediately apply the new eligibility criteria to new applicants at initial certification. For households already receiving SNAP, State agencies must review household circumstances and apply these policies at recertification.",
+      },
+    ],
+    earlier_formula_gaps: [
+      {
+        rule: "snap_member_citizenship_or_alien_status_eligible",
+        inputs: [
+          "member_has_eligible_military_connection",
+          "member_receives_blindness_or_disability_benefits",
+          "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
+          "member_is_under_age_eighteen",
+        ],
+        why:
+          "The pinned formula in force through 2025-06-30 ORs these four grounds into eligibility on their own, so a child under 18 with no immigration status passes it. The module's own 7 CFR 273.4(a)(6)(ii)(G)-(J) rules grant them only to a qualified alien (`qualified_alien AND ...`), and so does the amended formula, under `member_is_lawful_permanent_resident`.",
       },
     ],
   },
@@ -131,8 +149,15 @@ export interface AmendmentRef {
   /** Whether the amendment changed this result: `earlier.value` differs from
    *  the value under the amended formula. A refugee met the 7 CFR 273.4
    *  check before P.L. 119-21 and fails it after; a lawful permanent
-   *  resident short of the five-year wait fails it under both. */
+   *  resident short of the five-year wait fails it under both. It speaks to
+   *  this check only: the engine stops at the first failed condition, so a
+   *  verdict above it can fail on others too. */
   changed_outcome?: boolean;
+  /** On a household-level entry, the failing members whose own check the
+   *  amendment changed, and those who fail it under either formula. A
+   *  member in neither list has no earlier answer. */
+  changed_for_members?: number[];
+  unchanged_for_members?: number[];
 }
 
 export function amendmentRef(amendment: StatutoryAmendment, url: string): AmendmentRef {
@@ -145,9 +170,9 @@ export function amendmentRef(amendment: StatutoryAmendment, url: string): Amendm
     applies_from: encoded_from,
     url,
     note:
-      `For periods from ${encoded_from} this ${module_citation} rule applies ${provision.citation} as amended by ` +
-      `${enacted_by} (effective ${effective}). Cite the amended provision as the law this result applied; ` +
-      `fetch_citation on ${amendment.module} returns both texts.`,
+      `Axiom's encoded ${module_citation} rule applies ${provision.citation} as amended by ${enacted_by} ` +
+      `(effective ${effective}) to periods starting on or after ${encoded_from}. Cite the amended provision as the ` +
+      `law this result applied; fetch_citation on ${amendment.module} returns both texts.`,
   };
 }
 
@@ -168,4 +193,29 @@ export function withEarlierOutcome(
         ? `${under} failed this check, so the amendment is why it holds now.`
         : `${under} gave ${earlier.value}, so the amendment changed this result.`;
   return { ...ref, earlier, changed_outcome: changed, note: `${ref.note} ${sentence}` };
+}
+
+const membersLabel = (members: number[]) =>
+  `${members.length === 1 ? "member" : "members"} ${members.join(members.length === 2 ? " and " : ", ")}`;
+
+/** A household-level `ref` for a check that `changed` and `unchanged`
+ *  members fail now: those who met it under the formula from before the
+ *  amendment (run for `period`), and those who failed it then too. */
+export function withMemberOutcomes(
+  ref: AmendmentRef,
+  period: string,
+  changed: number[],
+  unchanged: number[]
+): AmendmentRef {
+  if (changed.length + unchanged.length === 0) return ref;
+  const parts = [
+    ...(changed.length > 0 ? [`${membersLabel(changed)} met this check, so the amendment is why ${changed.length === 1 ? "that member fails" : "they fail"} it now`] : []),
+    ...(unchanged.length > 0 ? [`${membersLabel(unchanged)} failed it then too`] : []),
+  ];
+  return {
+    ...ref,
+    changed_for_members: changed,
+    unchanged_for_members: unchanged,
+    note: `${ref.note} Under the formula in force before the amendment (run for ${period}), ${parts.join("; ")}.`,
+  };
 }
