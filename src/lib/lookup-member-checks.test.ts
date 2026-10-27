@@ -84,6 +84,28 @@ describe.skipIf(!hasEngine)("lookup member checks run apart from the lookup", ()
     expect(error).toHaveBeenCalledWith(expect.stringContaining("changed the outputs"), "us-fiit", expect.any(String), expect.any(String));
   }, 30_000);
 
+  // A warning that a gate counted none of the listed members is confirmed
+  // with a third run, which sets the facts it says are missing. If that run
+  // fails, the warning is left out and the checked lookup stands.
+  it("confirms a member-count warning on a third run, and leaves it out if that run fails", async () => {
+    const ageOnly = { ...LOOKUP, members: [LOOKUP.members[0], { facts: { age: 10 } }] };
+    const isCountWarning = (note: string) => / counts? members through /.test(note);
+    runCompiled.mockClear();
+    const confirmed = await computeProgram(ageOnly);
+    expect(runCompiled).toHaveBeenCalledTimes(3);
+    expect(confirmed.applied.notes.filter(isCountWarning)).toEqual([expect.stringContaining("Member 2 fails it only on facts no one stated: ")]);
+
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    runCompiled.mockClear();
+    const actual = runCompiled.getMockImplementation()!;
+    runCompiled.mockImplementationOnce(actual).mockImplementationOnce(actual).mockRejectedValueOnce(new Error("engine exited 1"));
+    const result = await computeProgram(ageOnly);
+    expect(numericOutput(result, "eitc_maximum")).toBe(664);
+    expect(result.member_checks?.length).toBe(2);
+    expect(result.applied.notes.filter(isCountWarning)).toEqual([]);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("count-warning check failed"), expect.anything(), "program:", "us-fiit", "gate:", "eitc_qualifying_child");
+  }, 30_000);
+
   it("runs once when the value counts members through no gate", async () => {
     runCompiled.mockClear();
     const result = await computeProgram({ ...LOOKUP, outputsOverride: ["exemption_amount"] });
