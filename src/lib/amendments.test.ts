@@ -7,7 +7,9 @@ import {
   amendmentForModule,
   amendmentRef,
   appliedAmendment,
+  earlierFormulaEnd,
   formulaVersionAt,
+  withEarlierOutcome,
 } from "./amendments";
 
 const CITIZENSHIP_CHECK = "snap_member_citizenship_or_alien_status_eligible";
@@ -151,5 +153,55 @@ describe("statutory amendments registry", () => {
       applies_from: "2025-08-01",
     });
     expect(ref.note).toContain("7 U.S.C. 2015(f) as amended by P.L. 119-21, §10108");
+    expect(ref).not.toHaveProperty("changed_outcome");
+    expect(earlierFormulaEnd(rule, amendment)).toBe("2025-06-30");
+  });
+});
+
+describe("the earlier-formula run behind changed_outcome", () => {
+  it("runs, for every changed rule, a day the pre-amendment formula was in force", () => {
+    for (const amendment of STATUTORY_AMENDMENTS) {
+      for (const { program, output } of outputs.filter(({ output }) => moduleOf(output) === amendment.module && output.versions)) {
+        const end = earlierFormulaEnd(output, amendment);
+        if (!end) continue;
+        expect(end < amendment.encoded_from, `${program} ${output.name}`).toBe(true);
+        const version = formulaVersionAt(output.versions!, end);
+        expect(version, `${program} ${output.name}`).toBeDefined();
+        expect(appliedAmendment(output, end), `${program} ${output.name}`).toBeUndefined();
+      }
+    }
+  });
+
+  const amendment = STATUTORY_AMENDMENTS[0];
+  const value = fc.oneof(fc.constantFrom("holds", "not_holds"), fc.integer({ min: 0, max: 2000 }));
+
+  it("reports changed_outcome exactly when the earlier value differs, keeping the citation", () => {
+    fc.assert(
+      fc.property(value, value, (now, earlier) => {
+        const ref = amendmentRef(amendment, "https://example.test/x");
+        const out = withEarlierOutcome(ref, now, { period: "2025-06", value: earlier });
+        expect(out.changed_outcome).toBe(now !== earlier);
+        expect(out.earlier).toEqual({ period: "2025-06", value: earlier });
+        expect(out.note.startsWith(ref.note)).toBe(true);
+        const { note: _n, earlier: _e, changed_outcome: _c, ...rest } = out;
+        const { note: _rn, ...refRest } = ref;
+        expect(rest).toEqual(refRest);
+        expect(out.note.includes("the amendment did not change it")).toBe(now === earlier);
+      }),
+      { seed: 20261030, numRuns: 300 }
+    );
+  });
+
+  it("says which way the amendment moved a judgment", () => {
+    const ref = amendmentRef(amendment, "https://example.test/x");
+    expect(withEarlierOutcome(ref, "not_holds", { period: "2025-06", value: "holds" }).note).toMatch(
+      /run for 2025-06\) the same facts met this check, so the amendment is why it fails now\.$/
+    );
+    expect(withEarlierOutcome(ref, "holds", { period: "2025-06", value: "not_holds" }).note).toMatch(
+      /the same facts failed this check, so the amendment is why it holds now\.$/
+    );
+    expect(withEarlierOutcome(ref, 0, { period: "2025-06", value: 298 }).note).toMatch(
+      /the same facts gave 298, so the amendment changed this result\.$/
+    );
   });
 });

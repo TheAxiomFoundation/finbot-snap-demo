@@ -12,8 +12,6 @@ import { tool } from "ai";
 import { z } from "zod";
 
 import { getCatalog, getProgram, searchOutputs, type CatalogProgram } from "./catalog";
-import { amendmentRef, appliedAmendment } from "./amendments";
-import { periodStartDate } from "./annual-updates";
 import { citationUrl, fetchCitation } from "./citations";
 import { programDisclosures } from "./catalog-overlay";
 import { describeProgramPayload } from "./describe";
@@ -29,6 +27,7 @@ import {
   computeProgram,
   defaultPeriodFor,
   labelFor,
+  lookupAmendment,
   memberCountSlotNames,
   nearestNames,
   resolveOutput,
@@ -384,7 +383,7 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
           // A failed judgment names only what its inputs don't meet, as in
           // compute; one that holds lists the rule's whole requirement.
           const requires = value?.value === "not_holds" ? value.requires : meta.requires;
-          const amendment = appliedAmendment(meta, periodStartDate(shaped.period));
+          const amended = await lookupAmendment({ program, period, facts, members }, meta, shaped.period, value?.value ?? null);
           return {
             program: program.slug,
             name: meta.name,
@@ -406,7 +405,7 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
               : null,
             source: meta.source,
             url: meta.id ? citationUrl(meta.id) : null,
-            ...(amendment && { amended_by: amendmentRef(amendment, citationUrl(amendment.provision.legal_id)) }),
+            ...(amended && { amended_by: amended }),
             applied: shaped.applied,
           };
         } catch (err) {

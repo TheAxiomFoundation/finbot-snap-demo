@@ -164,6 +164,37 @@ function ZeroBecause({ output }: { output: any }) {
   );
 }
 
+/** One amended statute a check applied (`amended_by`), and whether the
+ *  amendment changed the result (the engine's earlier-formula run). */
+function AmendedLine({ name, amended }: { name?: string; amended: any }) {
+  return (
+    <div className="mono" style={{ fontSize: 10.5, color: "#374151", marginTop: 2 }}>
+      {name ? `${checkLabel(name)} applies ` : "Applies "}
+      <a className="cite" style={{ fontSize: 10.5 }} href={amended.url} target="_blank" rel="noreferrer">
+        {amended.citation}
+      </a>
+      {` as amended by ${amended.enacted_by}, from ${amended.applies_from}`}
+      {amended.changed_outcome === true && " · the amendment changed this result"}
+      {amended.changed_outcome === false && " · same result under the earlier formula"}
+    </div>
+  );
+}
+
+/** The `amended_by` entries under a set of failed checks, once per check
+ *  and outcome: a household's outputs repeat the same failed sub-check. */
+function AmendedChecks({ checks }: { checks: any[] }) {
+  const seen = new Set<string>();
+  const lines = checks
+    .flatMap((check) => check?.failed_because ?? [])
+    .filter((f: any) => {
+      const key = `${f.name}|${f.amended_by?.changed_outcome}`;
+      if (!f.amended_by || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  return <>{lines.map((f: any) => <AmendedLine key={`${f.name}|${f.amended_by.changed_outcome}`} name={f.name} amended={f.amended_by} />)}</>;
+}
+
 function Citations({ citations }: { citations?: Array<{ id: string; url: string }> }) {
   if (!citations?.length) return null;
   const shown = citations.slice(0, 3);
@@ -231,6 +262,7 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
           ])}
         </div>
       )}
+      <AmendedChecks checks={outputs.flatMap((o: any) => [o, ...(o.zero_because ?? [])])} />
 
       {result.member_checks?.length > 0 && (
         <div className="tool-rows">
@@ -249,6 +281,7 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
                     </span>
                   </div>
                   <FailedCheckNeeds check={o} />
+                  <AmendedChecks checks={[o]} />
                 </div>
               ))
             )
@@ -384,6 +417,7 @@ function LookupCard({ result, hiddenNotes }: { result: any; hiddenNotes: readonl
           </>
         )}
       </div>
+      {result.amended_by && <AmendedLine amended={result.amended_by} />}
     </div>
   );
 }

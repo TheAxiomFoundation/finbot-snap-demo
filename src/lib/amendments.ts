@@ -101,6 +101,19 @@ export function appliedAmendment(
   return version && version.effective_from >= amendment.encoded_from ? amendment : undefined;
 }
 
+/** The last day a rule's formula from before the amendment was in force
+ *  (2025-06-30 for the 7 CFR 273.4 checks): the latest `effective_to` before
+ *  `encoded_from`. */
+export function earlierFormulaEnd(
+  rule: Pick<CatalogOutput, "versions">,
+  amendment: StatutoryAmendment
+): string | undefined {
+  const ends = (rule.versions ?? [])
+    .flatMap((v) => (v.effective_to && v.effective_to < amendment.encoded_from ? [v.effective_to] : []))
+    .sort();
+  return ends.at(-1);
+}
+
 /** What a failed check or a lookup carries when its rule applies an
  *  amendment: enough to cite the amended provision without a fetch. */
 export interface AmendmentRef {
@@ -111,6 +124,15 @@ export interface AmendmentRef {
   applies_from: string;
   url: string;
   note: string;
+  /** The same facts run through the rule's formula from before the
+   *  amendment (the engine, for `period`). Absent when that run was not made
+   *  or failed. */
+  earlier?: { period: string; value: string | number | boolean | null };
+  /** Whether the amendment changed this result: `earlier.value` differs from
+   *  the value under the amended formula. A refugee met the 7 CFR 273.4
+   *  check before P.L. 119-21 and fails it after; a lawful permanent
+   *  resident short of the five-year wait fails it under both. */
+  changed_outcome?: boolean;
 }
 
 export function amendmentRef(amendment: StatutoryAmendment, url: string): AmendmentRef {
@@ -124,7 +146,26 @@ export function amendmentRef(amendment: StatutoryAmendment, url: string): Amendm
     url,
     note:
       `For periods from ${encoded_from} this ${module_citation} rule applies ${provision.citation} as amended by ` +
-      `${enacted_by} (effective ${effective}). Cite the amended provision for this result; ` +
+      `${enacted_by} (effective ${effective}). Cite the amended provision as the law this result applied; ` +
       `fetch_citation on ${amendment.module} returns both texts.`,
   };
+}
+
+/** `ref` with what the formula from before the amendment gave for the same
+ *  facts, and whether that differs from `now`. */
+export function withEarlierOutcome(
+  ref: AmendmentRef,
+  now: string | number | boolean,
+  earlier: { period: string; value: string | number | boolean }
+): AmendmentRef {
+  const changed = earlier.value !== now;
+  const under = `Under the formula in force before the amendment (run for ${earlier.period}) the same facts`;
+  const sentence = !changed
+    ? `${under} give the same result, so the amendment did not change it.`
+    : now === "not_holds" && earlier.value === "holds"
+      ? `${under} met this check, so the amendment is why it fails now.`
+      : now === "holds" && earlier.value === "not_holds"
+        ? `${under} failed this check, so the amendment is why it holds now.`
+        : `${under} gave ${earlier.value}, so the amendment changed this result.`;
+  return { ...ref, earlier, changed_outcome: changed, note: `${ref.note} ${sentence}` };
 }

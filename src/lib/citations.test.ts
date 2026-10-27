@@ -74,7 +74,8 @@ describe("fetchCitation on an amended module", () => {
       source_url: STATUTE_2015_F.source_url,
     });
     expect(amended.body_excerpt).toContain("(D) an individual who lawfully resides in the United States in accordance with a Compact of Free Association");
-    expect(amended.note).toContain("The 7 CFR 273.4 text above has not been updated for P.L. 119-21, §10108");
+    expect(amended.note).toContain("The 7 CFR 273.4 text in the corpus has not been updated for P.L. 119-21, §10108");
+    expect(amended.note).toContain("Periods that start before 2025-08-01 do not use the amended provision.");
     expect(amended.note).toContain("refugees");
     expect(amended.note).toContain("for periods from 2025-08-01");
     expect(amended.evidence.map((e) => e.url)).toContain(
@@ -89,7 +90,8 @@ describe("fetchCitation on an amended module", () => {
     const note = (await fetchCitation("us:regulations/7-cfr/273/4")).amended_by!.note;
     expect(note).not.toContain("has not been updated");
     expect(note).toBe(
-      "Axiom's encoded 7 CFR 273.4 rules apply 7 U.S.C. 2015(f) as amended by P.L. 119-21, §10108 (effective 2025-07-04) for periods from 2025-08-01."
+      "Axiom's encoded 7 CFR 273.4 rules apply 7 U.S.C. 2015(f) as amended by P.L. 119-21, §10108 (effective 2025-07-04) for periods from 2025-08-01. " +
+        "Periods that start before 2025-08-01 do not use the amended provision."
     );
   });
 
