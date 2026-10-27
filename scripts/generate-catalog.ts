@@ -106,6 +106,10 @@ interface CatalogOutput {
   zero_unless?: string[];
   /** Earliest due date among annually reissued parameters this rule reaches. */
   annual_update_due?: string;
+  /** The rule's dated formula versions (`effective_to` inclusive), when the
+   *  compiled artifact carries any — the law the engine applies changes at
+   *  each boundary. Absent for single-formula rules. */
+  versions?: Array<{ effective_from: string; effective_to?: string }>;
 }
 
 interface CatalogInputSlot {
@@ -522,7 +526,7 @@ interface DerivedRule {
   source?: string | null;
   semantics?: string;
   expr?: unknown;
-  versions?: Array<{ expr?: unknown }>;
+  versions?: Array<{ expr?: unknown; effective_from?: string | null; effective_to?: string | null }>;
 }
 
 /** `expr` is the latest formula; older periods can read different facts and
@@ -1932,6 +1936,10 @@ function analyzeProgram(
     }
     const due = annualUpdateDue(rule.name);
     if (due) output.annual_update_due = due;
+    const versions = (rule.versions ?? []).flatMap((v) =>
+      v.effective_from ? [{ effective_from: v.effective_from, ...(v.effective_to && { effective_to: v.effective_to }) }] : []
+    );
+    if (versions.length > 0) output.versions = versions;
     return output;
   });
 

@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { runCompiled } from "./engine";
+import { runCompiled, type ExecutionResponse } from "./engine";
 import { tools } from "./tools";
 
 vi.mock("./engine", async (importOriginal) => ({
@@ -52,6 +52,16 @@ describe("formula coverage at the tool boundary", () => {
       expect(result).not.toHaveProperty("kind");
       expect(result).not.toHaveProperty("outputs");
       expect(result).not.toHaveProperty("value");
+    }
+  });
+
+  it("names no applied law for a value the engine did not return", async () => {
+    // A malformed engine answer: no result, or a result without the output.
+    for (const results of [[], [{ entity_id: "person:1", outputs: {} }]]) {
+      vi.mocked(runCompiled).mockResolvedValue({ results } as unknown as ExecutionResponse);
+      const result = (await tools.lookup_value.execute!({ program, period: "2026-10", output }, context)) as Record<string, unknown>;
+      expect(result.value).toBeNull();
+      expect(result).not.toHaveProperty("amended_by");
     }
   });
 });

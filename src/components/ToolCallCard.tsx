@@ -164,6 +164,47 @@ function ZeroBecause({ output }: { output: any }) {
   );
 }
 
+/** One amended statute a check applied (`amended_by`). */
+function AmendedLine({ name, amended }: { name?: string; amended: any }) {
+  const when = amended.effective
+    ? ` (effective ${amended.effective}; encoded for periods from ${amended.applies_from})`
+    : ` (encoded for periods from ${amended.applies_from})`;
+  return (
+    <div className="mono" style={{ fontSize: 10.5, color: "#374151", marginTop: 2 }}>
+      {name ? `${checkLabel(name)} applies ` : "Applies "}
+      <a className="cite" style={{ fontSize: 10.5 }} href={amended.url} target="_blank" rel="noreferrer">
+        {amended.citation}
+      </a>
+      {` as amended by ${amended.enacted_by}${when}`}
+    </div>
+  );
+}
+
+/** The failed checks among `checks` that carry an `amended_by`: each
+ *  check's own (AZ, CA, CO and NY gate members on the 7 CFR 273.4 check),
+ *  then its failed sub-checks'. */
+const amendedIn = (checks: any[]): any[] =>
+  checks.flatMap((check) => [
+    ...(check?.amended_by ? [check] : []),
+    ...(check?.failed_because ?? []).filter((f: any) => f.amended_by),
+  ]);
+
+/** The `amended_by` entries under a set of failed checks, once per check:
+ *  a household's outputs repeat the same failed sub-check.
+ *  Checks in `shownPerMember` are left out: rows of their own show them
+ *  (Arizona gates a member on the 7 CFR 273.4 check and on
+ *  snap_member_eligible, which fails because of it; so do CA and NY). */
+function AmendedChecks({ checks, shownPerMember }: { checks: any[]; shownPerMember?: Set<string> }) {
+  const seen = new Set<string>();
+  const lines = amendedIn(checks)
+    .flatMap((f: any) => {
+      if (shownPerMember?.has(f.name) || seen.has(f.name)) return [];
+      seen.add(f.name);
+      return [{ key: f.name, f }];
+    });
+  return <>{lines.map(({ key, f }) => <AmendedLine key={key} name={f.name} amended={f.amended_by} />)}</>;
+}
+
 function Citations({ citations }: { citations?: Array<{ id: string; url: string }> }) {
   if (!citations?.length) return null;
   const shown = citations.slice(0, 3);
@@ -231,6 +272,10 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
           ])}
         </div>
       )}
+      <AmendedChecks
+        checks={outputs.flatMap((o: any) => [o, ...(o.zero_because ?? [])])}
+        shownPerMember={new Set(amendedIn((result.member_checks ?? []).flatMap((m: any) => m.checks ?? [])).map((f) => f.name))}
+      />
 
       {result.member_checks?.length > 0 && (
         <div className="tool-rows">
@@ -240,7 +285,7 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
                 <span className="k" style={{ color: "#374151" }}>member {m.member} · same checks as member {m.same_as}</span>
               </div>
             ) : (
-              (m.checks ?? []).map((o: any) => (
+              (m.checks ?? []).map((o: any, _: number, checks: any[]) => (
                 <div key={`${m.member}-${o.name}`} style={{ padding: "4px 0", borderBottom: "1px dashed #eeeee8" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12 }}>
                     <span className="k" style={{ color: "#374151" }}>member {m.member} · {checkLabel(o.name)}</span>
@@ -249,6 +294,10 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
                     </span>
                   </div>
                   <FailedCheckNeeds check={o} />
+                  <AmendedChecks
+                    checks={[o]}
+                    shownPerMember={new Set(checks.filter((c) => c !== o && c.amended_by).map((c) => c.name))}
+                  />
                 </div>
               ))
             )
@@ -384,6 +433,7 @@ function LookupCard({ result, hiddenNotes }: { result: any; hiddenNotes: readonl
           </>
         )}
       </div>
+      {result.amended_by && <AmendedLine amended={result.amended_by} />}
     </div>
   );
 }
@@ -401,6 +451,23 @@ function CitationCard({ result }: { result: any }) {
             ? "The Axiom corpus has no text for this legal id yet."
             : "The Axiom corpus has this document but no body text."}
         </div>
+      )}
+      {result.amended_by && <AmendedProvision amended={result.amended_by} />}
+    </div>
+  );
+}
+
+/** The amended statute a citation's rules apply (citations.ts `amended_by`),
+ *  shown under the older text so the card shows the law the result used. */
+function AmendedProvision({ amended }: { amended: any }) {
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div className="tool-note">{amended.note}</div>
+      <a className="cite" href={amended.url} target="_blank" rel="noreferrer">{amended.legal_id}</a>
+      <span className="tool-foot"> · {amended.citation}, as amended by {amended.enacted_by}</span>
+      {amended.heading && <div style={{ fontWeight: 600, fontSize: 13, marginTop: 4 }}>{amended.heading}</div>}
+      {amended.body_excerpt && (
+        <div style={{ color: "#374151", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>{amended.body_excerpt}</div>
       )}
     </div>
   );

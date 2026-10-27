@@ -38,7 +38,8 @@ import {
   type CatalogProgram,
   type Requirement,
 } from "./catalog";
-import { legalIdToUrl } from "./legal-links";
+import { amendmentRef, appliedAmendment, type AmendmentRef } from "./amendments";
+import { citationUrl } from "./citations";
 import artifactsLock from "../../artifacts.lock.json";
 import { programDisclosures } from "./catalog-overlay";
 import type { AssumedMemberSlot } from "./assumed-slots";
@@ -1189,8 +1190,16 @@ export interface ShapedOutput {
   /** Attached when a judgment came back not_holds and the explain trace
    *  shows why: the deepest sub-judgments on its failing path, with their
    *  legal ids and sources (e.g. snap_member_eligible ←
-   *  snap_member_citizenship_or_alien_status_eligible, 7 CFR 273.4(a)). */
-  failed_because?: Array<{ name: string; legal_id: string | null; source: string | null }>;
+   *  snap_member_citizenship_or_alien_status_eligible, 7 CFR 273.4(a)).
+   *  `amended_by` names the amended statute a sub-judgment's formula in
+   *  force applies when its cited text predates the amendment
+   *  (amendments.ts). */
+  failed_because?: Array<{ name: string; legal_id: string | null; source: string | null; amended_by?: AmendmentRef }>;
+  /** Attached when this judgment came back not_holds and its own formula in
+   *  force applies an amendment, as `failed_because` entries' does: Arizona,
+   *  California, Colorado and New York gate each member on the 7 CFR 273.4
+   *  check itself. */
+  amended_by?: AmendmentRef;
   /** Attached when a scalar came back 0 because a judgment gating it failed
    *  (the catalog's `zero_unless`: us-fiit `eitc` ← `eitc_allowed`). Each
    *  entry reads like a failed judgment output. Member gates are left to
@@ -1440,14 +1449,14 @@ const OPEN_ALTERNATIVES_CAP = 3;
  *  unit, semantics, entity, ...) left out. */
 export type GateCheck = Pick<
   ShapedOutput,
-  "name" | "value" | "legal_id" | "requires" | "requires_any" | "requires_partial" | "failed_because"
+  "name" | "value" | "legal_id" | "requires" | "requires_any" | "requires_partial" | "failed_because" | "amended_by"
 >;
 
 /** One member-gate judgment at one member. */
 export type MemberCheck = GateCheck;
 
 function asGateCheck(shaped: ShapedOutput): GateCheck {
-  const { name, value, legal_id, requires, requires_any, requires_partial, failed_because } = shaped;
+  const { name, value, legal_id, requires, requires_any, requires_partial, failed_because, amended_by } = shaped;
   return {
     name,
     value,
@@ -1456,6 +1465,7 @@ function asGateCheck(shaped: ShapedOutput): GateCheck {
     ...(requires_any && { requires_any }),
     ...(requires_partial && { requires_partial }),
     ...(failed_because && { failed_because }),
+    ...(amended_by && { amended_by }),
   };
 }
 
@@ -1575,6 +1585,7 @@ export function shapeResult(
   // judgment output.
   const outputByName = new Map(program.outputs.map((o) => [o.name, o]));
   const reported = new Set(built.queried.map((o) => o.name));
+  const periodStart = periodStartDate(built.applied.period);
   const failedZeroGates = (
     output: CatalogOutput,
     scopeTrace: Record<string, DerivedTraceNode>,
@@ -1601,9 +1612,18 @@ export function shapeResult(
     let value: ShapedOutput["value"] = null;
     if (r) value = r.kind === "judgment" ? r.outcome ?? null : r.numeric ?? null;
     const failedJudgment = output.semantics === "judgment" && value === "not_holds";
+    const amendedBy = (rule: CatalogOutput | undefined) => {
+      const amendment = rule && appliedAmendment(rule, outputPeriodStart(program, rule, built.applied.period));
+      return amendment && amendmentRef(amendment, citationUrl(amendment.provision.legal_id));
+    };
     const failedBecause = failedJudgment
       ? failingSubJudgments(scopeTrace, queryKey(output), output.name, (name) => outputByName.get(name)?.negated_judgments)
+          .map((failed) => {
+            const amended = amendedBy(outputByName.get(failed.name));
+            return amended ? { ...failed, amended_by: amended } : failed;
+          })
       : [];
+    const ownAmendment = failedJudgment ? amendedBy(output) : undefined;
     const open = failedJudgment ? openAlternatives(output, entityId, scopeTrace).slice(0, OPEN_ALTERNATIVES_CAP) : [];
     // Name only the requirements this entity's own inputs fail. us-fiit's
     // 24(h)(7) test reads the taxpayer/spouse SSN facts on each child's
@@ -1628,6 +1648,7 @@ export function shapeResult(
         requires_partial: true,
       }),
       ...(failedBecause.length > 0 && { failed_because: failedBecause }),
+      ...(ownAmendment && { amended_by: ownAmendment }),
       ...(zeroBecause.length > 0 && { zero_because: zeroBecause }),
     };
   };
@@ -1838,7 +1859,6 @@ export function shapeResult(
   // With no allowance added, an answer that read the allowance rules counted
   // no utility costs: say which facts claim it (false by default) so a user
   // who stated them gets one recompute and one who didn't hears it.
-  const periodStart = periodStartDate(built.applied.period);
   for (const slot of allowanceSlots(program)) {
     const traced = slot.added_allowances.map((a) => ({ rule: a.rule, value: tracedValue(trace, a.rule) }));
     const added = traced
@@ -1874,7 +1894,7 @@ export function shapeResult(
     outputs: mainOutputs,
     ...(memberChecks.length > 0 && { member_checks: memberChecks }),
     applied: built.applied,
-    citations: citationsFor(mainOutputs),
+    citations: citationsFor(mainOutputs, memberChecks),
     incomplete_note: incomplete.length
       ? `Flagged in the program spec as not fully encoded: ${incomplete.join(", ")}.`
       : null,
@@ -1883,17 +1903,37 @@ export function shapeResult(
   };
 }
 
-function citationsFor(outputs: ShapedOutput[]): Array<{ id: string; url: string }> {
+function citationsFor(outputs: ShapedOutput[], memberChecks: MemberChecks[] = []): Array<{ id: string; url: string }> {
   const seen = new Set<string>();
   const citations: Array<{ id: string; url: string }> = [];
+  // The amended statutes failed checks applied come first: they are the law
+  // behind a not_holds verdict whose own source predates them.
+  for (const entry of amendedEntries(outputs, memberChecks)) {
+    const amended = entry.amended_by;
+    if (!amended || seen.has(amended.legal_id)) continue;
+    seen.add(amended.legal_id);
+    citations.push({ id: amended.legal_id, url: amended.url });
+  }
   for (const output of outputs) {
     if (!output.legal_id) continue;
     const base = output.legal_id.split("#")[0];
     if (!base.includes(":") || seen.has(base)) continue;
     seen.add(base);
-    citations.push({ id: base, url: legalIdToUrl(base) });
+    citations.push({ id: base, url: citationUrl(base) });
   }
   return citations;
+}
+
+/** Every judgment in a result that carries an `amended_by`: outputs, the
+ *  gates in their `zero_because` and member checks, each with its
+ *  `failed_because` entries. */
+function amendedEntries(outputs: ShapedOutput[], memberChecks: MemberChecks[] = []) {
+  const gates: GateCheck[] = [
+    ...outputs,
+    ...outputs.flatMap((o) => o.zero_because ?? []),
+    ...memberChecks.flatMap((m) => m.checks ?? []),
+  ];
+  return gates.flatMap((g) => [...(g.amended_by ? [g] : []), ...(g.failed_because ?? []).filter((f) => f.amended_by)]);
 }
 
 /** End-to-end compute: build → run → shape, then the unstated-age check
@@ -1978,6 +2018,20 @@ async function confirmCountWarning(options: BuildOptions, warning: PendingCountW
     console.error("[finbot] count-warning check failed; left the warning out:", err, "program:", program.slug, "gate:", gate.name);
     return null;
   }
+}
+
+/** The first day of the period the engine evaluates `output` in when a
+ *  request names `period`: a month rule in a year request runs in the
+ *  program's certified month (resolvePeriod), not in January. */
+export function outputPeriodStart(program: CatalogProgram, output: CatalogOutput, period: string): string {
+  return periodForOutput(output, resolvePeriod(program, period), program).interval.start;
+}
+
+/** A lookup's `amended_by`: the amendment its rule applies in the period
+ *  the engine evaluates it, whatever the value. */
+export function lookupAmendment(program: CatalogProgram, rule: CatalogOutput, period: string): AmendmentRef | undefined {
+  const amendment = appliedAmendment(rule, outputPeriodStart(program, rule, period));
+  return amendment && amendmentRef(amendment, citationUrl(amendment.provision.legal_id));
 }
 
 /** The trace of member 1's own queries (its member checks, or member-entity

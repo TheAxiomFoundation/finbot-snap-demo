@@ -72,6 +72,7 @@ jobs:
           AXIOM_RULES_ENGINE_BINARY: ${{ github.workspace }}/engine-src/target/release/axiom-rules-engine
           AXIOM_ARTIFACTS_DIR: ${{ github.workspace }}/engine/artifacts
         run: |
+          bun run test
           bun run test:smoke
           bun run test:regression
           bun run test:oracle
@@ -79,12 +80,3 @@ jobs:
           bun run test:exclusions
           bun run test:gates
           bun run test:annual-updates
-      - name: Engine-backed unit tests
-        # The build job's Vitest run has no engine, so the tests behind
-        # describe.skipIf(!hasEngine) only run here. Under REQUIRE_ENGINE most
-        # of those files throw, rather than skip, when the engine is missing.
-        env:
-          REQUIRE_ENGINE: "1"
-          AXIOM_RULES_ENGINE_BINARY: ${{ github.workspace }}/engine-src/target/release/axiom-rules-engine
-          AXIOM_ARTIFACTS_DIR: ${{ github.workspace }}/engine/artifacts
-        run: bun run test -- --maxWorkers=2

@@ -112,6 +112,83 @@ describe("catalog coverage in tool cards", () => {
     expect(html).toContain("Earned income assumption 1");
     expect(html).toContain("Earned income assumption 2");
   });
+
+  it("shows the amended statute a compute's failed check applied, in the card and in Sources", () => {
+    // The shape computeProgram returns for the Florida refugee starter.
+    const statute = "https://app.axiom-foundation.org/us/statute/7/2015/f";
+    const amended = {
+      legal_id: "us:statutes/7/2015/f", citation: "7 U.S.C. 2015(f)", enacted_by: "P.L. 119-21, §10108",
+      effective: "2025-07-04", applies_from: "2025-08-01", url: statute, note: "…",
+    };
+    const failed = () => [{
+      name: "snap_member_citizenship_or_alien_status_eligible", source: "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
+      legal_id: "us:regulations/7-cfr/273/4#snap_member_citizenship_or_alien_status_eligible", amended_by: amended,
+    }];
+    const compute = (member_checks?: unknown[]): ToolInvocation => ({
+      state: "result", toolCallId: "compute", toolName: "compute", args: { program: "us-fl-snap" },
+      result: {
+        program: "us-fl-snap", primary_output: "snap_benefit", applied: {}, member_count: 2,
+        outputs: [
+          { name: "snap_benefit", label: "Snap benefit", value: 0, unit: "USD", semantics: "scalar" },
+          { name: "snap_eligible", label: "Snap eligible", value: "not_holds", semantics: "judgment", failed_because: failed() },
+          { name: "snap_eligible_core", label: "Snap eligible core", value: "not_holds", semantics: "judgment", failed_because: failed() },
+        ],
+        ...(member_checks && { member_checks }),
+        citations: [{ id: "us:statutes/7/2015/f", url: statute }],
+      },
+    });
+    const line = "Snap member citizenship or alien status eligible applies";
+    const invocation = compute([
+      { member: 1, checks: [{ name: "snap_member_eligible", value: "not_holds", failed_because: failed() }] },
+      { member: 2, checks: [{ name: "snap_member_eligible", value: "not_holds", failed_because: failed() }] },
+    ]);
+    const html = renderToStaticMarkup(ToolCallCard({ invocation, programCoverage: statuses }));
+    expect(html).toContain(`href="${statute}"`);
+    expect(html).toContain("as amended by P.L. 119-21, §10108 (effective 2025-07-04; encoded for periods from 2025-08-01)");
+    // Once per member: the member rows carry it, so the household line,
+    // which would repeat them, is left out.
+    expect(html.split(line)).toHaveLength(3);
+    // It names the law applied, never an outcome of the amendment.
+    expect(html).not.toMatch(/changed this|same result|earlier formula/);
+
+    // With no member check carrying it, the household shows it once.
+    const household = renderToStaticMarkup(ToolCallCard({ invocation: compute(), programCoverage: statuses }));
+    expect(household.split(line)).toHaveLength(2);
+
+    // AZ, CA, CO and NY gate members on the check itself, which carries
+    // its own amended_by; all but CO also on snap_member_eligible, which fails
+    // because of it. Still one line per member, and none for the household.
+    const gate = { name: "snap_member_citizenship_or_alien_status_eligible", value: "not_holds", amended_by: amended };
+    const gated = renderToStaticMarkup(ToolCallCard({
+      invocation: compute([
+        { member: 1, checks: [gate, { name: "snap_member_eligible", value: "not_holds", failed_because: failed() }] },
+        { member: 2, checks: [gate] },
+      ]),
+      programCoverage: statuses,
+    }));
+    expect(gated.split(line)).toHaveLength(3);
+
+    const turn = renderToStaticMarkup(AssistantTurn({ toolInvocations: [invocation], programCoverage: statuses }));
+    expect(turn.split("Sources:")[1]).toContain(`href="${statute}"`);
+  });
+
+  it("shows the amended statute a lookup applied", () => {
+    const invocation: ToolInvocation = {
+      state: "result", toolCallId: "lookup", toolName: "lookup_value", args: { program: "us-fl-snap" },
+      result: {
+        program: "us-fl-snap", name: "snap_member_citizenship_or_alien_status_eligible", value: "not_holds", entity: "Person",
+        legal_id: "us:regulations/7-cfr/273/4#snap_member_citizenship_or_alien_status_eligible",
+        url: "https://app.axiom-foundation.org/us/regulation/7/273/4", applied: {},
+        amended_by: {
+          legal_id: "us:statutes/7/2015/f", citation: "7 U.S.C. 2015(f)", enacted_by: "P.L. 119-21, §10108",
+          applies_from: "2025-08-01", url: "https://app.axiom-foundation.org/us/statute/7/2015/f",
+        },
+      },
+    };
+    const html = renderToStaticMarkup(ToolCallCard({ invocation, programCoverage: statuses }));
+    expect(html).toContain("Applies <a");
+    expect(html).toContain("as amended by P.L. 119-21, §10108 (encoded for periods from 2025-08-01)</div>");
+  });
 });
 
 describe("compact session notice", () => {

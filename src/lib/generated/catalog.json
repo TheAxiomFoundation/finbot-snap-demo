@@ -1122,6 +1122,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -1141,7 +1150,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -1153,7 +1171,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -12819,6 +12846,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -12838,7 +12874,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -12850,7 +12895,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -22275,6 +22329,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -22294,7 +22357,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -22306,7 +22378,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -36562,6 +36643,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -36581,7 +36671,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -36593,7 +36692,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -73885,6 +73993,12 @@
        "slot": "section_57_a_7_small_business_stock_preference_is_zero",
        "value": true
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -73900,6 +74014,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "no_other_section_57_preference"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -73930,6 +74050,12 @@
        "slot": "section_58_c_2_completed_disposition_domain_is_satisfied",
        "value": true
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -73945,6 +74071,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_58_completed_loss_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -73960,6 +74092,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_58_completed_loss_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -73999,6 +74137,12 @@
        "slot": "no_other_section_59_special_rule_affects_completed_individual_amt",
        "value": true
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74014,6 +74158,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_59_completed_special_rule_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74029,6 +74179,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_59_completed_special_rule_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74044,6 +74200,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_59_completed_special_rule_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74059,6 +74221,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_59_completed_special_rule_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74086,6 +74254,12 @@
      "acknowledged_incomplete": false,
      "negated_judgments": [
       "section_59_j_kiddie_exemption_limit_applies"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74101,6 +74275,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74116,6 +74296,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74131,6 +74317,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74146,6 +74338,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74161,6 +74359,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74176,6 +74380,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74191,6 +74401,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74206,6 +74422,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74221,6 +74443,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74236,6 +74464,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74251,6 +74485,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74266,6 +74506,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74281,6 +74527,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74296,6 +74548,12 @@
      "acknowledged_incomplete": false,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74311,6 +74569,12 @@
      "acknowledged_incomplete": true,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     },
     {
@@ -74326,6 +74590,12 @@
      "acknowledged_incomplete": true,
      "zero_unless": [
       "section_55_verified_domain_is_satisfied"
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
      ]
     }
    ],
@@ -76172,6 +76442,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -76191,7 +76470,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -76203,7 +76491,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -116022,6 +116319,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -116041,7 +116347,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -116053,7 +116368,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -126596,6 +126920,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -126615,7 +126948,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -126627,7 +126969,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -142180,6 +142531,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -142199,7 +142559,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -142211,7 +142580,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -185156,7 +185534,13 @@
      "period": "Year",
      "source": "Tax Law § 601, completed-return New York taxable income",
      "certified": true,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
+     ]
     },
     {
      "name": "ny_pit_pilot_main_income_tax",
@@ -185168,7 +185552,13 @@
      "period": "Year",
      "source": "Tax Law § 601(a)(1)(B)(vii), (b)(1)(B)(vii), and (c)(1)(B)(vii), complete 2026 main tax",
      "certified": true,
-     "acknowledged_incomplete": true
+     "acknowledged_incomplete": true,
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
+     ]
     },
     {
      "name": "ny_pit_pilot_joint_or_surviving_bracket_selector",
@@ -185180,7 +185570,13 @@
      "period": "Year",
      "source": "Tax Law § 601(a)(1)(B)(vii), joint and surviving-spouse bracket selection",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
+     ]
     },
     {
      "name": "ny_pit_pilot_head_of_household_bracket_selector",
@@ -185192,7 +185588,13 @@
      "period": "Year",
      "source": "Tax Law § 601(b)(1)(B)(vii), head-of-household bracket selection",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
+     ]
     },
     {
      "name": "ny_pit_pilot_single_or_separate_bracket_selector",
@@ -185204,7 +185606,13 @@
      "period": "Year",
      "source": "Tax Law § 601(c)(1)(B)(vii), single and married-separate bracket selection",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-01-01",
+       "effective_to": "2026-12-31"
+      }
+     ]
     }
    ],
    "inputs": {
@@ -186085,6 +186493,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -186104,7 +186521,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -186116,7 +186542,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -195168,6 +195603,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -195187,7 +195631,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -195199,7 +195652,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -246989,6 +247451,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
      ]
     },
     {
@@ -247008,7 +247479,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "snap_member_citizenship_or_alien_status_eligible",
@@ -247020,7 +247500,16 @@
      "period": "Month",
      "source": "7 CFR 273.4(a), 7 CFR 273.4(b)(2)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "0001-01-01",
+       "effective_to": "2025-06-30"
+      },
+      {
+       "effective_from": "2025-08-01"
+      }
+     ]
     },
     {
      "name": "longer_absence_residency_interruption_presumed",
@@ -281186,7 +281675,16 @@
      "period": "Day",
      "source": "Chapter 99 subchapter III IEEPA overlay headings composition",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-02-19"
+      },
+      {
+       "effective_from": "2026-02-20"
+      }
+     ]
     },
     {
      "name": "ieepa_component_rate_with_declared_exceptions",
@@ -281198,7 +281696,16 @@
      "period": "Day",
      "source": "Chapter 99 subchapter III IEEPA overlay composition with declared exception and potash entry facts",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-02-19"
+      },
+      {
+       "effective_from": "2026-02-20"
+      }
+     ]
     },
     {
      "name": "section_122_component_rate",
@@ -281210,7 +281717,20 @@
      "period": "Day",
      "source": "Section 122 temporary import surcharge composition under heading 9903.03.01",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-02-23"
+      },
+      {
+       "effective_from": "2026-02-24",
+       "effective_to": "2026-07-23"
+      },
+      {
+       "effective_from": "2026-07-24"
+      }
+     ]
     },
     {
      "name": "section_201_component_rate",
@@ -281237,7 +281757,16 @@
      "period": "Day",
      "source": "Historical heading 9903.85.08 duty on the declared value of aluminum content in beer under HTS 2203.00.00, terminated April 6, 2026",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-04-05"
+      },
+      {
+       "effective_from": "2026-04-06"
+      }
+     ]
     },
     {
      "name": "section_232_aluminum_component_rate",
@@ -281249,7 +281778,16 @@
      "period": "Day",
      "source": "Flat ad-valorem section 232 aluminum overlay composition for HTS 7601.10.30.00, with the historical HTS 2203.00.00 aluminum-content-basis duty exposed separately and not misstated as a full-value rate",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-07-20"
+      },
+      {
+       "effective_from": "2026-07-21"
+      }
+     ]
     },
     {
      "name": "section_338_component_rate",
@@ -281261,7 +281799,16 @@
      "period": "Day",
      "source": "Section 338 heading 9903.03.12 Canada alcohol additional duty under Proclamation 11046 (explicitly non-exempt panel projection on full customs value; the U.S. note 51(a) accompanied-baggage and chapter 98 exclusions and 9802 reduced duty bases are applied by section_338_entry_component_rate)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-08-18"
+      },
+      {
+       "effective_from": "2026-08-19"
+      }
+     ]
     },
     {
      "name": "section_338_chapter_98_exclusion_applies",
@@ -281284,7 +281831,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-08-18"
+      },
+      {
+       "effective_from": "2026-08-19"
+      }
+     ]
     },
     {
      "name": "section_338_reduced_duty_base_applies",
@@ -281319,7 +281875,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-08-18"
+      },
+      {
+       "effective_from": "2026-08-19"
+      }
+     ]
     },
     {
      "name": "section_338_entry_component_rate",
@@ -281331,7 +281896,16 @@
      "period": "Day",
      "source": "Legally complete section 338 alcohol component under U.S. note 51(a) at entry level (accompanied baggage and chapter 98 exclusions applied; 9802 reduced-base entries exposed by section_338_reduced_duty_base_applies and not misstated as a full-customs-value rate; not consumed by the panel total)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-08-18"
+      },
+      {
+       "effective_from": "2026-08-19"
+      }
+     ]
     },
     {
      "name": "china_section_301_component_rate",
@@ -281355,7 +281929,16 @@
      "period": "Day",
      "source": "Brazil section 301 overlay composition under heading 9903.05.01",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-07-21"
+      },
+      {
+       "effective_from": "2026-07-22"
+      }
+     ]
     },
     {
      "name": "forced_labor_section_301_component_rate",
@@ -281367,7 +281950,16 @@
      "period": "Day",
      "source": "Forced labor section 301 overlay composition under headings 9903.05.20 through 9903.05.84 (non-exempt panel projection; transaction-dependent exceptions applied by forced_labor_section_301_entry_component_rate)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-07-23"
+      },
+      {
+       "effective_from": "2026-07-24"
+      }
+     ]
     },
     {
      "name": "forced_labor_in_transit_safe_harbor_applies",
@@ -281379,7 +281971,20 @@
      "period": "Day",
      "source": "HTS 9903.05.85 in-transit entries before July 28, 2026",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-07-23"
+      },
+      {
+       "effective_from": "2026-07-24",
+       "effective_to": "2026-07-27"
+      },
+      {
+       "effective_from": "2026-07-28"
+      }
+     ]
     },
     {
      "name": "forced_labor_usmca_exception_applies",
@@ -281416,6 +282021,15 @@
         ]
        ]
       }
+     ],
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-07-23"
+      },
+      {
+       "effective_from": "2026-07-24"
+      }
      ]
     },
     {
@@ -281439,7 +282053,16 @@
        "value": true
       }
      ],
-     "requires_partial": true
+     "requires_partial": true,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-07-23"
+      },
+      {
+       "effective_from": "2026-07-24"
+      }
+     ]
     },
     {
      "name": "forced_labor_section_301_entry_component_rate",
@@ -281451,7 +282074,16 @@
      "period": "Day",
      "source": "Legally complete forced labor section 301 component under U.S. note 52 and headings 9903.05.85 and 9903.05.91–9903.05.92 (entry-level; not consumed by the panel total)",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-07-23"
+      },
+      {
+       "effective_from": "2026-07-24"
+      }
+     ]
     },
     {
      "name": "us_tariff_total_ad_valorem_rate",
@@ -281475,7 +282107,20 @@
      "period": "Day",
      "source": "EO 14388 section 3(b) postal flat duty window",
      "certified": false,
-     "acknowledged_incomplete": false
+     "acknowledged_incomplete": false,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-02-23"
+      },
+      {
+       "effective_from": "2026-02-24",
+       "effective_to": "2026-07-23"
+      },
+      {
+       "effective_from": "2026-07-24"
+      }
+     ]
     },
     {
      "name": "us_tariff_duty",
@@ -281487,7 +282132,20 @@
      "period": "Day",
      "source": "Composition duty on customs value or postal flat duty on shipment value",
      "certified": true,
-     "acknowledged_incomplete": true
+     "acknowledged_incomplete": true,
+     "versions": [
+      {
+       "effective_from": "2026-02-15",
+       "effective_to": "2026-02-23"
+      },
+      {
+       "effective_from": "2026-02-24",
+       "effective_to": "2026-07-23"
+      },
+      {
+       "effective_from": "2026-07-24"
+      }
+     ]
     }
    ],
    "inputs": {
