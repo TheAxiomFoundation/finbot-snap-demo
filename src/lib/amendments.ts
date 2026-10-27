@@ -35,9 +35,9 @@ export interface StatutoryAmendment {
    *  select the law in force at the period's start, so this is the first
    *  month start on or after `effective`. */
   encoded_from: string;
-  /** A passage the cited text keeps from before the amendment, and what it
-   *  says. fetch_citation calls the text out of date only while the corpus
-   *  text it served still contains `passage`. */
+  /** A passage the cited text kept from before the amendment, and what it
+   *  says. fetch_citation mentions it only while the corpus text it served
+   *  still contains `passage` (whitespace aside). */
   superseded: { passage: string; summary: string };
   /** Corpus text behind `enacted_by`, `effective` and `provision`, quoted
    *  exactly. */
@@ -55,7 +55,7 @@ export const STATUTORY_AMENDMENTS: readonly StatutoryAmendment[] = [
     superseded: {
       passage: "(B) An alien admitted as a refugee under section 207 of the INA",
       summary:
-        "it still lists refugees (7 CFR 273.4(a)(6)(ii)(B)), asylees and other qualified aliens among the aliens eligible for SNAP, while the amended statute lists only U.S. citizens and nationals, lawful permanent residents, Cuban and Haitian entrants, and people lawfully residing under a Compact of Free Association",
+        "it lists refugees (7 CFR 273.4(a)(6)(ii)(B)) among the aliens eligible for SNAP, while the amended statute lists only U.S. citizens and nationals, lawful permanent residents, Cuban and Haitian entrants, and people lawfully residing under a Compact of Free Association",
     },
     evidence: [
       {

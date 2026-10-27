@@ -45,6 +45,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 const load = () => import("./citations");
+const EARLIER =
+  "For periods that end before 2025-07-04, the law then in force was 7 CFR 273.4 as it stood before P.L. 119-21, §10108; this result does not establish which version of the text it returns.";
 
 describe("fetchCitation on an amended module", () => {
   it("returns the CFR text with the amended statute it applies, at the declared corpus paths", async () => {
@@ -74,8 +76,11 @@ describe("fetchCitation on an amended module", () => {
       source_url: STATUTE_2015_F.source_url,
     });
     expect(amended.body_excerpt).toContain("(D) an individual who lawfully resides in the United States in accordance with a Compact of Free Association");
-    expect(amended.note).toContain("The 7 CFR 273.4 text in the corpus has not been updated for P.L. 119-21, §10108");
-    expect(amended.note).toContain("For periods that end before 2025-07-04, this 7 CFR 273.4 text states the law then in force.");
+    expect(amended.note).toContain(
+      "The 7 CFR 273.4 text in the corpus still contains the passage that P.L. 119-21, §10108, amending 7 U.S.C. 2015(f) effective 2025-07-04, superseded: it lists refugees (7 CFR 273.4(a)(6)(ii)(B)) among the aliens eligible for SNAP"
+    );
+    expect(amended.note).toContain(EARLIER);
+    expect(amended.note).not.toMatch(/has not been updated|text states the law/);
     expect(amended.note).not.toContain("Periods that start before 2025-08-01");
     expect(amended.note).toContain("refugees");
     expect(amended.note).toContain("for periods from 2025-08-01");
@@ -84,23 +89,32 @@ describe("fetchCitation on an amended module", () => {
     );
   });
 
-  // Only a body that still has the superseded passage is the earlier text.
   // A revised regulation, an empty or placeholder body, or no document at
-  // all is neither called out of date nor offered as the earlier law.
+  // all gets no superseded-passage sentence. No body is ever offered as the
+  // earlier version: the corpus text is undated.
   const revised = { ...REGULATION_273_4, body: REGULATION_273_4.body.replace("(B) An alien admitted as a refugee under section 207 of the INA;", "") };
   it.each([
     ["a revised regulation", revised],
     ["an empty body", { ...REGULATION_273_4, body: "" }],
     ["a placeholder body", { ...REGULATION_273_4, body: ". . ." }],
     ["no document", undefined],
-  ])("neither calls %s out of date nor offers it as the earlier law", async (_, doc) => {
+  ])("says nothing about the superseded passage for %s", async (_, doc) => {
     stubCorpus({ ...(doc && { "us/regulation/7/273/4": doc }), "us/statute/7/2015/f": STATUTE_2015_F });
     const { fetchCitation } = await load();
     const note = (await fetchCitation("us:regulations/7-cfr/273/4")).amended_by!.note;
     expect(note).toBe(
       "Axiom's encoded 7 CFR 273.4 rules apply 7 U.S.C. 2015(f) as amended by P.L. 119-21, §10108 (effective 2025-07-04) for periods from 2025-08-01. " +
-        "For periods that end before 2025-07-04, the law then in force was 7 CFR 273.4 as it stood before P.L. 119-21, §10108; this result does not include that text."
+        EARLIER
     );
+  });
+
+  it("finds the superseded passage whatever its whitespace", async () => {
+    const rewrapped = { ...REGULATION_273_4, body: REGULATION_273_4.body.replace("admitted as a refugee", "admitted as a\n  refugee") };
+    stubCorpus({ "us/regulation/7/273/4": rewrapped, "us/statute/7/2015/f": STATUTE_2015_F });
+    const { fetchCitation } = await load();
+    const note = (await fetchCitation("us:regulations/7-cfr/273/4")).amended_by!.note;
+    expect(note).toContain("still contains the passage");
+    expect(note).toContain(EARLIER);
   });
 
   it("still names the amendment when the corpus is unreachable, without claiming anything about the text", async () => {
@@ -109,8 +123,8 @@ describe("fetchCitation on an amended module", () => {
     const c = await fetchCitation("us:regulations/7-cfr/273/4");
     expect(c).toMatchObject({ resolved: false, resolution: "not_found", body_excerpt: null, citation_path: "us/regulation/7/273/4" });
     expect(c.amended_by).toMatchObject({ legal_id: "us:statutes/7/2015/f", resolved: false, body_excerpt: null });
-    expect(c.amended_by!.note).not.toContain("has not been updated");
-    expect(c.amended_by!.note).not.toContain("text states the law");
+    expect(c.amended_by!.note).not.toContain("still contains the passage");
+    expect(c.amended_by!.note).toContain(EARLIER);
   });
 
   it("adds nothing to a module no amendment is registered for", async () => {

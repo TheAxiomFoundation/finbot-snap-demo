@@ -171,11 +171,11 @@ it("tells the model which law applied, and not to say why the facts fail it", ()
   expect(prompt).toContain("`amended_by` says which law applied, not why the facts fail it");
   expect(prompt).toContain("never say the amendment is why the person fails the check, that they would have met it before, or that the amendment changed nothing for them");
   expect(prompt).toContain("say how the texts differ, citing both, without applying the earlier text to the user's facts");
-  expect(prompt).toContain("The engine stops evaluating a judgment at its first condition that fails, so a failed verdict says nothing about the conditions after it");
-  expect(prompt).toContain("a member check or output that reports some of them was evaluated on its own and does not cover the rest");
+  expect(prompt).toContain("A failed check establishes only the failures it reports: it says nothing about conditions it does not report (income, SSN, work or student rules)");
+  expect(prompt).toContain("a member check or output that reports some of them does not cover the rest");
   expect(prompt).toContain("never say the person or household would otherwise be eligible");
   expect(prompt).toContain("Axiom's encoded rules apply the amended provision to periods starting on or after its `applies_from`");
-  expect(prompt).toContain("for a period that ends before `effective` the regulation as it stood then is the law in force: quote the fetched text as that law only when the note says this text states it");
+  expect(prompt).toContain("for a period that ends before `effective` the law in force is the regulation as it stood before the amendment, and the fetched text is not established as that version, so don't quote it as that version's wording");
   // Wording earlier rounds removed: the comparison fields, a verdict-level
   // cause, and the July 2025 claim.
   expect(prompt).not.toMatch(/changed_outcome|changed_for_members|unchanged_for_members/);
@@ -185,6 +185,10 @@ it("tells the model which law applied, and not to say why the facts fail it", ()
   // Round 5: scoped to the judgment's own evaluation, and no certifying of
   // whatever text fetch_citation returned.
   expect(prompt).not.toContain("so it did not evaluate the conditions after it");
+  // Round 6: no claim about how the engine evaluates, and no quoting of the
+  // undated fetched text as the earlier version.
+  expect(prompt).not.toContain("stops evaluating");
+  expect(prompt).not.toContain("only when the note says this text states it");
   expect(prompt).not.toContain("cite the regulation text as the law then in force");
 });
 
