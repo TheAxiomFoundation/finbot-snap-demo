@@ -110,6 +110,13 @@ export const SCENARIOS: Scenario[] = [
     truth_note: "the EITC starter (single dad); PE eitc 3,923.23; IRS Rev. Proc. 2025-32 two-child 2026 parameters",
   },
   {
+    id: "eitc-max-2kids",
+    area: "tax",
+    question: "What's the maximum earned income tax credit for a family with two children in tax year 2026?",
+    truth: [7316],
+    truth_note: "IRS Rev. Proc. 2025-32: two-child maximum $7,316. The engine side headlined the childless $664 on 2026-10-25: no child counted (qualifying_child_name_age_and_tin_included_on_return unset, lookups showed no member checks)",
+  },
+  {
     id: "il-elig-70k",
     area: "property-tax",
     question: "I'm 70 and own my home in Illinois. Our household income is $70,000. Can I defer my property taxes?",

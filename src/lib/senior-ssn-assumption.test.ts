@@ -40,7 +40,9 @@ describe("senior-deduction prerequisites the user never mentions", () => {
     expect(ssnRecords(built, "person:1").every((i) => i.value.value === true)).toBe(true);
     expect(ssnRecords(built, "person:2").every((i) => i.value.value === true)).toBe(true);
     // Before the compute every assumed member is listed; shapeResult narrows it.
-    expect(built.applied.assumed_facts).toEqual([expect.objectContaining({ slot: SSN, value: true, members: [1, 2] })]);
+    expect(built.applied.assumed_facts?.find((a) => a.slot === SSN)).toEqual(
+      expect.objectContaining({ slot: SSN, value: true, members: [1, 2] })
+    );
   });
 
   it("keeps a stated SSN fact, and an SSN fact stated false anywhere turns the assumption off", () => {
@@ -103,10 +105,10 @@ describe.skipIf(!hasEngine)("real-engine senior deduction from the run-10 facts"
     expect(withChild.applied.assumed_facts).toEqual([expect.objectContaining({ slot: SSN, members: [1] })]);
   }, 30_000);
 
-  it("keeps the disclosure on the lookup path, which runs no member checks", async () => {
+  it("keeps the disclosure on the lookup path, which checks only the gate the deduction counts through", async () => {
     const result = await computeProgram({ ...RUN_10, outputsOverride: ["senior_deduction"] });
     expect(numericOutput(result, "senior_deduction")).toBe(4500);
-    expect(result.member_checks).toBeUndefined();
+    expect(result.member_checks).toEqual([{ member: 1, checks: [expect.objectContaining({ name: CHECK, value: "holds" })] }]);
     expect(result.applied.assumed_facts).toEqual([expect.objectContaining({ slot: SSN, members: [1] })]);
   }, 30_000);
 });

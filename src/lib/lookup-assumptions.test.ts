@@ -59,7 +59,10 @@ describe("assumed facts on the lookup path", () => {
 
   it("leaves computes unchanged", () => {
     const built = buildRequest({ program: fiit, period: "2026", facts: {} });
-    expect(built.applied.assumed_facts?.map((a) => a.slot)).toEqual([SSN]);
+    expect(built.applied.assumed_facts?.map((a) => a.slot)).toEqual([
+      SSN,
+      "qualifying_child_name_age_and_tin_included_on_return",
+    ]);
   });
 });
 

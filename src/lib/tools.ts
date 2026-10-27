@@ -350,7 +350,7 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
 
     lookup_value: tool({
       description:
-        "Read a single encoded output — a threshold, limit, deduction amount, or any intermediate value — by name. Routes the query to the right entity automatically. Facts still apply: size-indexed values (income limits, maximum allotments) need the relevant count input from describe_program.",
+        "Read a single encoded output — a threshold, limit, deduction amount, or any intermediate value — by name. Routes the query to the right entity automatically. Facts still apply: size-indexed values (income limits, maximum allotments) need the relevant count input from describe_program. A value read through a count of qualifying members (a credit maximum indexed by qualifying children) needs members[], and its member_checks show whether each member counted.",
       parameters: z.object({
         program: z.string().describe("Program slug from list_programs."),
         output: z.string().describe("Output name (or legal id) exactly as returned by describe_program or list_programs search."),
@@ -392,6 +392,9 @@ export function createTools(onProvenance?: (event: ProvenanceAnnotation) => void
             semantics: meta.semantics,
             unit: meta.unit,
             value: value?.value ?? null,
+            // With a members list: the gates this value counts members
+            // through, per member, read like compute's.
+            ...(shaped.member_checks && { member_checks: shaped.member_checks }),
             ...(meta.semantics === "judgment" && (meta.requires || value?.requires_any) && {
               ...(requires && { requires }),
               ...(value?.requires_any && { requires_any: value.requires_any }),

@@ -327,6 +327,9 @@ export interface BuiltRequest {
   memberCheckNames: Set<string>;
   /** Member instance ids the gates are queried at, in member order. */
   memberCheckIds: string[];
+  /** "counted" on a lookup with a members list: shapeResult reports only
+   *  the gates the looked-up outputs count members through. */
+  memberChecksScope: "all" | "counted";
   applied: {
     period: string;
     member_count: number;
@@ -475,6 +478,25 @@ const MEMBER_ASSUMPTIONS: MemberAssumption[] = [
       Object.entries(facts).some(([n, v]) => SSN_FACT.test(n) && v === false),
     gate: "senior_deduction_qualified_individual",
     why: "Nothing was said about this person's SSN, so it is assumed to be on the return, as the senior deduction requires. Say so in Assumptions and invite the user to correct it (someone filing with an ITIN doesn't qualify).",
+  },
+  {
+    // 26 USC 32(c)(3)(D): a qualifying child counts toward the EITC only
+    // when the return includes the child's name, age and TIN. Filers
+    // ordinarily include them, and the slot has lookalikes (the CTC's
+    // qualifying_child_ssn_included_on_return, the auxiliary
+    // qualifying_child_tin_included_on_return). Asked for the 2026 maximum
+    // EITC with two children, gpt-6-luna set every other qualifying-child
+    // fact plus the CTC lookalikes, so eitc_child_count came out 0 and
+    // eitc_maximum gave the childless $664 instead of $7,316. The same
+    // statement as the senior-deduction SSN keeps it off.
+    slot: "qualifying_child_name_age_and_tin_included_on_return",
+    value: true,
+    applies: (program) => program.slug === "us-fiit",
+    stated: (facts) =>
+      "qualifying_child_name_age_and_tin_included_on_return" in facts ||
+      Object.entries(facts).some(([n, v]) => SSN_FACT.test(n) && v === false),
+    gate: "eitc_qualifying_child",
+    why: "Nothing was said about this child's SSN, so the child's name, age and SSN are assumed to be on the return, as the EITC's qualifying-child test requires. Say so in Assumptions and invite the user to correct it (a child without an SSN doesn't count for the EITC).",
   },
 ];
 
@@ -727,9 +749,14 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // member is checked: the taxpayer listed first fails the qualifying-child
   // gate the children hold, so member 1 alone reads as "no qualifying child".
   // Synthesized members past the first carry only defaults; check member 1.
+  // A lookup checks members only when it lists them: a value read through a
+  // count of members (us-fiit eitc_maximum, through eitc_child_count) came
+  // back with no sign that none of the listed children counted, and
+  // gpt-6-luna headlined the childless $664 as the two-child maximum.
+  const memberChecksScope = options.outputsOverride ? "counted" : "all";
   const memberCheckNames = new Set<string>();
   const memberCheckIds: string[] = [];
-  if (memberEntity && memberCount > 0 && !options.outputsOverride) {
+  if (memberEntity && memberCount > 0 && (!options.outputsOverride || (options.members?.length ?? 0) > 0)) {
     for (const relation of program.relations) {
       if (relation.related_entity !== memberEntity) continue;
       for (const gate of relation.gate_judgments ?? []) {
@@ -996,6 +1023,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     queried,
     memberCheckNames,
     memberCheckIds,
+    memberChecksScope,
     applied: {
       period: resolved.label,
       member_count: memberCount,
@@ -1198,6 +1226,37 @@ function reachableKeys(trace: Record<string, DerivedTraceNode>, rootKey: string)
     queue.push(...trace[key].dependencies);
   }
   return reached;
+}
+
+/** Member gates the outputs count members through, each with the outputs
+ *  that do. A relation aggregation's trace node lists its gate's rule among
+ *  its dependencies (us-fiit eitc_child_count → eitc_qualifying_child). The
+ *  walk stops at a gate: past it lies member 1's own check, not the
+ *  output's chain. A branch the engine short-circuited isn't in the trace,
+ *  so a gate it would have counted through can't move the value. */
+function countedGates(
+  trace: Record<string, DerivedTraceNode>,
+  outputs: CatalogOutput[],
+  gates: CatalogOutput[]
+): Map<string, string[]> {
+  const gateByKey = new Map(gates.map((gate) => [queryKey(gate), gate.name]));
+  const counted = new Map<string, string[]>();
+  for (const output of outputs) {
+    const seen = new Set<string>();
+    const queue = [...(trace[queryKey(output)]?.dependencies ?? [])];
+    while (queue.length) {
+      const key = queue.shift()!;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const gate = gateByKey.get(key);
+      if (gate) {
+        counted.set(gate, [...(counted.get(gate) ?? []), output.name]);
+        continue;
+      }
+      queue.push(...(trace[key]?.dependencies ?? []));
+    }
+  }
+  return counted;
 }
 
 /** Unmet `or`s shown per failed judgment; the catalog keeps up to six. */
@@ -1409,28 +1468,49 @@ export function shapeResult(
     .map((o) => shapeOne(o, merged, trace));
 
   const gates = built.queried.filter((o) => built.memberCheckNames.has(o.name));
+  // A lookup shows only the gates its outputs count members through; the
+  // rest can't move the value it reads.
+  const counted = built.memberChecksScope === "counted"
+    ? countedGates(trace, built.queried.filter((o) => !built.memberCheckNames.has(o.name)), gates)
+    : null;
+  const shownGates = counted ? gates.filter((gate) => counted.has(gate.name)) : gates;
   const firstMemberWith = new Map<string, number>();
   const heldAt = new Set<string>(); // `${gate}|${member}` for every gate that holds
-  const memberChecks: MemberChecks[] = built.memberCheckIds.map((id, index) => {
+  const memberChecks: MemberChecks[] = shownGates.length === 0 ? [] : built.memberCheckIds.map((id, index) => {
     const member = index + 1;
     const scope = perMember.get(id) ?? { outputs: new Map<string, ReadOutput>(), trace: {} };
-    const checks: MemberCheck[] = gates.map((gate) => {
-      const check = asGateCheck(shapeOne(gate, scope.outputs, scope.trace, id));
-      if (check.value === "holds") heldAt.add(`${check.name}|${member}`);
-      return check;
-    });
+    const checks: MemberCheck[] = shownGates.map((gate) => asGateCheck(shapeOne(gate, scope.outputs, scope.trace, id)));
     const signature = JSON.stringify(checks);
     const sameAs = firstMemberWith.get(signature);
     if (sameAs !== undefined) return { member, same_as: sameAs };
     firstMemberWith.set(signature, member);
     return { member, checks };
   });
+  built.memberCheckIds.forEach((id, index) => {
+    const outcomes = perMember.get(id)?.outputs;
+    for (const gate of gates) {
+      if (outcomes?.get(queryKey(gate))?.outcome === "holds") heldAt.add(`${gate.name}|${index + 1}`);
+    }
+  });
+
+  // A lookup's value read through a gate no listed member holds counted
+  // none of them: the childless $664 EITC maximum for a taxpayer and two
+  // children whose qualifying-child facts were incomplete. One listed
+  // member failing it (a single filer) is the ordinary case.
+  if (counted && built.memberCheckIds.length > 1) {
+    for (const gate of shownGates) {
+      if (built.memberCheckIds.some((_, index) => heldAt.has(`${gate.name}|${index + 1}`))) continue;
+      built.applied.notes.push(
+        `WARNING: ${counted.get(gate.name)!.join(", ")} counts members through ${gate.name}, which holds for none of the ${built.memberCheckIds.length} listed members, so none of them counted (member_checks show what each one lacks). If the user's description says a listed member should count, set the facts its \`requires\` names on that member and look the value up again once; otherwise this value stands.`
+      );
+    }
+  }
 
   // An assumption tied to a member gate changed nothing where that gate
   // fails anyway (a 40-year-old's senior-deduction check), so disclose it
-  // only where the gate holds. Members whose gate wasn't checked (the
-  // lookup path, synthesized members past the first) stay disclosed; a
-  // lookup already dropped assumptions its output doesn't read.
+  // only where the gate holds. Members whose gate wasn't checked (a lookup
+  // with no members list, synthesized members past the first) stay
+  // disclosed; a lookup already dropped assumptions its output doesn't read.
   if (built.applied.assumed_facts) {
     const disclosed = built.applied.assumed_facts
       .map((assumed) => {

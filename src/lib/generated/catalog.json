@@ -74240,7 +74240,23 @@
      {
       "name": "qualifying_child_name_age_and_tin_included_on_return",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "eitc",
+       "eitc_allowed",
+       "eitc_before_eligibility",
+       "eitc_capped_child_count",
+       "eitc_child_count",
+       "eitc_demographic_eligible",
+       "eitc_earned_income_amount",
+       "eitc_maximum",
+       "eitc_phase_in_rate",
+       "eitc_phase_out_rate",
+       "eitc_phase_out_start",
+       "eitc_phased_in",
+       "eitc_qualifying_child",
+       "eitc_reduction"
+      ]
      },
      {
       "name": "qualifying_child_name_included_on_return",
