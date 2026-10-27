@@ -800,6 +800,31 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
       members: [taxpayer, { facts: { ...probeChild.facts, qualifying_child_name_included_on_return: true } }],
     });
     expect(harmless.applied.notes).toContainEqual(expect.stringMatching(/^WARNING: fact "qualifying_child_name_included_on_return" .* the headline ignores it\./));
+
+    // Review r5: set false at the top level and overridden true on every
+    // member, it keeps nothing off, so it gets no guard note. Overridden on
+    // the taxpayer only, it still reaches the child.
+    const named = { ...probeChild.facts, qualifying_child_name_included_on_return: true };
+    const lookup = (members: MemberSpec[]) =>
+      computeProgram({
+        program: fiit,
+        period: "2026",
+        facts: { filing_status: 3, qualifying_child_name_included_on_return: false },
+        members,
+        outputsOverride: ["eitc_maximum"],
+      });
+    const isGuardNote = (n: string) => n.includes("it kept the app from assuming");
+    const overridden = await lookup([{ facts: { ...taxpayer.facts, qualifying_child_name_included_on_return: true } }, { facts: named }]);
+    expect(numericOutput(overridden, "eitc_maximum")).toBe(4427);
+    expect(overridden.applied.notes.filter(isGuardNote)).toEqual([]);
+    expect(overridden.applied.notes).toContainEqual(
+      expect.stringMatching(/^WARNING: fact "qualifying_child_name_included_on_return" \(in facts, members\[0\]\.facts, members\[1\]\.facts\) .* the headline ignores it\./)
+    );
+    const reachesChild = await lookup([{ facts: { ...taxpayer.facts, qualifying_child_name_included_on_return: true } }, probeChild]);
+    expect(numericOutput(reachesChild, "eitc_maximum")).toBe(664);
+    expect(reachesChild.applied.notes.filter(isGuardNote)).toEqual([
+      expect.stringMatching(/^fact "qualifying_child_name_included_on_return" feeds no rule itself/),
+    ]);
   }, 60_000);
 
   // Review r4 (noted as predating this PR): a top-level "the child's SSN
