@@ -713,9 +713,10 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // (qualifying_child_name_included_on_return: false keeps the child's TIN
   // from being assumed), so it gets a note saying so instead, and no
   // suggestion: the aggregate slot set true would undo what it says. A
-  // top-level one that every listed member overrides with its own value
-  // reaches no member's assumptions (they're judged on the top-level facts
-  // overridden by the member's), so it gets the warning like any other.
+  // top-level member fact that every listed member sets for itself reaches
+  // no member (each gets its own value, and its assumptions are judged on
+  // the top-level facts overridden by its own), so only the members' paths
+  // are reported.
   const certifiedSlotNames = [...slotsByName.values()].filter((s) => !s.aux).map((s) => s.name);
   const memberSlotNames = new Set((program.member_entity ? program.inputs[program.member_entity] ?? [] : []).map((s) => s.name));
   const keptOff = (name: string, value: FactScalar) =>
@@ -726,7 +727,8 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   const guardPaths = new Map<string, { paths: string[]; assumptions: MemberAssumption[] }>();
   const noteAux = (name: string, value: FactScalar, path: string) => {
     if (!slotsByName.get(name)?.aux) return;
-    const assumptions = path === "facts" && !reachesMembers(name) ? [] : keptOff(name, value);
+    if (path === "facts" && memberSlotNames.has(name) && !reachesMembers(name)) return;
+    const assumptions = keptOff(name, value);
     if (assumptions.length > 0) {
       const entry = guardPaths.get(name) ?? { paths: [], assumptions };
       entry.paths.push(path);

@@ -801,9 +801,10 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
     });
     expect(harmless.applied.notes).toContainEqual(expect.stringMatching(/^WARNING: fact "qualifying_child_name_included_on_return" .* the headline ignores it\./));
 
-    // Review r5: set false at the top level and overridden true on every
-    // member, it keeps nothing off, so it gets no guard note. Overridden on
-    // the taxpayer only, it still reaches the child.
+    // Review r5: set false at the top level and overridden on every member,
+    // it reaches no one, so only the members' own values are reported: true
+    // gets the aux warning and no guard note, false the guard note and no
+    // warning. Overridden on the taxpayer only, it still reaches the child.
     const named = { ...probeChild.facts, qualifying_child_name_included_on_return: true };
     const lookup = (members: MemberSpec[]) =>
       computeProgram({
@@ -818,8 +819,14 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
     expect(numericOutput(overridden, "eitc_maximum")).toBe(4427);
     expect(overridden.applied.notes.filter(isGuardNote)).toEqual([]);
     expect(overridden.applied.notes).toContainEqual(
-      expect.stringMatching(/^WARNING: fact "qualifying_child_name_included_on_return" \(in facts, members\[0\]\.facts, members\[1\]\.facts\) .* the headline ignores it\./)
+      expect.stringMatching(/^WARNING: fact "qualifying_child_name_included_on_return" \(in members\[0\]\.facts, members\[1\]\.facts\) .* the headline ignores it\./)
     );
+    const unnamed = { ...probeChild.facts, qualifying_child_name_included_on_return: false };
+    const overriddenFalse = await lookup([{ facts: { ...taxpayer.facts, qualifying_child_name_included_on_return: false } }, { facts: unnamed }]);
+    expect(numericOutput(overriddenFalse, "eitc_maximum")).toBe(664);
+    expect(overriddenFalse.applied.notes.filter((n) => n.includes('"qualifying_child_name_included_on_return"'))).toEqual([
+      `fact "qualifying_child_name_included_on_return" (in members[0].facts, members[1].facts) feeds no rule itself, but it kept the app from assuming ${TIN}=true for the members it applies to. Keep it as the user stated it.`,
+    ]);
     const reachesChild = await lookup([{ facts: { ...taxpayer.facts, qualifying_child_name_included_on_return: true } }, probeChild]);
     expect(numericOutput(reachesChild, "eitc_maximum")).toBe(664);
     expect(reachesChild.applied.notes.filter(isGuardNote)).toEqual([
