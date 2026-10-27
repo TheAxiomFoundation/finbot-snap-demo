@@ -197,15 +197,25 @@ function AmendedLine({ name, amended }: { name?: string; amended: any }) {
   );
 }
 
+/** The failed checks among `checks` that carry an `amended_by`: each
+ *  check's own (AZ, CA, CO and NY gate members on the 7 CFR 273.4 check),
+ *  then its failed sub-checks'. */
+const amendedIn = (checks: any[]): any[] =>
+  checks.flatMap((check) => [
+    ...(check?.amended_by ? [check] : []),
+    ...(check?.failed_because ?? []).filter((f: any) => f.amended_by),
+  ]);
+
 /** The `amended_by` entries under a set of failed checks, once per check
  *  and outcome: a household's outputs repeat the same failed sub-check.
- *  Checks in `shownPerMember` are left out: the member rows show them. */
+ *  Checks in `shownPerMember` are left out: rows of their own show them
+ *  (Arizona gates a member on the 7 CFR 273.4 check and on
+ *  snap_member_eligible, which fails because of it; so do CA and NY). */
 function AmendedChecks({ checks, shownPerMember }: { checks: any[]; shownPerMember?: Set<string> }) {
   const seen = new Set<string>();
-  const lines = checks
-    .flatMap((check) => check?.failed_because ?? [])
+  const lines = amendedIn(checks)
     .flatMap((f: any) => {
-      if (!f.amended_by || shownPerMember?.has(f.name)) return [];
+      if (shownPerMember?.has(f.name)) return [];
       const { changed_outcome, changed_for_members, unchanged_for_members } = f.amended_by;
       const key = `${f.name}|${JSON.stringify([changed_outcome, changed_for_members, unchanged_for_members])}`;
       if (seen.has(key)) return [];
@@ -284,13 +294,7 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
       )}
       <AmendedChecks
         checks={outputs.flatMap((o: any) => [o, ...(o.zero_because ?? [])])}
-        shownPerMember={
-          new Set(
-            (result.member_checks ?? []).flatMap((m: any) =>
-              (m.checks ?? []).flatMap((c: any) => (c.failed_because ?? []).filter((f: any) => f.amended_by).map((f: any) => f.name))
-            )
-          )
-        }
+        shownPerMember={new Set(amendedIn((result.member_checks ?? []).flatMap((m: any) => m.checks ?? [])).map((f) => f.name))}
       />
 
       {result.member_checks?.length > 0 && (
@@ -301,7 +305,7 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
                 <span className="k" style={{ color: "#374151" }}>member {m.member} · same checks as member {m.same_as}</span>
               </div>
             ) : (
-              (m.checks ?? []).map((o: any) => (
+              (m.checks ?? []).map((o: any, _: number, checks: any[]) => (
                 <div key={`${m.member}-${o.name}`} style={{ padding: "4px 0", borderBottom: "1px dashed #eeeee8" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 12 }}>
                     <span className="k" style={{ color: "#374151" }}>member {m.member} · {checkLabel(o.name)}</span>
@@ -310,7 +314,10 @@ function ComputeCard({ result, hiddenNotes }: { result: any; hiddenNotes: readon
                     </span>
                   </div>
                   <FailedCheckNeeds check={o} />
-                  <AmendedChecks checks={[o]} />
+                  <AmendedChecks
+                    checks={[o]}
+                    shownPerMember={new Set(checks.filter((c) => c !== o && c.amended_by).map((c) => c.name))}
+                  />
                 </div>
               ))
             )

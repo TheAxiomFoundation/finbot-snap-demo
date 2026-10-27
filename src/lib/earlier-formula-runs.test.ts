@@ -13,6 +13,13 @@ vi.mock("./engine", async (importOriginal) => {
 });
 
 const CHECK = "snap_member_citizenship_or_alien_status_eligible";
+// The module's branch-by-branch rules for the same paragraph, queried with
+// the check so its earlier answer counts only where they agree.
+const DETAIL = [
+  "snap_member_citizen_or_national_status_eligible",
+  "snap_member_special_nonqualified_alien_status_eligible",
+  "snap_member_qualified_alien_status_eligible",
+];
 const fl = getProgram("us-fl-snap")!;
 const hasEngine = engineAvailable();
 const REFUGEE: Facts = { member_is_refugee: true, member_is_us_citizen: false };
@@ -25,7 +32,7 @@ const earlierRuns = () => calls().filter(([, request]) => request.queries.every(
 beforeEach(() => vi.clearAllMocks());
 
 describe.skipIf(!hasEngine)("earlier-formula runs", () => {
-  it("make one run per failed rule, whatever the household size, with a timeout", async () => {
+  it("make one run per failed rule, whatever the household size or facts, with a timeout", async () => {
     await compute([REFUGEE]);
     expect(earlierRuns()).toHaveLength(1);
     vi.clearAllMocks();
@@ -34,15 +41,16 @@ describe.skipIf(!hasEngine)("earlier-formula runs", () => {
     const [[, request, options]] = earlierRuns();
     expect(earlierRuns()).toHaveLength(1);
     expect(request.queries.map((q) => [q.entity_id, q.outputs])).toEqual(
-      [1, 2, 3, 4, 5, 6].map((m) => [`person:${m}`, [`us:regulations/7-cfr/273/4#${CHECK}`]])
+      [1, 2, 3, 4, 5, 6].map((m) => [`person:${m}`, [CHECK, ...DETAIL].map((name) => `us:regulations/7-cfr/273/4#${name}`)])
     );
     expect(options?.signal).toBeInstanceOf(AbortSignal);
     expect(six.member_checks?.slice(1).every((m) => m.same_as === 1)).toBe(true);
     vi.clearAllMocks();
 
-    // A ground the earlier formula takes with no status adds one recheck.
+    // A ground the flat earlier formula takes with no status adds no run:
+    // the detailed rules ride in the same call.
     await compute(Array(6).fill({ ...REFUGEE, member_is_under_age_eighteen: true }));
-    expect(earlierRuns()).toHaveLength(2);
+    expect(earlierRuns()).toHaveLength(1);
     vi.clearAllMocks();
 
     await compute([{ member_is_us_citizen: true }]);
@@ -96,5 +104,25 @@ describe.skipIf(!hasEngine)("earlier-formula runs", () => {
     for (const field of ["changed_outcome", "changed_for_members", "unchanged_for_members", '"earlier"']) expect(json).not.toContain(field);
     // With no earlier answer the two members' equal checks stay merged.
     expect(result.member_checks?.[1]).toEqual({ member: 2, same_as: 1 });
+  }, 30_000);
+
+  it("claim nothing for a member whose detailed rules did not all answer", async () => {
+    const actual = (await vi.importActual<typeof import("./engine")>("./engine")).runCompiled;
+    vi.mocked(runCompiled).mockImplementation(async (slug, request, options) => {
+      const response = await actual(slug, request, options);
+      if (request.queries.every((q) => q.period.start === "2025-06-01")) {
+        const first = response.results.find((r) => r.entity_id === "person:1")!;
+        // The citizen-or-national answer: the refugee's others still agree
+        // with the check, so only the missing answer can withhold the claim.
+        delete first.outputs[`us:regulations/7-cfr/273/4#${DETAIL[0]}`];
+      }
+      return response;
+    });
+    const result = await compute([REFUGEE, { ...REFUGEE, member_is_under_age_eighteen: true }]);
+    const entry = (m: number) =>
+      result.member_checks?.find((c) => c.member === m)?.checks?.flatMap((c) => c.failed_because ?? []).find((f) => f.name === CHECK);
+    expect(entry(1)?.amended_by).toBeDefined();
+    expect(entry(1)?.amended_by).not.toHaveProperty("changed_outcome");
+    expect(entry(2)?.amended_by).toMatchObject({ changed_outcome: true });
   }, 30_000);
 });

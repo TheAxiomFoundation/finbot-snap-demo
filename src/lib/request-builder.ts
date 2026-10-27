@@ -1081,6 +1081,11 @@ export interface ShapedOutput {
    *  force applies when its cited text predates the amendment
    *  (amendments.ts). */
   failed_because?: Array<{ name: string; legal_id: string | null; source: string | null; amended_by?: AmendmentRef }>;
+  /** Attached when this judgment came back not_holds and its own formula in
+   *  force applies an amendment, as `failed_because` entries' does: Arizona,
+   *  California, Colorado and New York gate each member on the 7 CFR 273.4
+   *  check itself. */
+  amended_by?: AmendmentRef;
   /** Attached when a scalar came back 0 because a judgment gating it failed
    *  (the catalog's `zero_unless`: us-fiit `eitc` ← `eitc_allowed`). Each
    *  entry reads like a failed judgment output. Member gates are left to
@@ -1221,14 +1226,14 @@ const OPEN_ALTERNATIVES_CAP = 3;
  *  unit, semantics, entity, ...) left out. */
 export type GateCheck = Pick<
   ShapedOutput,
-  "name" | "value" | "legal_id" | "requires" | "requires_any" | "requires_partial" | "failed_because"
+  "name" | "value" | "legal_id" | "requires" | "requires_any" | "requires_partial" | "failed_because" | "amended_by"
 >;
 
 /** One member-gate judgment at one member. */
 export type MemberCheck = GateCheck;
 
 function asGateCheck(shaped: ShapedOutput): GateCheck {
-  const { name, value, legal_id, requires, requires_any, requires_partial, failed_because } = shaped;
+  const { name, value, legal_id, requires, requires_any, requires_partial, failed_because, amended_by } = shaped;
   return {
     name,
     value,
@@ -1237,6 +1242,7 @@ function asGateCheck(shaped: ShapedOutput): GateCheck {
     ...(requires_any && { requires_any }),
     ...(requires_partial && { requires_partial }),
     ...(failed_because && { failed_because }),
+    ...(amended_by && { amended_by }),
   };
 }
 
@@ -1387,14 +1393,18 @@ export function shapeResult(
     let value: ShapedOutput["value"] = null;
     if (r) value = r.kind === "judgment" ? r.outcome ?? null : r.numeric ?? null;
     const failedJudgment = output.semantics === "judgment" && value === "not_holds";
+    const amendedBy = (rule: CatalogOutput | undefined) => {
+      const amendment = rule && appliedAmendment(rule, outputPeriodStart(program, rule, built.applied.period));
+      return amendment && amendmentRef(amendment, citationUrl(amendment.provision.legal_id));
+    };
     const failedBecause = failedJudgment
       ? failingSubJudgments(scopeTrace, queryKey(output), output.name, (name) => outputByName.get(name)?.negated_judgments)
           .map((failed) => {
-            const rule = outputByName.get(failed.name);
-            const amendment = rule && appliedAmendment(rule, outputPeriodStart(program, rule, built.applied.period));
-            return amendment ? { ...failed, amended_by: amendmentRef(amendment, citationUrl(amendment.provision.legal_id)) } : failed;
+            const amended = amendedBy(outputByName.get(failed.name));
+            return amended ? { ...failed, amended_by: amended } : failed;
           })
       : [];
+    const ownAmendment = failedJudgment ? amendedBy(output) : undefined;
     const open = failedJudgment ? openAlternatives(output, entityId, scopeTrace) : [];
     // Name only the requirements this entity's own inputs fail. us-fiit's
     // 24(h)(7) test reads the taxpayer/spouse SSN facts on each child's
@@ -1419,6 +1429,7 @@ export function shapeResult(
         requires_partial: true,
       }),
       ...(failedBecause.length > 0 && { failed_because: failedBecause }),
+      ...(ownAmendment && { amended_by: ownAmendment }),
       ...(zeroBecause.length > 0 && { zero_because: zeroBecause }),
     };
   };
@@ -1547,7 +1558,7 @@ function citationsFor(outputs: ShapedOutput[], memberChecks: MemberChecks[] = []
   const citations: Array<{ id: string; url: string }> = [];
   // The amended statutes failed checks applied come first: they are the law
   // behind a not_holds verdict whose own source predates them.
-  for (const entry of failedBecauseEntries(outputs, memberChecks)) {
+  for (const entry of amendedEntries(outputs, memberChecks)) {
     const amended = entry.amended_by;
     if (!amended || seen.has(amended.legal_id)) continue;
     seen.add(amended.legal_id);
@@ -1563,14 +1574,20 @@ function citationsFor(outputs: ShapedOutput[], memberChecks: MemberChecks[] = []
   return citations;
 }
 
-type FailedBecause = NonNullable<ShapedOutput["failed_because"]>[number];
+/** The failed judgments in `gates` that carry an `amended_by`: each gate's
+ *  own, then its `failed_because` entries'. */
+function amendedIn(gates: GateCheck[]): Array<{ name: string; amended_by?: AmendmentRef }> {
+  return gates.flatMap((g) => [...(g.amended_by ? [g] : []), ...(g.failed_because ?? []).filter((f) => f.amended_by)]);
+}
 
-/** Every `failed_because` entry in a result: on outputs, on the gates in
- *  their `zero_because`, and on member checks. */
-function failedBecauseEntries(outputs: ShapedOutput[], memberChecks: MemberChecks[] = []): FailedBecause[] {
-  const gates = [...outputs, ...outputs.flatMap((o) => o.zero_because ?? [])];
-  const checks = memberChecks.flatMap((m) => m.checks ?? []);
-  return [...gates, ...checks].flatMap((g) => g.failed_because ?? []);
+/** The outputs of a result and the gates in their `zero_because`. */
+const householdGates = (outputs: ShapedOutput[]): GateCheck[] => [...outputs, ...outputs.flatMap((o) => o.zero_because ?? [])];
+
+/** Every judgment in a result that carries an `amended_by`: outputs, the
+ *  gates in their `zero_because` and member checks, with their
+ *  `failed_because` entries. */
+function amendedEntries(outputs: ShapedOutput[], memberChecks: MemberChecks[] = []) {
+  return amendedIn([...householdGates(outputs), ...memberChecks.flatMap((m) => m.checks ?? [])]);
 }
 
 /** End-to-end compute: build → run → shape, then, side by side, the
@@ -1619,14 +1636,15 @@ function earlierPeriodFor(rule: CatalogOutput): string | undefined {
  *  call queries the rule at every member, as a compute's member checks do;
  *  a rule on another entity is queried once, as member 1's answer.
  *
- *  A "holds" counts only when it rests on what the earlier formula names
- *  correctly. The amendment's `earlier_formula_gaps` list inputs that
- *  formula accepts on their own though the law requires a status with them
- *  (the pinned 7 CFR 273.4 check passes a child under 18 with no
- *  immigration status). A member who has one of them is run again with all
- *  of them false, and keeps "holds" only if it still holds; the inputs only
- *  ever add ways to hold, so a "not_holds" stands. A member is left out
- *  when a run fails or times out. */
+ *  Where the module also encodes that formula branch by branch (the
+ *  amendment's `earlier_formula_detail`), the same call queries those rules,
+ *  and a member's answer counts only when it agrees with whether any of them
+ *  holds. The pinned 7 CFR 273.4 check from before the amendment is one flat
+ *  OR: it passes a child under 18 with no immigration status, and a parolee
+ *  on the 40-quarter exception, which 7 CFR 273.4(a)(6)(ii)(A) grants only
+ *  to permanent residents. The module's (a)(6) rule fails them both. A
+ *  member is left out when the encodings disagree, or the run fails or
+ *  times out. */
 async function valuesUnderEarlierFormula(
   options: BuildOptions,
   rule: CatalogOutput,
@@ -1635,43 +1653,38 @@ async function valuesUnderEarlierFormula(
 ): Promise<Map<number, EarlierValue>> {
   const { program } = options;
   const values = new Map<number, EarlierValue>();
-  const gap = new Set(
-    (amendmentForModule(rule.id ?? "")?.earlier_formula_gaps ?? [])
-      .filter((g) => g.rule === rule.name)
-      .flatMap((g) => g.inputs.map((slot) => legalInputId(program.slug, slot)))
-  );
+  const detailNames =
+    amendmentForModule(rule.id ?? "")?.earlier_formula_detail?.find((d) => d.rule === rule.name)?.detailed_by ?? [];
+  const detail = detailNames.map((name) => program.outputs.find((o) => o.name === name));
+  if (detail.some((o) => !o || o.entity !== rule.entity)) return values;
   try {
-    const built = buildRequest({ ...options, period, outputsOverride: [rule.name], extraOutputs: undefined });
+    const built = buildRequest({
+      ...options,
+      period,
+      outputsOverride: [rule.name, ...detailNames],
+      extraOutputs: undefined,
+    });
     const query = built.request.queries.find((q) => q.outputs.includes(queryKey(rule)));
     if (!query) return values;
     const memberEntity = rule.entity === program.member_entity ? program.member_entity : undefined;
     const ids = members.map((m) => (memberEntity ? instanceId(memberEntity, m) : query.entity_id));
-    const leaning = new Set(
-      built.request.dataset.inputs.filter((i) => gap.has(i.name) && i.value.value === true).map((i) => i.entity_id)
+    const outputs = [rule, ...(detail as CatalogOutput[])].map(queryKey);
+    const response = await runCompiled(
+      program.slug,
+      {
+        ...built.request,
+        queries: [...new Set(ids)].map((entity_id) => ({ entity_id, period: query.period, outputs })),
+      },
+      { signal: AbortSignal.timeout(EARLIER_FORMULA_TIMEOUT_MS) }
     );
-    const recheck = [...new Set(ids.filter((id) => leaning.has(id)))];
-    const at = (inputs: InputRecord[], entityIds: string[]): ExecutionRequest => ({
-      ...built.request,
-      dataset: { ...built.request.dataset, inputs },
-      queries: [...new Set(entityIds)].map((entity_id) => ({ entity_id, period: query.period, outputs: [queryKey(rule)] })),
-    });
-    const withoutGap = built.request.dataset.inputs.map((i) =>
-      gap.has(i.name) ? { ...i, value: { kind: "bool" as const, value: false } } : i
-    );
-    const signal = AbortSignal.timeout(EARLIER_FORMULA_TIMEOUT_MS);
-    const [plain, guarded] = await Promise.all([
-      runCompiled(program.slug, at(built.request.dataset.inputs, ids), { signal }),
-      recheck.length > 0 ? runCompiled(program.slug, at(withoutGap, recheck), { signal }) : undefined,
-    ]);
-    const read = (response: ExecutionResponse | undefined, id: string) => {
-      const out = response?.results.find((r) => r.entity_id === id)?.outputs?.[queryKey(rule)];
-      const r = out && readOutput(out);
-      return r ? ((r.kind === "judgment" ? r.outcome : r.numeric) ?? undefined) : undefined;
-    };
     members.forEach((member, i) => {
-      const value = read(plain, ids[i]);
-      if (value === undefined) return;
-      if (value === "holds" && leaning.has(ids[i]) && read(guarded, ids[i]) !== "holds") return;
+      const result = response.results.find((r) => r.entity_id === ids[i]);
+      const [value, ...parts] = outputs.map((key) => {
+        const r = result?.outputs?.[key] && readOutput(result.outputs[key]);
+        return r ? ((r.kind === "judgment" ? r.outcome : r.numeric) ?? undefined) : undefined;
+      });
+      if (value === undefined || parts.includes(undefined)) return;
+      if (parts.length > 0 && (value === "holds") !== parts.includes("holds")) return;
       values.set(member, { period, value });
     });
   } catch (err) {
@@ -1702,26 +1715,27 @@ export async function lookupAmendment(
  *  that failed the rule. The refugee starter fails the 7 CFR 273.4 check
  *  because P.L. 119-21 §10108 dropped refugees, but a lawful permanent
  *  resident short of the five-year wait fails it under both formulas, and
- *  citing the amendment as the reason would be false. A member check gets
- *  its member's answer; a household-level entry lists the failing members
- *  each way, since they can differ. */
+ *  citing the amendment as the reason would be false. A member's check, and
+ *  an output's own amended rule, get that entity's answer; a household-level
+ *  failed sub-check lists the failing members each way, since they can
+ *  differ. */
 async function attributeAmendments(options: BuildOptions, shaped: ShapedResult): Promise<void> {
   const { program } = options;
   const checks = shaped.member_checks ?? [];
   const byMember = new Map(checks.map((m) => [m.member, m]));
   const resolved = (m: MemberChecks) => (m.same_as ? byMember.get(m.same_as)?.checks : m.checks) ?? [];
-  const amendedRules = (gates: GateCheck[]) =>
-    gates.flatMap((g) => (g.failed_because ?? []).flatMap((f) => (f.amended_by ? [f.name] : [])));
-  const failing = new Map<string, number[]>(); // rule → members whose checks failed on it
-  for (const m of checks) {
-    for (const rule of amendedRules(resolved(m))) {
-      const members = failing.get(rule) ?? [];
-      if (!members.includes(m.member)) failing.set(rule, [...members, m.member]);
-    }
-  }
-  for (const rule of amendedRules([...shaped.outputs, ...shaped.outputs.flatMap((o) => o.zero_because ?? [])])) {
-    if (!failing.has(rule)) failing.set(rule, [1]);
-  }
+  const failing = new Map<string, number[]>(); // rule → members whose judgment of it failed
+  const add = (rule: string, member: number) => {
+    const members = failing.get(rule) ?? [];
+    if (!members.includes(member)) failing.set(rule, [...members, member]);
+  };
+  for (const m of checks) for (const { name } of amendedIn(resolved(m))) add(name, m.member);
+  // An output is judged at member 1 (a member rule) or once (any other),
+  // and the earlier run answers the latter as member 1. A household-level
+  // sub-check no member check failed is answered the same way.
+  const gates = householdGates(shaped.outputs);
+  for (const g of gates) if (g.amended_by) add(g.name, 1);
+  for (const f of gates.flatMap((g) => g.failed_because ?? [])) if (f.amended_by && !failing.has(f.name)) add(f.name, 1);
   if (failing.size === 0) return;
 
   const earlier = new Map<string, Map<number, EarlierValue>>(); // rule → member → run
@@ -1748,13 +1762,13 @@ async function attributeAmendments(options: BuildOptions, shaped: ShapedResult):
       return m.same_as ? { member: m.member, checks: structuredClone(resolved(m)) } : m;
     });
   }
-  for (const m of shaped.member_checks ?? []) {
-    for (const entry of (m.checks ?? []).flatMap((g) => g.failed_because ?? [])) {
-      const value = entry.amended_by && run(entry.name, m.member);
-      if (entry.amended_by && value) entry.amended_by = withEarlierOutcome(entry.amended_by, "not_holds", value);
-    }
-  }
-  for (const entry of failedBecauseEntries(shaped.outputs)) {
+  const annotate = (entry: { name: string; amended_by?: AmendmentRef }, member: number) => {
+    const value = run(entry.name, member);
+    if (entry.amended_by && value) entry.amended_by = withEarlierOutcome(entry.amended_by, "not_holds", value);
+  };
+  for (const m of shaped.member_checks ?? []) for (const entry of amendedIn(m.checks ?? [])) annotate(entry, m.member);
+  for (const g of gates) annotate(g, 1);
+  for (const entry of gates.flatMap((g) => g.failed_because ?? [])) {
     if (!entry.amended_by) continue;
     const known = (failing.get(entry.name) ?? [1]).flatMap((member) => {
       const value = run(entry.name, member);

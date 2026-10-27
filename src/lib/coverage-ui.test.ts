@@ -152,10 +152,28 @@ describe("catalog coverage in tool cards", () => {
     expect(html).toContain("this check gives the same result under the earlier formula");
     expect(html).not.toContain("changed this result");
 
-    // With no member checks (us-co-snap), the household line says it per member.
+    // With no member check carrying it, the household line says it per member.
     const household = renderToStaticMarkup(ToolCallCard({ invocation: compute(), programCoverage: statuses }));
     expect(household.split("Snap member citizenship or alien status eligible applies")).toHaveLength(2);
     expect(household).toContain("the amendment changed this check for member 1; same under the earlier formula for member 2");
+
+    // AZ, CA, CO and NY gate members on the check itself, which carries
+    // its own amended_by; all but CO also on snap_member_eligible, which fails
+    // because of it. Still one line per member, and none for the household.
+    const gate = (outcome: Record<string, unknown>) => ({
+      name: "snap_member_citizenship_or_alien_status_eligible", value: "not_holds", amended_by: amended(outcome),
+    });
+    const gated = renderToStaticMarkup(ToolCallCard({
+      invocation: compute([
+        { member: 1, checks: [gate({ changed_outcome: true }), { name: "snap_member_eligible", value: "not_holds", failed_because: failed({ changed_outcome: true }) }] },
+        { member: 2, checks: [gate({ changed_outcome: false })] },
+      ]),
+      programCoverage: statuses,
+    }));
+    expect(gated.split("Snap member citizenship or alien status eligible applies")).toHaveLength(3);
+    expect(gated).toContain("the amendment changed this check&#x27;s result");
+    expect(gated).toContain("this check gives the same result under the earlier formula");
+    expect(gated).not.toContain("for member 1; same under");
 
     const turn = renderToStaticMarkup(AssistantTurn({ toolInvocations: [invocation], programCoverage: statuses }));
     expect(turn.split("Sources:")[1]).toContain(`href="${statute}"`);

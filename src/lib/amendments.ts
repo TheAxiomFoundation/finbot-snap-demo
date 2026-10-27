@@ -42,11 +42,13 @@ export interface StatutoryAmendment {
   /** Corpus text behind `enacted_by`, `effective` and `provision`, quoted
    *  exactly. */
   evidence: Array<{ citation_path: string; excerpt: string }>;
-  /** Inputs a rule's formula from before the amendment accepts on their own,
-   *  though the law accepts them only together with a status. The
-   *  earlier-formula run (request-builder.ts) does not count a "holds" that
-   *  needed one of them as evidence the amendment changed the result. */
-  earlier_formula_gaps?: ReadonlyArray<{ rule: string; inputs: readonly string[]; why: string }>;
+  /** Rules whose formula from before the amendment the module also encodes
+   *  branch by branch, as separate rules. The earlier-formula run
+   *  (request-builder.ts) uses a rule's earlier answer only where it agrees
+   *  with whether any of `detailed_by` holds for the same facts, so a
+   *  "changed" or "unchanged" claim never rests on a branch the two
+   *  encodings read differently. */
+  earlier_formula_detail?: ReadonlyArray<{ rule: string; detailed_by: readonly string[]; why: string }>;
 }
 
 export const STATUTORY_AMENDMENTS: readonly StatutoryAmendment[] = [
@@ -77,17 +79,16 @@ export const STATUTORY_AMENDMENTS: readonly StatutoryAmendment[] = [
           "Section 10108 of the OBBB was effective upon enactment, July 4, 2025. State agencies must immediately apply the new eligibility criteria to new applicants at initial certification. For households already receiving SNAP, State agencies must review household circumstances and apply these policies at recertification.",
       },
     ],
-    earlier_formula_gaps: [
+    earlier_formula_detail: [
       {
         rule: "snap_member_citizenship_or_alien_status_eligible",
-        inputs: [
-          "member_has_eligible_military_connection",
-          "member_receives_blindness_or_disability_benefits",
-          "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
-          "member_is_under_age_eighteen",
+        detailed_by: [
+          "snap_member_citizen_or_national_status_eligible",
+          "snap_member_special_nonqualified_alien_status_eligible",
+          "snap_member_qualified_alien_status_eligible",
         ],
         why:
-          "The pinned formula in force through 2025-06-30 ORs these four grounds into eligibility on their own, so a child under 18 with no immigration status passes it. The module's own 7 CFR 273.4(a)(6)(ii)(G)-(J) rules grant them only to a qualified alien (`qualified_alien AND ...`), and so does the amended formula, under `member_is_lawful_permanent_resident`.",
+          "The pinned formula in force through 2025-06-30 is one flat OR over 7 CFR 273.4(a)'s grounds. With no qualified-alien status it passes the 40-quarter flag, Amerasian status, the (a)(6)(ii)(G)-(J) grounds (military connection, disability benefits, the 1996/1931 residence ground, under 18) and the five-year wait flag, and it fails a lawful permanent resident who has met the five-year period unless that wait flag is set. The module's own rules for 7 CFR 273.4(a)(1)-(2), (a)(3)-(5) and (a)(6) encode the same paragraph branch by branch, with each (a)(6) ground under `qualified_alien`. The flat formula also reads 7 CFR 273.4(b)(2)'s missing-documentation input, which they do not, so a refugee without documents gets no earlier answer.",
       },
     ],
   },

@@ -1,11 +1,10 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { STATUTORY_AMENDMENTS, appliedAmendment, formulaVersionAt } from "./amendments";
 import { getCatalog, getProgram, type CatalogProgram } from "./catalog";
+import { readOutput, runCompiled } from "./engine";
 import { buildSystemPrompt } from "./prompts";
-import { computeProgram, lookupAmendment, type Facts } from "./request-builder";
+import { buildRequest, computeProgram, lookupAmendment, queryKey, type Facts } from "./request-builder";
 import { tools } from "./tools";
 import { engineAvailable, memberCheck } from "../../scripts/snap-scenarios";
 
@@ -38,25 +37,86 @@ const CHANGED = { ...AMENDED, changed_outcome: true, earlier: { period: "2025-06
 const UNCHANGED = { ...AMENDED, changed_outcome: false, earlier: { period: "2025-06", value: "not_holds" } };
 // A household-level entry lists the failing members each way instead.
 const household = (changed: number[], unchanged: number[]) => ({ ...AMENDED, changed_for_members: changed, unchanged_for_members: unchanged });
-// The four grounds the pre-amendment formula accepts with no status.
-const GAP = STATUTORY_AMENDMENTS[0].earlier_formula_gaps![0].inputs;
+// The module's branch-by-branch rules for the paragraph the check flattens.
+const DETAIL = STATUTORY_AMENDMENTS[0].earlier_formula_detail![0].detailed_by;
+// The round-3 counterexample: an adult parolee with 40 credited quarters who
+// is not a permanent resident and has not met the five-year period. The flat
+// pre-amendment formula passes them on the 40-quarter flag; the module's
+// 7 CFR 273.4(a)(6)(ii)(A) rule requires permanent residence.
+const PAROLEE_40Q: Facts = {
+  member_is_us_citizen: false,
+  member_age: 30,
+  member_is_under_age_eighteen: false,
+  member_is_lawful_permanent_resident: false,
+  qualified_alien_five_year_status_period_met: false,
+  member_is_paroled_into_united_states_for_at_least_one_year: true,
+  member_parole_period_years: 1,
+  member_is_qualified_alien_with_forty_qualifying_quarters: true,
+  member_qualifying_quarters: 40,
+};
+// Grounds the flat formula accepts with no qualified-alien status.
+const FLAT_ONLY = [
+  "member_has_eligible_military_connection",
+  "member_receives_blindness_or_disability_benefits",
+  "member_was_lawfully_residing_on_1996_08_22_and_born_on_or_before_1931_08_22",
+  "member_is_under_age_eighteen",
+  "member_is_qualified_alien_with_forty_qualifying_quarters",
+  "member_is_amerasian_immigrant",
+];
+// Each ground of 7 CFR 273.4(a) alone, and with a status, for the
+// differential sweep.
+const PROFILES: Record<string, Facts> = {
+  none: {},
+  citizen: { member_is_us_citizen: true },
+  national: { member_is_us_noncitizen_national: true },
+  refugee: { member_is_refugee: true },
+  asylee: { member_is_asylee: true },
+  deportation_withheld: { member_has_deportation_or_removal_withheld: true },
+  cuban_haitian: { member_is_cuban_or_haitian_entrant: true },
+  american_indian: { member_is_american_indian_born_in_canada_or_recognized_indian_tribe_member: true },
+  hmong: { member_is_hmong_or_highland_laotian_qualifying_person_or_family_member: true },
+  trafficking: { member_is_trafficking_victim_or_qualifying_family_member: true },
+  ...Object.fromEntries(FLAT_ONLY.flatMap((slot) => [
+    [slot, { [slot]: true }],
+    [`${slot}+lpr`, { [slot]: true, member_is_lawful_permanent_resident: true }],
+    [`${slot}+refugee`, { [slot]: true, member_is_refugee: true }],
+  ])),
+  forty_quarters_lpr_adult: { ...PAROLEE_40Q, member_is_paroled_into_united_states_for_at_least_one_year: false, member_is_lawful_permanent_resident: true },
+  parolee_40q: PAROLEE_40Q,
+  five_year_flag: { member_is_qualified_alien_subject_to_five_year_wait: true, qualified_alien_five_year_status_period_met: true },
+  five_year_lpr: { member_is_lawful_permanent_resident: true, qualified_alien_five_year_status_period_met: true },
+  lpr: { member_is_lawful_permanent_resident: true },
+  refugee_without_documents: { member_is_refugee: true, alien_status_documentation_missing_or_unwilling: true },
+};
 const starter = (program: CatalogProgram, period = "2026-10", member: Facts = REFUGEE) =>
   computeProgram({ program, period, facts: { household_size: 1 }, members: [{ facts: member }] });
 const citizenshipFailure = (failed: Array<{ name: string; amended_by?: unknown }> | undefined) => failed?.find((f) => f.name === CHECK);
-type Entry = { name: string; amended_by?: Record<string, unknown> };
-/** The check's failed_because entries on member checks, and on household
- *  outputs and their zero_because gates. */
-const memberEntries = (result: Awaited<ReturnType<typeof computeProgram>>): Entry[] =>
-  (result.member_checks ?? []).flatMap((m) => (m.checks ?? []).flatMap((c) => c.failed_because ?? [])).filter((f) => f.name === CHECK) as Entry[];
-const householdEntries = (result: Awaited<ReturnType<typeof computeProgram>>): Entry[] =>
+type Entry = { name: string; value?: unknown; amended_by?: Record<string, unknown> };
+type Result = Awaited<ReturnType<typeof computeProgram>>;
+/** The check where it fails in member checks: a failed_because entry (FL
+ *  gates members on snap_member_eligible), or the gate itself (CO). */
+const failedHere = (checks: Entry[] = []): Entry[] =>
+  checks.flatMap((c) => [c, ...((c as { failed_because?: Entry[] }).failed_because ?? [])])
+    .filter((f) => f.name === CHECK && (f.value === undefined || f.value === "not_holds"));
+const memberEntries = (result: Result): Entry[] => (result.member_checks ?? []).flatMap((m) => failedHere(m.checks as Entry[]));
+/** Member `m`'s entry for the check, following same_as. */
+const memberEntry = (result: Result, m: number): Entry | undefined => {
+  const entry = result.member_checks?.find((c) => c.member === m);
+  const own = entry?.same_as ? result.member_checks?.find((c) => c.member === entry.same_as) : entry;
+  return failedHere(own?.checks as Entry[])[0];
+};
+const householdEntries = (result: Result): Entry[] =>
   result.outputs.flatMap((o) => [o, ...(o.zero_because ?? [])]).flatMap((o) => o.failed_because ?? []).filter((f) => f.name === CHECK) as Entry[];
-/** Every failed_because entry naming the check, wherever the result puts one
- *  (outputs, member checks, zero_because gates). */
+/** Every place the check fails, wherever the result puts one: a
+ *  failed_because entry (on outputs, member checks, zero_because gates) or a
+ *  failed check of that name. */
 const citizenshipFailures = (result: unknown): Array<{ amended_by?: unknown }> => {
   const found: Array<{ amended_by?: unknown }> = [];
   const walk = (node: unknown) => {
     if (Array.isArray(node)) node.forEach(walk);
     else if (node && typeof node === "object") {
+      const entry = node as Entry;
+      if (entry.name === CHECK && entry.value === "not_holds") found.push(entry);
       for (const [key, value] of Object.entries(node)) {
         if (key === "failed_because" && Array.isArray(value)) found.push(...value.filter((f) => f?.name === CHECK));
         walk(value);
@@ -78,7 +138,8 @@ describe.skipIf(!hasEngine)("real-engine refugee starter", () => {
       const result = await starter(program);
       const failures = citizenshipFailures(result);
       expect(failures.length).toBeGreaterThan(0);
-      // Nothing else carries the check (CO has no member checks).
+      expect(memberEntries(result).length).toBeGreaterThan(0);
+      // Nothing else carries the check.
       expect(memberEntries(result).length + householdEntries(result).length).toBe(failures.length);
       for (const failed of memberEntries(result)) expect(failed.amended_by).toMatchObject(CHANGED);
       for (const failed of householdEntries(result)) {
@@ -105,10 +166,18 @@ describe.skipIf(!hasEngine)("real-engine refugee starter", () => {
       for (const failed of householdEntries(none)) expect(failed.amended_by, program.slug).toMatchObject(household([], [1]));
       // A waiting LPR's deepest failure is the unversioned sub-rule
       // eligibility_based_on_earlier_less_rigorous_alien_status_preserved,
-      // whose formula the amendment did not change: no amended_by at all.
+      // whose formula the amendment did not change. Only a member gate that
+      // is the amended check itself (AZ, CA, CO, NY) carries amended_by,
+      // and it says unchanged.
       const lpr = await starter(program, "2026-10", WAITING_LPR);
       expect(JSON.stringify(lpr), program.slug).toContain('"failed_because":[{"name":"eligibility_based_on_earlier_less_rigorous_alien_status_preserved"');
-      expect(JSON.stringify(lpr), program.slug).not.toContain("amended_by");
+      const gate = lpr.member_checks?.[0].checks?.find((c) => c.name === CHECK);
+      if (gate) {
+        expect(gate.amended_by, program.slug).toMatchObject(UNCHANGED);
+        expect(JSON.stringify(lpr).match(/"amended_by"/g), program.slug).toHaveLength(1);
+      } else {
+        expect(JSON.stringify(lpr), program.slug).not.toContain("amended_by");
+      }
     }
   }, 60_000);
 
@@ -139,67 +208,132 @@ describe.skipIf(!hasEngine)("real-engine refugee starter", () => {
     for (const entry of householdEntries(three)) expect(entry.amended_by).toMatchObject(household([2, 3], [1]));
   }, 30_000);
 
-  it("claims no change from the pre-amendment formula's four status-free grounds", async () => {
-    for (const slot of GAP) {
-      // The gap is real in the pinned formula: the ground alone, with no
-      // status, meets the check in June 2025. When rulespec-us guards it,
-      // this fails and the registry entry should go.
-      const june = (await tools.lookup_value.execute!(
-        { program: "us-fl-snap", output: CHECK, period: "2025-06", members: [{ facts: { member_is_us_citizen: false, [slot]: true } }] },
-        context
-      )) as Record<string, unknown>;
-      expect(june.value, slot).toBe("holds");
-      // So in October 2026 nobody is told the amendment is why they fail.
-      const statusFree = await compute([{ member_is_us_citizen: false, [slot]: true }]);
-      const [entry] = memberEntries(statusFree);
-      expect(entry.amended_by, slot).toMatchObject(AMENDED);
-      expect(entry.amended_by, slot).not.toHaveProperty("changed_outcome");
-      expect(entry.amended_by, slot).not.toHaveProperty("earlier");
-      for (const h of householdEntries(statusFree)) expect(h.amended_by, slot).not.toHaveProperty("changed_for_members");
-      // A refugee with the same ground met the earlier formula on the
-      // refugee branch, which the amendment removed.
+  it("annotates Colorado's direct 7 CFR 273.4 gates member by member", async () => {
+    // Colorado gates each member on the check itself, so the failed gate
+    // carries amended_by (round 3: the household listed member 1 only).
+    const co = getProgram("us-co-snap")!;
+    const result = await computeProgram({
+      program: co,
+      period: "2026-10",
+      facts: { household_size: 2 },
+      members: [{ facts: { member_is_us_citizen: false } }, { facts: REFUGEE }],
+    });
+    expect(memberCheck(result, 1, CHECK)).toMatchObject({ value: "not_holds", amended_by: UNCHANGED });
+    expect(memberCheck(result, 2, CHECK)).toMatchObject({ value: "not_holds", amended_by: CHANGED });
+    expect(result.member_checks?.map((m) => m.same_as)).toEqual([undefined, undefined]);
+    expect(householdEntries(result).length).toBeGreaterThan(0);
+    for (const entry of householdEntries(result)) expect(entry.amended_by).toMatchObject(household([2], [1]));
+    expect(result.citations[0].id).toBe(AMENDED.legal_id);
+  }, 30_000);
+
+  it("claims nothing where the flat earlier formula and the module's own rules disagree", async () => {
+    const lookup = async (period: string, facts: Facts, output = CHECK) =>
+      (await tools.lookup_value.execute!({ program: "us-fl-snap", output, period, members: [{ facts }] }, context)) as Record<string, unknown>;
+    // The disagreement is in the pinned rules: the flat formula passes the
+    // parolee in June 2025, the module's (a)(6) rule fails them. When
+    // rulespec-us guards the flat formula, the first expectation fails.
+    expect((await lookup("2025-06", PAROLEE_40Q)).value).toBe("holds");
+    expect((await lookup("2025-06", PAROLEE_40Q, "snap_member_qualified_alien_status_eligible")).value).toBe("not_holds");
+    const now = await lookup("2026-10", PAROLEE_40Q);
+    expect(now.value).toBe("not_holds");
+    expect(now.amended_by).toMatchObject(AMENDED);
+    expect(now.amended_by).not.toHaveProperty("changed_outcome");
+    expect(now.amended_by).not.toHaveProperty("earlier");
+    for (const facts of [PAROLEE_40Q, ...FLAT_ONLY.map((slot) => ({ member_is_us_citizen: false, [slot]: true }))]) {
+      const result = await compute([facts]);
+      const [entry] = memberEntries(result);
+      expect(entry.amended_by, JSON.stringify(facts)).toMatchObject(AMENDED);
+      expect(entry.amended_by, JSON.stringify(facts)).not.toHaveProperty("changed_outcome");
+      for (const h of householdEntries(result)) expect(h.amended_by, JSON.stringify(facts)).not.toHaveProperty("changed_for_members");
+    }
+    // The other direction: the flat formula fails a permanent resident past
+    // the five-year period unless a separate wait flag is set, and the
+    // module's (a)(6) rule passes them. No claim either way.
+    const pastWait = await lookup("2026-10", { ...WAITING_LPR, qualified_alien_five_year_status_period_met: true });
+    expect(pastWait.value).toBe("holds");
+    expect(pastWait.amended_by).not.toHaveProperty("changed_outcome");
+    // A refugee without documents fails both then (the flat formula reads
+    // 7 CFR 273.4(b)(2); the detailed rules do not): no claim.
+    const undocumented = await compute([{ ...REFUGEE, alien_status_documentation_missing_or_unwilling: true }]);
+    expect(memberEntries(undocumented)[0].amended_by).not.toHaveProperty("changed_outcome");
+  }, 60_000);
+
+  it("claims an earlier answer where both encodings agree, with a status or without", async () => {
+    // A refugee met the check on the refugee branch, which the amendment
+    // removed, whatever other ground they have.
+    for (const slot of FLAT_ONLY) {
       const refugee = await compute([{ ...REFUGEE, [slot]: true }]);
       expect(memberEntries(refugee)[0].amended_by, slot).toMatchObject(CHANGED);
     }
-    // A lawful permanent resident under 18 holds now; the earlier formula
-    // gives no answer that does not lean on the under-18 ground alone.
+    // A permanent resident under 18 meets both encodings then and the
+    // check now: unchanged.
     const lprChild = (await tools.lookup_value.execute!(
       { program: "us-fl-snap", output: CHECK, period: "2026-10", members: [{ facts: { ...WAITING_LPR, member_is_under_age_eighteen: true } }] },
       context
     )) as Record<string, unknown>;
     expect(lprChild.value).toBe("holds");
-    expect(lprChild.amended_by).toMatchObject(AMENDED);
-    expect(lprChild.amended_by).not.toHaveProperty("changed_outcome");
+    expect(lprChild.amended_by).toMatchObject({ ...AMENDED, changed_outcome: false, earlier: { period: "2025-06", value: "holds" } });
   }, 60_000);
 
-  // The recheck sets the gap inputs false and trusts a "not_holds" from the
-  // first run; both rest on the inputs only ever adding ways to hold.
-  it("finds each gap input in the pinned pre-amendment formula, never negated", () => {
-    type Expr = { kind?: string; name?: string; [key: string]: unknown };
-    const dir = process.env.AXIOM_ARTIFACTS_DIR ?? path.resolve("engine/artifacts");
+  // Differential: every claim against the engine's own June 2025 answers for
+  // the flat check and the module's detailed rules, in every program and for
+  // each ground of 7 CFR 273.4(a). A member gets an earlier answer exactly
+  // when the two encodings agree, and it is theirs.
+  it("matches every earlier claim to the module's two encodings of the earlier law", async () => {
+    const names = Object.keys(PROFILES);
+    const members = names.map((k) => ({ facts: { member_is_us_citizen: false, ...PROFILES[k] } }));
     for (const program of programs) {
-      const artifact = JSON.parse(readFileSync(path.join(dir, `${program.slug}.compiled.json`), "utf8"));
-      const rule = artifact.program.derived.find((r: { name: string }) => r.name === CHECK);
-      const earlier = rule.versions.find((v: { effective_to?: string }) => v.effective_to === "2025-06-30").expr;
-      const reads = new Map<string, boolean>(); // input → read under a negation
-      const walk = (node: unknown, negated: boolean) => {
-        if (Array.isArray(node)) return node.forEach((n) => walk(n, negated));
-        if (!node || typeof node !== "object") return;
-        const expr = node as Expr;
-        if (expr.kind === "input" && expr.name) reads.set(expr.name, (reads.get(expr.name) ?? false) || negated);
-        // `input eq true` reads the input as is; any other comparison may not.
-        const right = expr.right as { kind?: string; value?: { value?: unknown } } | undefined;
-        const asIs = expr.kind !== "comparison" || (expr.op === "eq" && right?.kind === "literal" && right.value?.value === true);
-        for (const value of Object.values(expr)) walk(value, negated || expr.kind === "not" || !asIs);
-      };
-      walk(earlier, false);
-      for (const slot of GAP) expect(reads.get(slot), `${program.slug} ${slot}`).toBe(false);
+      const keys = [CHECK, ...DETAIL].map((name) => queryKey(program.outputs.find((o) => o.name === name)!));
+      const built = buildRequest({ program, period: "2025-06", facts: { household_size: names.length }, members, outputsOverride: [CHECK, ...DETAIL] });
+      const period = built.request.queries[0].period;
+      const june = await runCompiled(program.slug, {
+        ...built.request,
+        queries: names.map((_, i) => ({ entity_id: `person:${i + 1}`, period, outputs: keys })),
+      });
+      const now = await computeProgram({ program, period: "2026-10", facts: { household_size: names.length }, members });
+      const expected = { changed: [] as number[], unchanged: [] as number[] };
+      let withheld = 0;
+      names.forEach((name, i) => {
+        const at = `${program.slug} ${name}`;
+        const result = june.results.find((r) => r.entity_id === `person:${i + 1}`)!;
+        const [flat, ...detail] = keys.map((key) => readOutput(result.outputs[key]).outcome);
+        const entry = memberEntry(now, i + 1);
+        if (!entry) return; // holds now, or fails an earlier condition first
+        expect(entry.amended_by, at).toMatchObject(AMENDED);
+        if ((flat === "holds") === detail.includes("holds")) {
+          expect(entry.amended_by, at).toMatchObject({ changed_outcome: flat === "holds", earlier: { period: "2025-06", value: flat } });
+          (flat === "holds" ? expected.changed : expected.unchanged).push(i + 1);
+        } else {
+          expect(entry.amended_by, at).not.toHaveProperty("changed_outcome");
+          expect(entry.amended_by, at).not.toHaveProperty("earlier");
+          withheld++;
+        }
+      });
+      expect(expected.changed.length, program.slug).toBeGreaterThan(0);
+      expect(expected.unchanged.length, program.slug).toBeGreaterThan(0);
+      expect(withheld, program.slug).toBeGreaterThan(0);
+      for (const entry of householdEntries(now)) expect(entry.amended_by, program.slug).toMatchObject(household(expected.changed, expected.unchanged));
     }
-  });
+  }, 120_000);
 
   it("runs the earlier formula for the check alone, whatever extra outputs the compute asked for", async () => {
     const result = await compute([REFUGEE], { extraOutputs: ["snap_standard_income_eligible", "snap_net_monthly_income"] });
     expect(memberEntries(result)[0].amended_by).toMatchObject(CHANGED);
+  }, 30_000);
+
+  it("says on a requested output of the check itself whether the amendment changed it", async () => {
+    // Asked for as an output, the check is member 1's own judgment.
+    const refugee = await compute([REFUGEE, { member_is_us_citizen: false }], { extraOutputs: [CHECK] });
+    expect(refugee.outputs.find((o) => o.name === CHECK)).toMatchObject({ value: "not_holds", amended_by: CHANGED });
+    const none = await compute([{ member_is_us_citizen: false }, REFUGEE], { extraOutputs: [CHECK] });
+    expect(none.outputs.find((o) => o.name === CHECK)).toMatchObject({ value: "not_holds", amended_by: UNCHANGED });
+    const citizen = await compute([{ member_is_us_citizen: true }], { extraOutputs: [CHECK] });
+    expect(citizen.outputs.find((o) => o.name === CHECK)).not.toHaveProperty("amended_by");
+    // With the check as the only output there are no member checks: the
+    // output alone puts member 1 in the earlier run.
+    const alone = await compute([REFUGEE], { outputsOverride: [CHECK] });
+    expect(alone.member_checks).toBeUndefined();
+    expect(alone.outputs).toEqual([expect.objectContaining({ name: CHECK, value: "not_holds", amended_by: expect.objectContaining(CHANGED) })]);
   }, 30_000);
 
   it("dates a year-only request by the month the engine runs, and runs the earlier formula in its own month", async () => {
@@ -218,7 +352,9 @@ describe.skipIf(!hasEngine)("real-engine refugee starter", () => {
 
   it("tells the model the outcome is about the check, not the verdict", () => {
     const prompt = buildSystemPrompt();
-    expect(prompt).toContain("`changed_outcome` on a member's check or a lookup, and on a household-level entry `changed_for_members` / `unchanged_for_members`");
+    expect(prompt).toContain("When a failed check (a sub-check in `failed_because`, a member check, an output) or a lookup carries `amended_by`");
+    expect(prompt).toContain("`changed_outcome` on a member's check, an output or a lookup, and on a household-level sub-check `changed_for_members` / `unchanged_for_members`");
+    expect(prompt).toContain("the module's encodings of the earlier law disagree for those facts");
     expect(prompt).toContain("do not present the amendment as the cause");
     expect(prompt).toContain("never that they or the household would otherwise be eligible");
     expect(prompt).toContain("Axiom's encoded rules apply the amended provision to periods starting on or after its `applies_from`");

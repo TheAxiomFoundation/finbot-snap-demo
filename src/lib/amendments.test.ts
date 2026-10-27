@@ -138,17 +138,29 @@ describe("statutory amendments registry", () => {
     );
   });
 
-  it("names, for each earlier-formula gap, a versioned rule of the module and member inputs it reads", () => {
+  it("details each earlier formula with rules of the same module, entity and grain, in force for that formula's span", () => {
     for (const amendment of STATUTORY_AMENDMENTS) {
-      for (const gap of amendment.earlier_formula_gaps ?? []) {
-        const presenting = getCatalog().programs.filter((p) => p.outputs.some((o) => o.name === gap.rule));
-        expect(presenting.length, gap.rule).toBeGreaterThan(0);
+      for (const entry of amendment.earlier_formula_detail ?? []) {
+        expect(entry.detailed_by.length, entry.rule).toBeGreaterThan(0);
+        const presenting = getCatalog().programs.filter((p) => p.outputs.some((o) => o.name === entry.rule));
+        expect(presenting.length, entry.rule).toBeGreaterThan(0);
         for (const program of presenting) {
-          const rule = program.outputs.find((o) => o.name === gap.rule)!;
-          expect(moduleOf(rule), `${program.slug} ${gap.rule}`).toBe(amendment.module);
-          expect(rule.versions && earlierFormulaEnd(rule, amendment), `${program.slug} ${gap.rule}`).toBeTruthy();
-          const memberInputs = new Set((program.inputs[program.member_entity ?? ""] ?? []).map((s) => s.name));
-          for (const slot of gap.inputs) expect(memberInputs.has(slot), `${program.slug} ${slot}`).toBe(true);
+          const rule = program.outputs.find((o) => o.name === entry.rule)!;
+          expect(moduleOf(rule), `${program.slug} ${entry.rule}`).toBe(amendment.module);
+          const end = earlierFormulaEnd(rule, amendment);
+          expect(end, `${program.slug} ${entry.rule}`).toBeTruthy();
+          for (const name of entry.detailed_by) {
+            const detail = program.outputs.find((o) => o.name === name);
+            expect(detail, `${program.slug} ${name}`).toBeDefined();
+            expect(moduleOf(detail!), `${program.slug} ${name}`).toBe(amendment.module);
+            expect([detail!.entity, detail!.semantics, detail!.period], `${program.slug} ${name}`).toEqual([
+              rule.entity,
+              "judgment",
+              rule.period,
+            ]);
+            // Unversioned, or its own earlier formula covers the same last day.
+            if (detail!.versions) expect(formulaVersionAt(detail!.versions, end!), `${program.slug} ${name}`).toBeDefined();
+          }
         }
       }
     }
