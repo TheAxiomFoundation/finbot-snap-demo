@@ -469,6 +469,8 @@ const SSN_FACT = /(^|_)(ssn|tin)(_|$)|social_security_number/;
  *  return includes for the child, and whether the child's TIN was issued by
  *  the return's due date. */
 const CHILD_IDENTIFICATION_FACT = /^qualifying_child_\w*(included_on_return|valid_for_subsection_h|issued_on_or_before_return_due_date)$/;
+const isChildIdentificationFact = (name: string) =>
+  CHILD_IDENTIFICATION_FACT.test(name) || name === "ctc_child_missing_identification";
 /** Facts saying part of a child's identification is missing from the return:
  *  a qualifying_child_* identification fact set false (the child's name, SSN
  *  or TIN), or the CTC's missing-identification flag set true. The
@@ -516,13 +518,15 @@ const MEMBER_ASSUMPTIONS: MemberAssumption[] = [
     // individual's SSN on the return. Filers ordinarily include it, and a
     // compute that omitted the fact headlined a $0 deduction. Setting the
     // slot, or saying that some SSN on the return is missing (an SSN/TIN
-    // fact set false), keeps it off.
+    // fact set false), keeps it off. A child's identification facts don't:
+    // a top-level "the child's SSN isn't on the return" zeroed a 70-year-old
+    // taxpayer's deduction.
     slot: "qualified_individual_social_security_number_included_on_return",
     value: true,
     applies: (program) => program.slug === "us-fiit",
     stated: (facts) =>
       "qualified_individual_social_security_number_included_on_return" in facts ||
-      Object.entries(facts).some(([n, v]) => SSN_FACT.test(n) && v === false),
+      Object.entries(facts).some(([n, v]) => SSN_FACT.test(n) && !isChildIdentificationFact(n) && v === false),
     gate: "senior_deduction_qualified_individual",
     why: "Nothing was said about this person's SSN, so it is assumed to be on the return, as the senior deduction requires. Say so in Assumptions and invite the user to correct it (someone filing with an ITIN doesn't qualify).",
   },
@@ -704,22 +708,44 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // plausible sibling name (`countable_monthly_unearned_income` vs the live
   // `snap_total_monthly_unearned_income`). Surface it loudly in the applied
   // report with the nearest on-path sibling. Member facts get the same
-  // warning with their members[i] path; one warning per slot.
+  // warning with their members[i] path; one warning per slot. An auxiliary
+  // fact that keeps a member assumption off does reach the answer
+  // (qualifying_child_name_included_on_return: false keeps the child's TIN
+  // from being assumed), so it gets a note saying so instead, and no
+  // suggestion: the aggregate slot set true would undo what it says.
   const certifiedSlotNames = [...slotsByName.values()].filter((s) => !s.aux).map((s) => s.name);
+  const memberSlotNames = new Set((program.member_entity ? program.inputs[program.member_entity] ?? [] : []).map((s) => s.name));
+  const keptOff = (name: string, value: FactScalar) =>
+    MEMBER_ASSUMPTIONS.filter((a) => a.applies(program) && memberSlotNames.has(a.slot) && a.stated({ [name]: value }));
   const auxPaths = new Map<string, string[]>();
-  const noteAux = (name: string, path: string) => {
-    if (slotsByName.get(name)?.aux) auxPaths.set(name, [...(auxPaths.get(name) ?? []), path]);
+  const guardPaths = new Map<string, { paths: string[]; assumptions: MemberAssumption[] }>();
+  const noteAux = (name: string, value: FactScalar, path: string) => {
+    if (!slotsByName.get(name)?.aux) return;
+    const assumptions = keptOff(name, value);
+    if (assumptions.length > 0) {
+      const entry = guardPaths.get(name) ?? { paths: [], assumptions };
+      entry.paths.push(path);
+      guardPaths.set(name, entry);
+    } else {
+      auxPaths.set(name, [...(auxPaths.get(name) ?? []), path]);
+    }
   };
-  for (const name of Object.keys(facts)) noteAux(name, "facts");
+  const located = (paths: string[]) => (paths.length === 1 && paths[0] === "facts" ? "" : ` (in ${paths.join(", ")})`);
+  for (const [name, value] of Object.entries(facts)) noteAux(name, value, "facts");
   for (const [index, member] of (options.members ?? []).entries()) {
-    for (const name of Object.keys(member.facts ?? {})) noteAux(name, `members[${index}].facts`);
+    for (const [name, value] of Object.entries(member.facts ?? {})) noteAux(name, value, `members[${index}].facts`);
   }
   for (const [name, paths] of auxPaths) {
     const siblings = nearestNames(name, certifiedSlotNames, 3);
-    const where = paths.length === 1 && paths[0] === "facts" ? "" : ` (in ${paths.join(", ")})`;
     notes.push(
-      `WARNING: fact "${name}"${where} targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
+      `WARNING: fact "${name}"${located(paths)} targets an auxiliary slot that does NOT feed the published outputs — the headline ignores it.` +
         (siblings.length ? ` Did you mean: ${siblings.join(", ")}?` : "")
+    );
+  }
+  for (const [name, { paths, assumptions }] of guardPaths) {
+    const assumed = assumptions.map((a) => `${a.slot}=${a.value}`).join(" or ");
+    notes.push(
+      `fact "${name}"${located(paths)} feeds no rule itself, but it kept the app from assuming ${assumed} for the members it applies to. Keep it as the user stated it.`
     );
   }
 
@@ -1290,6 +1316,38 @@ function reachableKeys(trace: Record<string, DerivedTraceNode>, rootKey: string)
   return reached;
 }
 
+/** Whether a recorded value meets a requirement. */
+function satisfies(value: string, req: Requirement): boolean {
+  if (!req.op) return value === String(req.value);
+  const [n, t] = [Number(value), Number(req.value)];
+  return req.op === "gt" ? n > t : req.op === "gte" ? n >= t : req.op === "lt" ? n < t : n <= t;
+}
+
+/** A value that meets `req`: its value, or for a threshold one on the right
+ *  side of it (`gt 0.5` → 0.75, `lt 19` → 18, `gte 65` → 65). */
+function meetingValue(req: Requirement): FactScalar {
+  if (!req.op) return req.value as FactScalar;
+  const t = Number(req.value);
+  if (req.op === "gte" || req.op === "lte") return t;
+  const step = Math.abs(t) >= 1 ? 1 : 0.5;
+  return req.op === "gt" ? (t >= 0 && t < 1 ? (t + 1) / 2 : t + step) : t - step;
+}
+
+/** A lookup's warning that a gate counted none of the listed members,
+ *  pending the check that confirms each member it would name. */
+interface PendingCountWarning {
+  gate: CatalogOutput;
+  /** The warning's text up to the members it names. */
+  lead: string;
+  /** Members that fail the gate only on facts no one stated, each with
+   *  those facts set to values that meet them. */
+  candidates: Array<{ member: number; fills: Facts }>;
+}
+
+/** shapeResult's pending count warnings, by the request they came from:
+ *  lookupMemberChecks confirms them with one more engine run each. */
+const pendingCountWarnings = new WeakMap<BuiltRequest, PendingCountWarning[]>();
+
 /** A member gate the looked-up outputs count members through. */
 interface CountedGate {
   /** The outputs whose chains count through it. */
@@ -1485,10 +1543,7 @@ export function shapeResult(
     const value = req.computed
       ? tracedValue(scopeTrace, req.slot)
       : recorded.get(`${entityId}|${legalInputId(program.slug, req.slot)}`);
-    if (value === undefined) return false;
-    if (!req.op) return value === String(req.value);
-    const [n, t] = [Number(value), Number(req.value)];
-    return req.op === "gt" ? n > t : req.op === "gte" ? n >= t : req.op === "lt" ? n < t : n <= t;
+    return value !== undefined && satisfies(value, req);
   };
   const openAlternatives = (
     output: CatalogOutput,
@@ -1620,10 +1675,13 @@ export function shapeResult(
   //    parents' SSN facts sit on the taxpayer's record alone still count as
   //    other dependents, and the lower maximum that gives is flagged all the
   //    same;
-  //  - a linked member plausibly should have held it (plausiblyMeant): none
-  //    of its failures is on a slot stated for it, and one is on a slot no
-  //    one stated. A 10-year-old fails the senior deduction on a stated age,
-  //    a child whose SSN is stated missing fails the EITC on that.
+  //  - a linked member fails it only on facts no one stated (unstatedFills),
+  //    and holds it once they are set: lookupMemberChecks runs the gate
+  //    again with them. A 10-year-old fails the senior deduction on a stated
+  //    age, a child whose SSN is stated missing fails the EITC on that, and a
+  //    child stated to have filed a joint return fails a test the checks
+  //    don't list (`requires_partial`), so setting the listed facts leaves it
+  //    failing.
   // Filers are named only for a gate whose requirements name a filer role
   // (senior_deduction_qualified_individual: the taxpayer, or the spouse on a
   // joint return), where the roles decide. The other us-fiit gates are the
@@ -1636,38 +1694,56 @@ export function shapeResult(
   const holds = (gate: string, member: number) => heldAt.has(`${gate}|${member}`);
   const linkedThrough = (relations: string[]) =>
     memberNumbers.filter((m) => built.memberLinks[m - 1]?.relations.some((r) => relations.includes(r)));
-  const filerRoles = RETURN_SCOPED_MEMBER_FACTS[program.slug]?.filerRoles ?? [];
-  // Once any member carries a filer role, the others' roles are stated too:
-  // they aren't filers.
-  const rolesStated = built.memberLinks.some((link) => link.filer === true);
+  const returnScoped = RETURN_SCOPED_MEMBER_FACTS[program.slug];
+  const filerRoles = returnScoped?.filerRoles ?? [];
+  // A return has one taxpayer and at most one spouse, so once a member
+  // carries a role, the rest don't: the role counts as stated for them. A
+  // role no member carries stays open (a joint return's spouse, untagged).
+  const heldRoles = filerRoles.filter((role) =>
+    built.memberCheckIds.some((id) => recorded.get(`${id}|${legalInputId(program.slug, role)}`) === "true")
+  );
   const namesFilerRole = (gate: CatalogOutput) =>
     [...(gate.requires ?? []), ...(gate.requires_any ?? []).flatMap((alt) => alt.any_of.flat())].some((req) =>
       filerRoles.includes(req.slot)
     );
-  /** Whether linked member `member` plausibly should hold `gate`, which it
-   *  fails: no requirement it fails is on a slot stated for it, and one is
-   *  on a slot no one stated. Its failures are the unmet core `requires`
-   *  and each open `requires_any` alternative. An alternative fails on a
-   *  stated slot when every one of its groups does, and on an unstated slot
-   *  when one group that doesn't fails on one. Computed requirements are
-   *  left out: no one states them. */
-  const plausiblyMeant = (gate: CatalogOutput, gateIndex: number, member: number): boolean => {
+  const topLevel = built.applied.facts_applied;
+  /** For linked member `member`, which fails `gate`: the facts no one stated
+   *  that its checks list as unmet, set to values that meet them. Null when
+   *  it fails on a slot stated for it, or lists nothing unstated. Its
+   *  checks are the unmet core `requires` and each open `requires_any`
+   *  alternative, all of them; an alternative fails on a stated slot when
+   *  every one of its groups does, and otherwise takes the group with the
+   *  fewest facts to set. A return-scoped slot withheld from a member
+   *  (filing_status on a member with no filer role) is judged at the
+   *  return's value, which it would get with a role. Computed requirements
+   *  are left out: no one states them. */
+  const unstatedFills = (gate: CatalogOutput, gateIndex: number, member: number): Facts | null => {
     const id = built.memberCheckIds[member - 1];
     const scopeTrace = perMember.get(id)?.trace ?? {};
-    const stated = new Set([...(built.memberLinks[member - 1]?.stated ?? []), ...(rolesStated ? filerRoles : [])]);
-    const onStated = (unmet: Requirement[]) => unmet.some((req) => stated.has(req.slot));
-    const core = (checksAt[member - 1]?.[gateIndex]?.requires ?? []).filter((req) => !req.computed);
-    const alternatives = openAlternatives(gate, id, scopeTrace).map((alt) =>
-      alt.any_of.map((group) => group.filter((req) => !req.computed && !meets(id, req, scopeTrace)))
-    );
-    const failsOnStated =
-      onStated(core) || alternatives.some((groups) => groups.length > 0 && groups.every(onStated));
-    const failsOnUnstated =
-      core.some((req) => !stated.has(req.slot)) ||
-      alternatives.some((groups) => groups.some((unmet) => unmet.length > 0 && !onStated(unmet)));
-    return !failsOnStated && failsOnUnstated;
+    const stated = new Set([...(built.memberLinks[member - 1]?.stated ?? []), ...heldRoles]);
+    const standing = (req: Requirement): "met" | "stated" | "unstated" => {
+      if (stated.has(req.slot)) return "stated";
+      if (returnScoped?.slots.includes(req.slot) && topLevel[req.slot] !== undefined) {
+        return satisfies(String(topLevel[req.slot]), req) ? "met" : "stated";
+      }
+      return "unstated";
+    };
+    const open = (unmet: Requirement[]) => unmet.filter((req) => !req.computed && standing(req) !== "met");
+    const core = open(checksAt[member - 1]?.[gateIndex]?.requires ?? []);
+    if (core.some((req) => standing(req) === "stated")) return null;
+    const toSet = [...core];
+    for (const alternative of openAlternatives(gate, id, scopeTrace)) {
+      const groups = alternative.any_of
+        .map((group) => open(group.filter((req) => !meets(id, req, scopeTrace))))
+        .filter((unmet) => unmet.every((req) => standing(req) === "unstated"));
+      if (groups.length === 0) return null;
+      toSet.push(...groups.reduce((fewest, unmet) => (unmet.length < fewest.length ? unmet : fewest)));
+    }
+    if (toSet.length === 0) return null;
+    return Object.fromEntries(toSet.map((req) => [req.slot, meetingValue(req)]));
   };
   const again = lookup ? "look the value up again once" : "compute again once";
+  const pending: PendingCountWarning[] = [];
   shownGates.forEach((gate, gateIndex) => {
     const entry = counted.get(gate.name);
     if (!entry || entry.exclusionary) return;
@@ -1684,19 +1760,23 @@ export function shapeResult(
     }
     if (!lookup || entry.quantityOutputs.length === 0 || linked.some((m) => holds(gate.name, m))) return;
     const filersCount = namesFilerRole(gate);
-    const meant = linked.filter(
-      (m) => (filersCount || built.memberLinks[m - 1]?.filer !== true) && plausiblyMeant(gate, gateIndex, m)
-    );
-    if (meant.length === 0) return;
+    const candidates = linked.flatMap((member) => {
+      if (!filersCount && built.memberLinks[member - 1]?.filer === true) return [];
+      const fills = unstatedFills(gate, gateIndex, member);
+      return fills ? [{ member, fills }] : [];
+    });
+    if (candidates.length === 0) return;
     const quantity = entry.quantityOutputs;
     const none = linked.length === 1
       ? `which doesn't hold for the one listed member linked through ${through}, so that member didn't count through it`
       : `which holds for none of the ${linked.length} listed members linked through ${through}, so none of them counted through it`;
-    const one = meant.length === 1;
-    built.applied.notes.push(
-      `WARNING: ${quantity.join(", ")} ${quantity.length === 1 ? "counts" : "count"} members through ${gate.name}, ${none}. ${one ? `Member ${meant[0]} fails` : `Members ${meant.join(", ")} fail`} it only on facts no one stated (its \`requires\` and \`requires_any\` in member_checks). If the user's description says ${one ? "that member" : "one of them"} should count, set those facts on it and look the value up again once; otherwise this value stands.`
-    );
+    pending.push({
+      gate,
+      lead: `WARNING: ${quantity.join(", ")} ${quantity.length === 1 ? "counts" : "count"} members through ${gate.name}, ${none}.`,
+      candidates,
+    });
   });
+  if (pending.length > 0) pendingCountWarnings.set(built, pending);
 
   // An assumption tied to a member gate changed nothing where that gate
   // fails anyway (a 40-year-old's senior-deduction check), so disclose it
@@ -1829,8 +1909,10 @@ export async function computeProgram(options: BuildOptions): Promise<ShapedResul
  *  gpt-6-luna headlined the childless $664 as the two-child maximum. The
  *  checks run separately so they can't fail or change the lookup: a gate
  *  whose rules have no parameter value at a historical period fails the
- *  whole engine run. Null when the value counts through no gate, or when
- *  the checked run fails or gives different outputs. */
+ *  whole engine run. A warning that a gate counted none of the listed
+ *  members is confirmed with one more run (confirmCountWarning). Null when
+ *  the value counts through no gate, or when the checked run fails or gives
+ *  different outputs. */
 async function lookupMemberChecks(
   options: BuildOptions,
   built: BuiltRequest,
@@ -1846,12 +1928,49 @@ async function lookupMemberChecks(
     const checkedBuilt = buildRequest({ ...options, memberChecks: [...counted.keys()] });
     const checked = shapeResult(program, checkedBuilt, await runCompiled(program.slug, checkedBuilt.request));
     const values = (r: ShapedResult) => JSON.stringify(r.outputs.map((o) => [o.name, o.value]));
-    if (values(checked) === values(shaped)) return checked;
+    if (values(checked) === values(shaped)) {
+      const confirmed = await Promise.all((pendingCountWarnings.get(checkedBuilt) ?? []).map((w) => confirmCountWarning(options, w)));
+      for (const note of confirmed) if (note) checked.applied.notes.push(note);
+      return checked;
+    }
     console.error("[finbot] lookup member checks changed the outputs; kept the plain lookup:", program.slug, values(shaped), values(checked));
   } catch (err) {
     console.error("[finbot] lookup member checks failed; kept the plain lookup:", err, "program:", program.slug);
   }
   return null;
+}
+
+/** A pending count warning's text, naming the members it would name whose
+ *  gate holds once their unstated facts are set: one more engine run, with
+ *  those facts added to each such member. Its checks list only some of a
+ *  gate's tests where it is `requires_partial`: an 18-year-old who filed a
+ *  joint return of its own fails eitc_qualifying_child on that, a test its
+ *  `requires` leave out, so setting its unstated residence leaves it failing
+ *  and it isn't named. Null when no member holds the gate that way, or the
+ *  run fails. */
+async function confirmCountWarning(options: BuildOptions, warning: PendingCountWarning): Promise<string | null> {
+  const { program } = options;
+  const { gate, candidates } = warning;
+  try {
+    const members = (options.members ?? []).map((spec, index) => {
+      const fills = candidates.find((c) => c.member === index + 1)?.fills;
+      return fills ? { ...spec, facts: { ...(spec.facts ?? {}), ...fills } } : spec;
+    });
+    const built = buildRequest({ ...options, members, memberChecks: [gate.name] });
+    const response = await runCompiled(program.slug, built.request);
+    const holdsAt = (member: number) => {
+      const result = response.results.find((r) => r.entity_id === built.memberCheckIds[member - 1]);
+      const output = result?.outputs?.[queryKey(gate)];
+      return output !== undefined && readOutput(output).outcome === "holds";
+    };
+    const meant = candidates.map((c) => c.member).filter(holdsAt);
+    if (meant.length === 0) return null;
+    const one = meant.length === 1;
+    return `${warning.lead} ${one ? `Member ${meant[0]} fails` : `Members ${meant.join(", ")} fail`} it only on facts no one stated: with the unmet \`requires\`, and one group of each open \`requires_any\` entry, set as member_checks list them, ${one ? "it holds" : "each holds"}. If the user's description says ${one ? "that member" : "one of them"} should count, set those facts on it and look the value up again once; otherwise this value stands.`;
+  } catch (err) {
+    console.error("[finbot] count-warning check failed; left the warning out:", err, "program:", program.slug, "gate:", gate.name);
+    return null;
+  }
 }
 
 /** The trace of member 1's own queries (its member checks, or member-entity
