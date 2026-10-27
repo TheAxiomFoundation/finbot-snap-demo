@@ -335,9 +335,11 @@ export interface BuiltRequest {
   memberChecksScope: "all" | "counted";
   /** Per member instance, in order: the member relations it is linked
    *  through, whether it carries a filer role (RETURN_SCOPED_MEMBER_FACTS;
-   *  null in a program without filer roles), and the member-scope facts set
-   *  on it (its own, the top level's shared ones, and assumed ones); every
-   *  other slot sat at its default. */
+   *  null in a program without filer roles), and the member-scope slots
+   *  stated for it: the facts set on it (its own, the top level's shared
+   *  ones, and assumed ones), and the slots of assumptions its facts kept
+   *  off (a child's SSN stated missing says its TIN isn't on the return);
+   *  every other slot sat at its default. */
   memberLinks: Array<{ relations: string[]; filer: boolean | null; stated: string[] }>;
   applied: {
     period: string;
@@ -918,17 +920,27 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     const withheld = new Map<string, number[]>(); // slot → members it did not reach
     // Facts the user never spoke to are assumed per member (see
     // MEMBER_ASSUMPTIONS) and disclosed in applied.assumed_facts. A related
-    // fact on the member or at the top level keeps an assumption off.
+    // fact keeps an assumption off for a member: its own, or the top level's
+    // where the member doesn't override it (a child whose SSN is stated
+    // included, where the top level said a child's SSN was missing).
     const assumptions = MEMBER_ASSUMPTIONS.filter(
-      (a) => a.applies(program) && memberSlots.some((s) => s.name === a.slot) && !a.stated(facts)
+      (a) => a.applies(program) && memberSlots.some((s) => s.name === a.slot)
     );
-    const applyAssumptions = (memberFacts: Facts, member: number) => {
+    /** Sets the assumptions the member's facts don't speak to, and returns
+     *  the slots of those they do: those slots count as stated. */
+    const applyAssumptions = (memberFacts: Facts, member: number): string[] => {
+      const effective = { ...facts, ...memberFacts };
+      const spokenTo: string[] = [];
       for (const assumption of assumptions) {
-        if (assumption.stated(memberFacts)) continue;
+        if (assumption.stated(effective)) {
+          spokenTo.push(assumption.slot);
+          continue;
+        }
         memberFacts[assumption.slot] = assumption.value;
         if (!assumedMembers.has(assumption)) assumedMembers.set(assumption, []);
         assumedMembers.get(assumption)!.push(member);
       }
+      return spokenTo;
     };
     for (let i = 0; i < memberCount; i++) {
       const memberId = instanceId(memberEntity, i + 1);
@@ -947,7 +959,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         }
       }
       const memberFacts: Facts = { ...base, ...(spec?.facts ?? {}) };
-      applyAssumptions(memberFacts, i + 1);
+      const spokenTo = applyAssumptions(memberFacts, i + 1);
       for (const slot of memberSlots) {
         record(slot, memberEntity, memberId, memberFacts[slot.name]);
       }
@@ -955,7 +967,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       const links = {
         relations: [] as string[],
         filer: filerRoles ? filerRoles.some((role) => memberFacts[role] === true) : null,
-        stated: Object.keys(memberFacts),
+        stated: [...new Set([...Object.keys(memberFacts), ...spokenTo])],
       };
       memberLinks.push(links);
       const wanted = spec?.relations;
@@ -1289,10 +1301,11 @@ interface CountedGate {
    *  member to hold snap_member_ssn_requirement_ineligible), so no member
    *  holding it is the expected case. */
   exclusionary: boolean;
-  /** The outputs among them whose chain counts it as a number of members
-   *  (eitc_child_count), not as a test of the count (`count > 0`): counting
-   *  none of the members gives them a different value rather than failing a
-   *  test that may well pass another way. */
+  /** The outputs among them that read the count as a number of members
+   *  (eitc_maximum, through eitc_child_count), not only as a test of it
+   *  (eitc_demographic_eligible: `eitc_child_count > 0`): counting none of
+   *  the members gives them a different value rather than failing a test
+   *  that may well pass another way. */
   quantityOutputs: string[];
 }
 
@@ -1341,7 +1354,9 @@ function countedGates(
         for (const { relation, aggregation } of edges) {
           if (!entry.relations.includes(relation)) entry.relations.push(relation);
           if (aggregation.exclusionary_gates?.includes(gate)) entry.exclusionary = true;
-          if (aggregation.quantity_gates?.includes(gate) && !entry.quantityOutputs.includes(output.name)) {
+          const readsNumber =
+            aggregation.rule === output.name || aggregation.quantity_readers?.includes(output.name);
+          if (aggregation.quantity_gates?.includes(gate) && readsNumber && !entry.quantityOutputs.includes(output.name)) {
             entry.quantityOutputs.push(output.name);
           }
         }
@@ -1483,8 +1498,7 @@ export function shapeResult(
     if (!output.requires_any) return [];
     const holding = new Set(Object.values(scopeTrace).filter((n) => n.outcome === "holds").map((n) => n.name));
     return output.requires_any
-      .filter((alt) => !holding.has(alt.rule) && !alt.any_of.some((group) => group.every((req) => meets(entityId, req, scopeTrace))))
-      .slice(0, OPEN_ALTERNATIVES_CAP);
+      .filter((alt) => !holding.has(alt.rule) && !alt.any_of.some((group) => group.every((req) => meets(entityId, req, scopeTrace))));
   };
   const mainEntityOf = new Map<string, string>();
   for (const query of built.request.queries) {
@@ -1528,7 +1542,7 @@ export function shapeResult(
     const failedBecause = failedJudgment
       ? failingSubJudgments(scopeTrace, queryKey(output), output.name, (name) => outputByName.get(name)?.negated_judgments)
       : [];
-    const open = failedJudgment ? openAlternatives(output, entityId, scopeTrace) : [];
+    const open = failedJudgment ? openAlternatives(output, entityId, scopeTrace).slice(0, OPEN_ALTERNATIVES_CAP) : [];
     // Name only the requirements this entity's own inputs fail. us-fiit's
     // 24(h)(7) test reads the taxpayer/spouse SSN facts on each child's
     // record; gpt-6-luna set them on the parents, saw all five SSN facts it
@@ -1593,38 +1607,65 @@ export function shapeResult(
   // that hold the gate. Two ways it can leave out a member the user meant. A
   // member holds the gate but isn't linked through that relation (a child
   // listed under dependent_of_tax_unit only): flagged on computes and
-  // lookups alike. Or a count of members counted none of them (the childless
-  // $664 EITC maximum for a taxpayer and two children whose qualifying-child
+  // lookups alike. Or the gate holds for none of them (the childless $664
+  // EITC maximum for a taxpayer and two children whose qualifying-child
   // facts were incomplete): flagged on lookups, whose member_checks used to
   // show nothing (computes have always shown them), and only where that can
   // be what went wrong:
-  //  - the output reads the count as a number (eitc_child_count), not as a
-  //    test (`count > 0`) that another path can pass;
-  //  - no gate the output counts that way holds for a linked member (two
-  //    qualifying children counted for the CTC, though no member is an other
-  //    dependent);
-  //  - a linked member fails the gate only on facts no one stated: each unmet
-  //    `requires` entry names a slot left at its default. A member failing on
-  //    a stated fact (a 10-year-old's age for the senior deduction, a TIN
-  //    stated missing) wasn't meant to count. Filers are never named: the
-  //    counts such lookups ask about (qualifying children, dependents) leave
-  //    them out by definition.
+  //  - the output reads the count as a number (eitc_maximum, through
+  //    eitc_child_count), not only as a test (eitc_demographic_eligible:
+  //    `eitc_child_count > 0`) that another path can pass;
+  //  - the gate holds for no linked member. This goes gate by gate: two
+  //    children who fail ctc_qualifying_child_under_subsection_h because the
+  //    parents' SSN facts sit on the taxpayer's record alone still count as
+  //    other dependents, and the lower maximum that gives is flagged all the
+  //    same;
+  //  - a linked member plausibly should have held it (plausiblyMeant): none
+  //    of its failures is on a slot stated for it, and one is on a slot no
+  //    one stated. A 10-year-old fails the senior deduction on a stated age,
+  //    a child whose SSN is stated missing fails the EITC on that.
+  // Filers are named only for a gate whose requirements name a filer role
+  // (senior_deduction_qualified_individual: the taxpayer, or the spouse on a
+  // joint return), where the roles decide. The other us-fiit gates are the
+  // qualifying-child and dependent tests, which a filer failing is expected
+  // (no one is a qualifying child or dependent on their own return), and
+  // exemption_individual_eligible, which filers do hold: a filer who fails
+  // it on an unstated TIN goes unnamed.
   // An exclusionary gate held by no one is the expected case.
   const memberNumbers = built.memberCheckIds.map((_, index) => index + 1);
   const holds = (gate: string, member: number) => heldAt.has(`${gate}|${member}`);
   const linkedThrough = (relations: string[]) =>
     memberNumbers.filter((m) => built.memberLinks[m - 1]?.relations.some((r) => relations.includes(r)));
-  const countedSomeone = new Set<string>();
-  for (const [gate, entry] of counted) {
-    if (linkedThrough(entry.relations).some((m) => holds(gate, m))) {
-      for (const output of entry.quantityOutputs) countedSomeone.add(output);
-    }
-  }
-  const topLevelStated = Object.keys(built.applied.facts_applied);
-  const failsOnlyOnUnstated = (gateIndex: number, member: number): boolean => {
-    const stated = new Set([...topLevelStated, ...(built.memberLinks[member - 1]?.stated ?? [])]);
-    const unmet = (checksAt[member - 1]?.[gateIndex]?.requires ?? []).filter((req) => !req.computed);
-    return unmet.length > 0 && unmet.every((req) => !stated.has(req.slot));
+  const filerRoles = RETURN_SCOPED_MEMBER_FACTS[program.slug]?.filerRoles ?? [];
+  // Once any member carries a filer role, the others' roles are stated too:
+  // they aren't filers.
+  const rolesStated = built.memberLinks.some((link) => link.filer === true);
+  const namesFilerRole = (gate: CatalogOutput) =>
+    [...(gate.requires ?? []), ...(gate.requires_any ?? []).flatMap((alt) => alt.any_of.flat())].some((req) =>
+      filerRoles.includes(req.slot)
+    );
+  /** Whether linked member `member` plausibly should hold `gate`, which it
+   *  fails: no requirement it fails is on a slot stated for it, and one is
+   *  on a slot no one stated. Its failures are the unmet core `requires`
+   *  and each open `requires_any` alternative. An alternative fails on a
+   *  stated slot when every one of its groups does, and on an unstated slot
+   *  when one group that doesn't fails on one. Computed requirements are
+   *  left out: no one states them. */
+  const plausiblyMeant = (gate: CatalogOutput, gateIndex: number, member: number): boolean => {
+    const id = built.memberCheckIds[member - 1];
+    const scopeTrace = perMember.get(id)?.trace ?? {};
+    const stated = new Set([...(built.memberLinks[member - 1]?.stated ?? []), ...(rolesStated ? filerRoles : [])]);
+    const onStated = (unmet: Requirement[]) => unmet.some((req) => stated.has(req.slot));
+    const core = (checksAt[member - 1]?.[gateIndex]?.requires ?? []).filter((req) => !req.computed);
+    const alternatives = openAlternatives(gate, id, scopeTrace).map((alt) =>
+      alt.any_of.map((group) => group.filter((req) => !req.computed && !meets(id, req, scopeTrace)))
+    );
+    const failsOnStated =
+      onStated(core) || alternatives.some((groups) => groups.length > 0 && groups.every(onStated));
+    const failsOnUnstated =
+      core.some((req) => !stated.has(req.slot)) ||
+      alternatives.some((groups) => groups.some((unmet) => unmet.length > 0 && !onStated(unmet)));
+    return !failsOnStated && failsOnUnstated;
   };
   const again = lookup ? "look the value up again once" : "compute again once";
   shownGates.forEach((gate, gateIndex) => {
@@ -1641,13 +1682,19 @@ export function shapeResult(
       );
       return;
     }
-    if (!lookup) return;
-    const uncounted = entry.quantityOutputs.filter((output) => !countedSomeone.has(output));
-    const meant = linked.filter((m) => built.memberLinks[m - 1]?.filer !== true && failsOnlyOnUnstated(gateIndex, m));
-    if (uncounted.length === 0 || meant.length === 0) return;
+    if (!lookup || entry.quantityOutputs.length === 0 || linked.some((m) => holds(gate.name, m))) return;
+    const filersCount = namesFilerRole(gate);
+    const meant = linked.filter(
+      (m) => (filersCount || built.memberLinks[m - 1]?.filer !== true) && plausiblyMeant(gate, gateIndex, m)
+    );
+    if (meant.length === 0) return;
+    const quantity = entry.quantityOutputs;
+    const none = linked.length === 1
+      ? `which doesn't hold for the one listed member linked through ${through}, so that member didn't count through it`
+      : `which holds for none of the ${linked.length} listed members linked through ${through}, so none of them counted through it`;
     const one = meant.length === 1;
     built.applied.notes.push(
-      `WARNING: ${uncounted.join(", ")} ${uncounted.length === 1 ? "counts" : "count"} members through ${gate.name}, which holds for none of the ${linked.length} listed members linked through ${through}, so none of them counted. ${one ? `Member ${meant[0]} fails` : `Members ${meant.join(", ")} fail`} it only on facts no one stated (the \`requires\` in member_checks). If the user's description says ${one ? "that member" : "one of them"} should count, set those facts on it and look the value up again once; otherwise this value stands.`
+      `WARNING: ${quantity.join(", ")} ${quantity.length === 1 ? "counts" : "count"} members through ${gate.name}, ${none}. ${one ? `Member ${meant[0]} fails` : `Members ${meant.join(", ")} fail`} it only on facts no one stated (its \`requires\` and \`requires_any\` in member_checks). If the user's description says ${one ? "that member" : "one of them"} should count, set those facts on it and look the value up again once; otherwise this value stands.`
     );
   });
 

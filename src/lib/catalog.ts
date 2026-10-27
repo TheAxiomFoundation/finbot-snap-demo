@@ -148,9 +148,14 @@ export interface CatalogAggregation {
    *  `not`): no member holding one is the expected case. */
   exclusionary_gates?: string[];
   /** Gates the rule counts as a number of members rather than testing the
-   *  count (`> 0`, `== 0`, all-of): counting none of them gives a different
-   *  value, not a failed test. */
+   *  count (`> 0`, `== 0`, all-of): counting none of them gives the rule a
+   *  different value, not a failed test. */
   quantity_gates?: string[];
+  /** With quantity_gates: the rules that read this rule's value as a number,
+   *  directly or through other rules that do (eitc_maximum, through
+   *  eitc_capped_child_count). A rule that only compares it
+   *  (eitc_demographic_eligible) isn't one. */
+  quantity_readers?: string[];
 }
 
 export interface CatalogProgram {

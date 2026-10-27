@@ -176,8 +176,13 @@ interface CatalogAggregation {
   /** Gates the rule counts as a number of members (multiplied, subtracted,
    *  capped, or the rule's own value) rather than testing the count
    *  (`> 0`, `== 0`, all-of `count(where) == count()`): counting none of
-   *  them gives a different value, not a failed test. */
+   *  them gives the rule a different value, not a failed test. */
   quantity_gates?: string[];
+  /** With quantity_gates: the rules that read this rule's value as a number,
+   *  directly or through other rules that do (eitc_maximum, through
+   *  eitc_capped_child_count). A rule that only compares it
+   *  (eitc_demographic_eligible: `eitc_child_count > 0`) isn't one. */
+  quantity_readers?: string[];
 }
 
 interface CatalogProgram {
@@ -665,38 +670,83 @@ function analyzeProgram(
     });
     return found;
   };
-  // Rules some other rule reads outside a comparison: their value is used as
-  // a number, not only tested.
-  const referenced = new Set<string>();
-  const usedAsValue = new Set<string>();
-  const visitUses = (n: unknown, compared: boolean) => {
-    if (Array.isArray(n)) { n.forEach((item) => visitUses(item, compared)); return; }
+  const isJudgmentRule = (rule: DerivedRule | undefined) => rule?.semantics === "judgment" || rule?.dtype === "judgment";
+  /** Whether a comparison reads `side` as a number. It tests it instead when
+   *  the other side is a zero or a one in a test for zero or for any
+   *  (`count > 0`, `count == 0`, `count >= 1`), or is another aggregator
+   *  (all-of `count(where) == count()`). Any other literal or value reads it
+   *  as a number: eitc_maximum picks its amount by
+   *  `eitc_capped_child_count == 1`, `== 2`. So does a side nested in
+   *  arithmetic. */
+  const comparisonReadsAsNumber = (cmp: IRNode, side: unknown): boolean => {
+    if (side !== cmp.left && side !== cmp.right) return true;
+    const onLeft = side === cmp.left;
+    const other = onLeft ? cmp.right : cmp.left;
+    const value = numeric(other);
+    if (value !== undefined) {
+      const op = cmp.op as string;
+      const zeroOps = onLeft ? ["eq", "ne", "lte", "gt"] : ["eq", "ne", "gte", "lt"];
+      const oneOps = onLeft ? ["lt", "gte"] : ["gt", "lte"];
+      return !((value === 0 && zeroOps.includes(op)) || (value === 1 && oneOps.includes(op)));
+    }
+    return !isAggregator(other as IRNode);
+  };
+  /** Walk `n` with the nearest comparison above each node, calling `onRead`
+   *  for each derived ref and aggregator with whether that read is a number. */
+  const visitReads = (
+    n: unknown,
+    cmp: IRNode | null,
+    onRead: (node: IRNode, asNumber: boolean) => void
+  ) => {
+    if (Array.isArray(n)) { n.forEach((item) => visitReads(item, cmp, onRead)); return; }
     if (n === null || typeof n !== "object") return;
     const obj = n as IRNode;
-    if (obj.kind === "derived" && typeof obj.name === "string") {
-      referenced.add(obj.name);
-      if (!compared) usedAsValue.add(obj.name);
+    const aggregator = isAggregator(obj);
+    if (aggregator || (obj.kind === "derived" && typeof obj.name === "string")) {
+      onRead(obj, cmp === null || comparisonReadsAsNumber(cmp, obj));
+      if (aggregator) return;
     }
-    for (const value of Object.values(obj)) visitUses(value, compared || obj.kind === "comparison");
+    for (const value of Object.values(obj)) visitReads(value, obj.kind === "comparison" ? obj : cmp, onRead);
   };
-  for (const rule of rules) visitUses(ruleExpressions(rule), false);
-  /** Aggregator nodes of one rule read as a number of members: not under a
-   *  comparison in the rule, or the rule's whole value and read outside a
-   *  comparison wherever another rule reads it (eitc_child_count, capped by
-   *  eitc_capped_child_count). */
+  // Rule name → the scalar rules that read its value as a number. A
+  // judgment's value is holds or not, never a number of members.
+  // eitc_capped_child_count reads eitc_child_count as a number;
+  // eitc_demographic_eligible only tests it.
+  const valueReaders = new Map<string, Set<string>>();
+  for (const rule of rules) {
+    if (isJudgmentRule(rule)) continue;
+    visitReads(ruleExpressions(rule), null, (node, asNumber) => {
+      if (node.kind !== "derived" || !asNumber) return;
+      const name = node.name as string;
+      if (!valueReaders.has(name)) valueReaders.set(name, new Set());
+      valueReaders.get(name)!.add(rule.name);
+    });
+  }
+  /** The rules that read `name`'s value as a number, directly or through
+   *  other rules that do. */
+  const numericReaders = (name: string): string[] => {
+    const reached = new Set<string>();
+    const queue = [name];
+    while (queue.length) {
+      for (const reader of valueReaders.get(queue.shift()!) ?? []) {
+        if (reader === name || reached.has(reader)) continue;
+        reached.add(reader);
+        queue.push(reader);
+      }
+    }
+    return [...reached].sort();
+  };
+  /** Aggregator nodes of one scalar rule that its value uses as a number of
+   *  members: the rule's whole value, multiplied, subtracted, capped, or
+   *  compared other than as a test (see comparisonReadsAsNumber). Whether
+   *  an output uses that number in turn is the aggregation's
+   *  `quantity_readers`. */
   const quantityAggregators = (rule: DerivedRule): Set<IRNode> => {
     const found = new Set<IRNode>();
-    const visit = (n: unknown, compared: boolean, root: boolean) => {
-      if (Array.isArray(n)) { n.forEach((item) => visit(item, compared, false)); return; }
-      if (n === null || typeof n !== "object") return;
-      const obj = n as IRNode;
-      if (isAggregator(obj)) {
-        if (root ? !referenced.has(rule.name) || usedAsValue.has(rule.name) : !compared) found.add(obj);
-        return;
-      }
-      for (const value of Object.values(obj)) visit(value, compared || obj.kind === "comparison", false);
-    };
-    for (const expr of ruleExpressions(rule)) visit(expr, false, true);
+    if (isJudgmentRule(rule)) return found;
+    visitReads(ruleExpressions(rule), null, (node, asNumber) => {
+      if (isAggregator(node) && asNumber) found.add(node);
+    });
     return found;
   };
   const aggregatorRefs = (node: unknown): Array<{ kind: string; name: string; negated: boolean }> => {
@@ -737,7 +787,7 @@ function analyzeProgram(
           if (ref.kind === "input") relationBodyInputs.get(relation)!.add(ref.name);
           if (ref.kind === "derived") {
             const target = ruleByName.get(ref.name);
-            if (target && (target.semantics === "judgment" || target.dtype === "judgment")) {
+            if (isJudgmentRule(target)) {
               relationGateJudgments.get(relation)!.add(ref.name);
               if (!aggregations.has(rule.name)) {
                 aggregations.set(rule.name, { gates: new Set(), exclusionary: new Set(), quantity: new Set() });
@@ -858,7 +908,7 @@ function analyzeProgram(
         rule,
         gates: sorted(read),
         ...(exclusionary.size > 0 && { exclusionary_gates: sorted(exclusionary) }),
-        ...(quantity.size > 0 && { quantity_gates: sorted(quantity) }),
+        ...(quantity.size > 0 && { quantity_gates: sorted(quantity), quantity_readers: numericReaders(rule) }),
       }));
     return {
       name: rel.name,

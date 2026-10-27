@@ -71300,6 +71300,12 @@
        ],
        "quantity_gates": [
         "ctc_other_dependent_under_subsection_h"
+       ],
+       "quantity_readers": [
+        "ctc_after_advance_payments",
+        "ctc_before_advance_payments",
+        "ctc_maximum_before_phase_out_under_subsection_h",
+        "ctc_maximum_before_phaseout"
        ]
       },
       {
@@ -71309,6 +71315,13 @@
        ],
        "quantity_gates": [
         "ctc_qualifying_child_under_subsection_h"
+       ],
+       "quantity_readers": [
+        "ctc_after_advance_payments",
+        "ctc_before_advance_payments",
+        "ctc_maximum_before_phase_out_under_subsection_h",
+        "ctc_maximum_before_phaseout",
+        "ctc_refundable_maximum_under_subsection_h"
        ]
       }
      ]
@@ -71330,6 +71343,11 @@
        ],
        "quantity_gates": [
         "ctc_qualifying_child"
+       ],
+       "quantity_readers": [
+        "ctc_after_advance_payments",
+        "ctc_before_advance_payments",
+        "ctc_maximum_before_phaseout"
        ]
       }
      ]
@@ -71351,6 +71369,25 @@
        ],
        "quantity_gates": [
         "exemption_individual_eligible"
+       ],
+       "quantity_readers": [
+        "alternative_minimum_tax",
+        "amt_base_tax",
+        "amt_exemption",
+        "amt_exemption_before_kiddie_tax_limit",
+        "amt_exemption_phaseout",
+        "amt_higher_base_tax",
+        "amt_income",
+        "amt_income_for_exemption_offset",
+        "amt_income_less_exemptions",
+        "amt_lower_base_tax",
+        "amt_separate_addition",
+        "amt_tax_before_foreign_tax_credit",
+        "income_tax_before_credits",
+        "income_tax_before_refundable_credits",
+        "income_tax_capped_non_refundable_credits",
+        "income_tax_unavailable_non_refundable_credits",
+        "tentative_minimum_tax_after_amtftc"
        ]
       }
      ]
@@ -71372,6 +71409,25 @@
        ],
        "quantity_gates": [
         "senior_deduction_qualified_individual"
+       ],
+       "quantity_readers": [
+        "alternative_minimum_tax",
+        "amt_base_tax",
+        "amt_exemption",
+        "amt_exemption_before_kiddie_tax_limit",
+        "amt_exemption_phaseout",
+        "amt_higher_base_tax",
+        "amt_income",
+        "amt_income_for_exemption_offset",
+        "amt_income_less_exemptions",
+        "amt_lower_base_tax",
+        "amt_separate_addition",
+        "amt_tax_before_foreign_tax_credit",
+        "income_tax_before_credits",
+        "income_tax_before_refundable_credits",
+        "income_tax_capped_non_refundable_credits",
+        "income_tax_unavailable_non_refundable_credits",
+        "tentative_minimum_tax_after_amtftc"
        ]
       }
      ]
@@ -71411,6 +71467,18 @@
        ],
        "quantity_gates": [
         "eitc_qualifying_child"
+       ],
+       "quantity_readers": [
+        "eitc",
+        "eitc_before_eligibility",
+        "eitc_capped_child_count",
+        "eitc_earned_income_amount",
+        "eitc_maximum",
+        "eitc_phase_in_rate",
+        "eitc_phase_out_rate",
+        "eitc_phase_out_start",
+        "eitc_phased_in",
+        "eitc_reduction"
        ]
       }
      ]

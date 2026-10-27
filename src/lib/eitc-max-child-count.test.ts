@@ -88,14 +88,30 @@ const maximumFor = (children: number) => MAXIMUM[Math.min(children, 3)];
 
 const taxpayer: MemberSpec = { facts: { is_taxpayer: true, age: 40, individual_age_at_close_of_calendar_year: 40 } };
 const spouse: MemberSpec = { facts: { is_spouse_of_taxpayer: true, age: 40, individual_age_at_close_of_calendar_year: 40 } };
-/** A child who meets every eitc_qualifying_child test except, maybe, the TIN;
- *  or, `ageOnly`, a child described by age alone (the probe's first lookup). */
-const child = (tin?: boolean, ageOnly = false): MemberSpec => ({
-  facts: {
-    ...(ageOnly ? { age: 10, individual_age_at_close_of_calendar_year: 10 } : probeChild.facts),
-    ...(tin !== undefined && { [TIN]: tin }),
-  },
-});
+type Relationship = "stated" | "unstated" | "denied";
+/** A child who meets every eitc_qualifying_child test except, maybe, the TIN
+ *  and the relationship (unstated, or denied: neither the taxpayer's child
+ *  nor a sibling); or, `ageOnly`, a child described by age alone (the
+ *  probe's first lookup). */
+const child = (tin?: boolean, ageOnly = false, relationship: Relationship = "stated"): MemberSpec => {
+  const { individual_is_child_of_taxpayer_or_descendant_of_such_child: _, ...rest } = probeChild.facts!;
+  const full =
+    relationship === "stated"
+      ? probeChild.facts
+      : relationship === "unstated"
+        ? rest
+        : {
+            ...rest,
+            individual_is_child_of_taxpayer_or_descendant_of_such_child: false,
+            individual_is_sibling_stepsibling_or_descendant_of_such_relative: false,
+          };
+  return {
+    facts: {
+      ...(ageOnly ? { age: 10, individual_age_at_close_of_calendar_year: 10 } : full),
+      ...(tin !== undefined && { [TIN]: tin }),
+    },
+  };
+};
 /** A child who also meets the CTC's tests. */
 const ctcChild: MemberSpec = {
   facts: {
@@ -158,6 +174,40 @@ describe("the child-TIN assumption", () => {
       members: [taxpayer, child(), child()],
     });
     expect(topLevel.applied.assumed_facts?.find((a) => a.slot === TIN)).toBeUndefined();
+  });
+
+  // Review r3: a shared child-SSN fact stated false at the top level kept
+  // the assumption off for every child, even one whose own facts said its
+  // SSN is on the return (maximum $664 instead of $4,427).
+  it("follows a member's own identification facts over the top level's", () => {
+    const { qualifying_child_ssn_included_on_return: _, ...silent } = probeChild.facts!;
+    const included: MemberSpec = { facts: { ...silent, qualifying_child_ssn_included_on_return: true } };
+    const shared: Facts[] = [
+      { qualifying_child_ssn_included_on_return: false },
+      { ctc_child_missing_identification: true },
+    ];
+    for (const facts of shared) {
+      const own: MemberSpec = Object.keys(facts).includes("ctc_child_missing_identification")
+        ? { facts: { ...silent, ctc_child_missing_identification: false } }
+        : included;
+      // Member 3 says nothing of its own, so the top level's fact holds.
+      const built = buildRequest({ program: fiit, period: "2026", facts, members: [taxpayer, own, { facts: silent }] });
+      expect(tinRecords(built, "person:2").every((i) => i.value.value === true)).toBe(true);
+      expect(tinRecords(built, "person:3").every((i) => i.value.value === false)).toBe(true);
+      expect(built.applied.assumed_facts?.find((a) => a.slot === TIN)?.members).toEqual([2]);
+    }
+  });
+
+  // Review r3: a child whose SSN was stated missing was told it failed the
+  // EITC gate "only on facts no one stated" and to set the TIN. A fact that
+  // keeps an assumption off speaks to its slot, so the slot counts as stated.
+  it("counts an assumption's slot as stated where the member's facts kept it off", () => {
+    const noSsn: MemberSpec = { facts: { ...probeChild.facts, qualifying_child_ssn_included_on_return: false } };
+    const built = buildRequest({ program: fiit, period: "2026", members: [taxpayer, noSsn, child()] });
+    expect(built.memberLinks[1].stated).toContain(TIN);
+    expect(tinRecords(built, "person:2").every((i) => i.value.value === false)).toBe(true);
+    // Assumed slots count as stated too: they were set.
+    expect(built.memberLinks[2].stated).toContain(TIN);
   });
 
   it("ignores the parents' own SSN facts", () => {
@@ -239,8 +289,25 @@ describe("relation aggregations in the catalog", () => {
   it("lists eitc_child_count as counting eitc_qualifying_child as a number, positively", () => {
     expect(relation("us-fiit", EITC_RELATION).gate_judgments).toEqual([GATE]);
     expect(relation("us-fiit", EITC_RELATION).aggregations).toEqual([
-      { rule: "eitc_child_count", gates: [GATE], quantity_gates: [GATE] },
+      { rule: "eitc_child_count", gates: [GATE], quantity_gates: [GATE], quantity_readers: expect.any(Array) },
     ]);
+  });
+
+  // Review r3: eitc_demographic_eligible only tests `eitc_child_count > 0`,
+  // yet warned for a single filer and a listed parent because another output
+  // reads the count as a number. eitc_maximum reads it through
+  // eitc_capped_child_count, picking its amount by `== 0`, `== 1`, `== 2`.
+  it("records which outputs read eitc_child_count as a number", () => {
+    const readers = aggregation("us-fiit", "eitc_child_count").quantity_readers!;
+    expect(readers).toEqual(
+      expect.arrayContaining(["eitc", "eitc_capped_child_count", "eitc_maximum", "eitc_phase_in_rate", "eitc_phase_out_start"])
+    );
+    expect(readers).not.toContain("eitc_child_count");
+    expect(readers).not.toContain("eitc_demographic_eligible");
+    expect(readers).not.toContain(GATE);
+    expect(aggregation("us-fiit", "ctc_qualifying_children_under_subsection_h").quantity_readers).toContain(
+      "ctc_maximum_before_phaseout"
+    );
   });
 
   it("marks the gates SNAP rules test for zero as exclusionary, per rule", () => {
@@ -277,6 +344,14 @@ describe("relation aggregations in the catalog", () => {
           expect(a.gates.length).toBeGreaterThan(0);
           for (const gate of a.gates) expect(r.gate_judgments).toContain(gate);
           for (const gate of [...(a.exclusionary_gates ?? []), ...(a.quantity_gates ?? [])]) expect(a.gates).toContain(gate);
+          // Readers come with quantity gates only, and are scalar rules of
+          // the same program: a judgment holds or not, never a number.
+          expect(a.quantity_readers !== undefined).toBe(a.quantity_gates !== undefined);
+          for (const reader of a.quantity_readers ?? []) {
+            expect(reader).not.toBe(a.rule);
+            const output = program.outputs.find((o) => o.name === reader);
+            if (output) expect(output.semantics).not.toBe("judgment");
+          }
         }
       }
     }
@@ -321,7 +396,7 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
     ]);
     // The taxpayer is a filer, so only the children were plausibly meant.
     expect(result.applied.notes).toContainEqual(
-      expect.stringMatching(/^WARNING: eitc_maximum counts members through eitc_qualifying_child, which holds for none of the 3 listed members linked through qualifying_child_of_tax_unit, so none of them counted\. Members 2, 3 fail it only on facts no one stated .* look the value up again once; otherwise this value stands\.$/)
+      expect.stringMatching(/^WARNING: eitc_maximum counts members through eitc_qualifying_child, which holds for none of the 3 listed members linked through qualifying_child_of_tax_unit, so none of them counted through it\. Members 2, 3 fail it only on facts no one stated .* look the value up again once; otherwise this value stands\.$/)
     );
   }, 30_000);
 
@@ -335,7 +410,7 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
       outputsOverride: ["eitc_maximum"],
     });
     expect(numericOutput(result, "eitc_maximum")).toBe(664);
-    expect(result.applied.notes).toContainEqual(expect.stringMatching(/ so none of them counted\. Member 1 fails it only on facts no one stated /));
+    expect(result.applied.notes).toContainEqual(expect.stringMatching(/, which doesn't hold for the one listed member linked through qualifying_child_of_tax_unit, so that member didn't count through it\. Member 1 fails it only on facts no one stated /));
   }, 30_000);
 
   it("gives the childless maximum to a filer alone, with no warning and no TIN disclosure", async () => {
@@ -407,8 +482,8 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
     expect(numericOutput(ctc, "ctc_maximum_before_phaseout")).toBe(4400);
     expect(memberCheck(ctc, 3, "ctc_other_dependent_under_subsection_h").value).toBe("not_holds");
     expect(ctc.applied.notes.filter(isMemberCountWarning)).toEqual([]);
-    // The children fail senior_deduction_qualified_individual on their stated
-    // age; the filers are never plausibly left out of a count.
+    // Everyone fails senior_deduction_qualified_individual on a stated age;
+    // the children also fail its filer-role alternatives.
     const senior = await computeProgram({ ...family, outputsOverride: ["senior_deduction"] });
     expect(numericOutput(senior, "senior_deduction")).toBe(0);
     expect(senior.applied.notes.filter(isMemberCountWarning)).toEqual([]);
@@ -478,21 +553,163 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
     expect(result.member_checks).toBeUndefined();
   }, 30_000);
 
-  // Invariants, for any number of children (0–5), each described in full or
-  // by age alone, with the TIN unstated, stated true or stated false, and
-  // linked through every member relation or through dependent_of_tax_unit
-  // only:
+  // Review r3, finding 1: two children who fail
+  // ctc_qualifying_child_under_subsection_h because the parents' SSN facts
+  // sat on the taxpayer's record only still count as other dependents, so
+  // the maximum came out $1,000 instead of $4,400, with no warning: some
+  // gate of the output had counted someone.
+  it("names children demoted to other dependents on facts no one stated on them", async () => {
+    const parentSsn = { taxpayer_or_spouse_ssn_included_on_return: true, taxpayer_or_spouse_ssn_is_valid_for_subsection_h: true };
+    const lookup = (facts: Facts, first: MemberSpec) =>
+      computeProgram({
+        program: fiit,
+        period: "2026",
+        facts: { filing_status: 1, ...facts },
+        members: [first, spouse, ctcChild, ctcChild],
+        outputsOverride: ["ctc_maximum_before_phaseout"],
+      });
+    const demoted = await lookup({}, { facts: { ...taxpayer.facts, ...parentSsn } });
+    expect(numericOutput(demoted, "ctc_maximum_before_phaseout")).toBe(1000);
+    expect(memberCheck(demoted, 3, "ctc_other_dependent_under_subsection_h").value).toBe("holds");
+    expect(demoted.applied.notes.filter(isMemberCountWarning)).toEqual([
+      expect.stringMatching(
+        /^WARNING: ctc_maximum_before_phaseout counts members through ctc_qualifying_child_under_subsection_h, which holds for none of the 4 listed members linked through dependent_of_tax_unit, so none of them counted through it\. Members 3, 4 fail it only on facts no one stated /
+      ),
+    ]);
+    const shared = await lookup(parentSsn, taxpayer);
+    expect(numericOutput(shared, "ctc_maximum_before_phaseout")).toBe(4400);
+    expect(shared.applied.notes.filter(isMemberCountWarning)).toEqual([]);
+  }, 60_000);
+
+  // Review r3, finding 2: a child who meets every core test but has no
+  // relationship stated fails only a `requires_any` alternative, and went
+  // unflagged. A child stated to be neither a child nor a sibling of the
+  // taxpayer fails on stated facts and stays quiet, even with its residence
+  // left unstated.
+  it("weighs the requires_any alternatives a member fails", async () => {
+    const { individual_is_child_of_taxpayer_or_descendant_of_such_child: _, ...noRelationship } = probeChild.facts!;
+    const lookup = (facts: Facts) =>
+      computeProgram({
+        program: fiit,
+        period: "2026",
+        facts: { filing_status: 3 },
+        members: [taxpayer, { facts }],
+        outputsOverride: ["eitc_maximum"],
+      });
+    const unstated = await lookup(noRelationship);
+    expect(numericOutput(unstated, "eitc_maximum")).toBe(664);
+    expect(unstated.applied.notes.filter(isMemberCountWarning)).toEqual([
+      expect.stringMatching(/ so none of them counted through it\. Member 2 fails it only on facts no one stated /),
+    ]);
+    const neither = await lookup({
+      age: 10,
+      individual_age_at_close_of_calendar_year: 10,
+      individual_is_younger_than_taxpayer: true,
+      individual_is_child_of_taxpayer_or_descendant_of_such_child: false,
+      individual_is_sibling_stepsibling_or_descendant_of_such_relative: false,
+    });
+    expect(numericOutput(neither, "eitc_maximum")).toBe(664);
+    expect(neither.applied.notes.filter(isMemberCountWarning)).toEqual([]);
+    const tooOld = await lookup({
+      age: 30,
+      individual_age_at_close_of_calendar_year: 30,
+      individual_is_child_of_taxpayer_or_descendant_of_such_child: true,
+      individual_is_permanently_and_totally_disabled: false,
+    });
+    expect(numericOutput(tooOld, "eitc_maximum")).toBe(664);
+    expect(tooOld.applied.notes.filter(isMemberCountWarning)).toEqual([]);
+  }, 60_000);
+
+  // Review r3, finding 3: a fully described child whose SSN, name or TIN
+  // timing is stated missing is rightly left out, and was then told to set
+  // the TIN its own facts had ruled out.
+  it("doesn't name a child whose identification is stated missing", async () => {
+    const statements: Facts[] = [
+      { qualifying_child_ssn_included_on_return: false },
+      { qualifying_child_name_included_on_return: false },
+      { qualifying_child_tin_issued_on_or_before_return_due_date: false },
+      { ctc_child_missing_identification: true },
+      { [TIN]: false },
+    ];
+    for (const missing of statements) {
+      const result = await computeProgram({
+        program: fiit,
+        period: "2026",
+        facts: { filing_status: 3 },
+        members: [taxpayer, { facts: { ...probeChild.facts, ...missing } }],
+        outputsOverride: ["eitc_maximum"],
+      });
+      expect([missing, numericOutput(result, "eitc_maximum")]).toEqual([missing, 664]);
+      expect([missing, result.applied.notes.filter(isMemberCountWarning)]).toEqual([missing, []]);
+    }
+  }, 60_000);
+
+  // Review r3, finding 4: eitc_demographic_eligible only tests
+  // `eitc_child_count > 0`, and passes for a childless filer, yet warned for
+  // a single filer of 40 with a listed parent of 70. eitc_maximum reads the
+  // count as a number and still names the parent: the model is told to keep
+  // the value unless the user's description puts that member in the count.
+  it("warns only on outputs that read the count as a number", async () => {
+    const lookup = (output: string) =>
+      computeProgram({
+        program: fiit,
+        period: "2026",
+        facts: { filing_status: 3 },
+        members: [
+          { facts: { is_taxpayer: true, age: 40, individual_age_at_close_of_calendar_year: 40 } },
+          { facts: { age: 70, individual_age_at_close_of_calendar_year: 70 } },
+        ],
+        outputsOverride: [output],
+      });
+    const demographic = await lookup("eitc_demographic_eligible");
+    expect(demographic.applied.notes.filter(isMemberCountWarning)).toEqual([]);
+    const maximum = await lookup("eitc_maximum");
+    expect(numericOutput(maximum, "eitc_maximum")).toBe(664);
+    expect(maximum.applied.notes.filter(isMemberCountWarning)).toEqual([
+      expect.stringMatching(/ Member 2 fails it only on facts no one stated .* otherwise this value stands\.$/),
+    ]);
+  }, 60_000);
+
+  // Review r3, finding 6: a taxpayer of 70 described only by
+  // individual_age_at_close_of_calendar_year (the senior test reads `age`)
+  // lost the $6,000 deduction silently, because filers were never named.
+  // The senior gate's requirements name the filer roles, so there they
+  // decide: the taxpayer is named, the children fail the roles.
+  it("names a filer for the senior deduction, whose gate the filer roles decide", async () => {
+    const lookup = (members: MemberSpec[], facts: Facts = { filing_status: 3 }) =>
+      computeProgram({ program: fiit, period: "2026", facts, members, outputsOverride: ["senior_deduction"] });
+    const ageAtClose = await lookup([{ facts: { is_taxpayer: true, individual_age_at_close_of_calendar_year: 70 } }]);
+    expect(numericOutput(ageAtClose, "senior_deduction")).toBe(0);
+    expect(ageAtClose.applied.notes.filter(isMemberCountWarning)).toEqual([
+      expect.stringMatching(/^WARNING: senior_deduction counts members through senior_deduction_qualified_individual, .* Member 1 fails it only on facts no one stated /),
+    ]);
+    const stated = await lookup([{ facts: { is_taxpayer: true, age: 70, individual_age_at_close_of_calendar_year: 70 } }]);
+    expect(numericOutput(stated, "senior_deduction")).toBe(6000);
+    expect(stated.applied.notes.filter(isMemberCountWarning)).toEqual([]);
+    // Only the filer is named; a child fails the filer-role alternatives.
+    const withKids = await lookup([{ facts: { is_taxpayer: true, individual_age_at_close_of_calendar_year: 70 } }, child(), child()]);
+    expect(withKids.applied.notes.filter(isMemberCountWarning)).toEqual([
+      expect.stringMatching(/ Member 1 fails it only on facts no one stated /),
+    ]);
+  }, 60_000);
+
+  // Invariants, for any number of children (0–5), each described in full
+  // (its relationship stated, left out, or denied) or by age alone, with the
+  // TIN unstated, stated true or stated false, and linked through every
+  // member relation or through dependent_of_tax_unit only. A child "holds"
+  // when described in full with its relationship stated and its TIN not
+  // stated false.
   //  - the maximum is the Rev. Proc. 2025-32 amount for the linked children
-  //    described in full whose TIN isn't stated false (three or more capped
-  //    at three);
-  //  - the TIN assumption is disclosed for exactly the unstated children
-  //    described in full (only they then count, or would if linked);
-  //  - a warning names exactly the unlinked children who hold the gate, on
-  //    both paths;
+  //    who hold (three or more capped at three);
+  //  - the TIN assumption is disclosed for exactly the children who hold
+  //    with the TIN unstated (only they then count, or would if linked);
+  //  - a warning names exactly the unlinked children who hold, on both paths;
   //  - with no child counted and none stranded that way, the lookup's warning
-  //    names exactly the linked age-only children whose TIN isn't stated
-  //    false (they fail only on facts no one stated); a child failing on its
-  //    stated TIN is never named, and computes never carry it;
+  //    names exactly the linked children whose TIN isn't stated false and
+  //    who are described by age alone or with their relationship left out
+  //    (they fail only on facts no one stated); a child failing on its stated
+  //    TIN or denied relationship is never named, and computes never carry
+  //    it;
   //  - lookup_value and compute's extra_outputs agree on the value and on
   //    every member's eitc_qualifying_child (two paths, one semantics).
   it("matches the maximum table, disclosures and warnings for any mix of children, TINs and links", async () => {
@@ -500,13 +717,14 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
       tin: fc.constantFrom<boolean | undefined>(undefined, true, false),
       linked: fc.boolean(),
       ageOnly: fc.boolean(),
+      relationship: fc.constantFrom<Relationship>("stated", "unstated", "denied"),
     });
     await fc.assert(
       fc.asyncProperty(fc.array(childSpec, { maxLength: 5 }), async (children) => {
         const members = [
           taxpayer,
-          ...children.map(({ tin, linked, ageOnly }) => ({
-            ...child(tin, ageOnly),
+          ...children.map(({ tin, linked, ageOnly, relationship }) => ({
+            ...child(tin, ageOnly, relationship),
             ...(!linked && { relations: ["dependent_of_tax_unit"] }),
           })),
         ];
@@ -515,12 +733,13 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
         const compute = await computeProgram({ ...options, extraOutputs: ["eitc_maximum"] });
         const which = (test: (c: (typeof children)[number]) => boolean) =>
           children.flatMap((c, i) => (test(c) ? [i + 2] : []));
-        const holders = which(({ tin, ageOnly }) => tin !== false && !ageOnly);
-        const counted = which(({ tin, ageOnly, linked }) => tin !== false && !ageOnly && linked);
+        const holds = (c: (typeof children)[number]) => c.tin !== false && !c.ageOnly && c.relationship === "stated";
+        const holders = which(holds);
+        const counted = which((c) => holds(c) && c.linked);
         expect(numericOutput(lookup, "eitc_maximum")).toBe(maximumFor(counted.length));
         expect(numericOutput(compute, "eitc_maximum")).toBe(maximumFor(counted.length));
         const disclosed = (r: typeof lookup) => r.applied.assumed_facts?.find((a) => a.slot === TIN)?.members ?? [];
-        const unstated = which(({ tin, ageOnly }) => tin === undefined && !ageOnly);
+        const unstated = which((c) => holds(c) && c.tin === undefined);
         expect(disclosed(lookup)).toEqual(unstated);
         expect(disclosed(compute)).toEqual(unstated);
         const named = (result: typeof lookup, pattern: RegExp) =>
@@ -532,15 +751,17 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
         const stranded = holders.filter((m) => !counted.includes(m));
         expect(named(lookup, unlinked)).toEqual(stranded);
         expect(named(compute, unlinked)).toEqual(stranded);
-        const uncounted = /^WARNING: eitc_maximum counts members through eitc_qualifying_child, .* so none of them counted\. Members? ([\d, ]+) fails? it only on facts no one stated/;
-        const meant = which(({ tin, ageOnly, linked }) => tin !== false && ageOnly && linked);
+        const uncounted = /^WARNING: eitc_maximum counts members through eitc_qualifying_child, .* (?:none of them|that member didn't) counted? through it\. Members? ([\d, ]+) fails? it only on facts no one stated/;
+        const meant = which(
+          ({ tin, ageOnly, linked, relationship }) => tin !== false && linked && (ageOnly || relationship === "unstated")
+        );
         expect(named(lookup, uncounted)).toEqual(counted.length === 0 && stranded.length === 0 ? meant : []);
         expect(named(compute, uncounted)).toEqual([]);
         members.forEach((_, i) => {
           expect(memberCheck(lookup, i + 1, GATE).value).toBe(memberCheck(compute, i + 1, GATE).value);
         });
       }),
-      { seed: 20261026, numRuns: 30 }
+      { seed: 20261026, numRuns: 40 }
     );
   }, 240_000);
 });
