@@ -476,6 +476,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "snap_member_eligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_eligible_core",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      }
      ]
     },
     {
@@ -12065,6 +12073,47 @@
       "snap_member_ssn_requirement_ineligible",
       "snap_member_student_ineligible",
       "snap_member_work_requirement_ineligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_household_member_eligible",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      },
+      {
+       "rule": "snap_household_residency_and_citizenship_eligible",
+       "gates": [
+        "snap_member_citizenship_or_alien_status_eligible"
+       ]
+      },
+      {
+       "rule": "snap_ssn_eligible",
+       "gates": [
+        "snap_member_ssn_requirement_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_ssn_requirement_ineligible"
+       ]
+      },
+      {
+       "rule": "snap_student_eligible",
+       "gates": [
+        "snap_member_student_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_student_ineligible"
+       ]
+      },
+      {
+       "rule": "snap_work_requirement_eligible",
+       "gates": [
+        "snap_member_work_requirement_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_work_requirement_ineligible"
+       ]
+      }
      ]
     },
     {
@@ -12075,6 +12124,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "participant_receives_bce_qualifying_benefit_or_status"
+     ],
+     "aggregations": [
+      {
+       "rule": "all_budgetary_unit_participants_receive_listed_bce_benefit_or_status",
+       "gates": [
+        "participant_receives_bce_qualifying_benefit_or_status"
+       ]
+      }
      ]
     }
    ],
@@ -21459,6 +21516,47 @@
       "snap_member_ssn_requirement_ineligible",
       "snap_member_student_ineligible",
       "snap_member_work_requirement_ineligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_household_member_eligible",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      },
+      {
+       "rule": "snap_household_residency_and_citizenship_eligible",
+       "gates": [
+        "snap_member_citizenship_or_alien_status_eligible"
+       ]
+      },
+      {
+       "rule": "snap_ssn_eligible",
+       "gates": [
+        "snap_member_ssn_requirement_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_ssn_requirement_ineligible"
+       ]
+      },
+      {
+       "rule": "snap_student_eligible",
+       "gates": [
+        "snap_member_student_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_student_ineligible"
+       ]
+      },
+      {
+       "rule": "snap_work_requirement_eligible",
+       "gates": [
+        "snap_member_work_requirement_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_work_requirement_ineligible"
+       ]
+      }
      ]
     },
     {
@@ -21470,6 +21568,20 @@
      "gate_judgments": [
       "calfresh_mce_member_eligible",
       "calfresh_mce_member_household_exclusion_applies"
+     ],
+     "aggregations": [
+      {
+       "rule": "calfresh_mce_household_exclusion_applies",
+       "gates": [
+        "calfresh_mce_member_household_exclusion_applies"
+       ]
+      },
+      {
+       "rule": "calfresh_mce_status_conferred",
+       "gates": [
+        "calfresh_mce_member_eligible"
+       ]
+      }
      ]
     }
    ],
@@ -35706,6 +35818,36 @@
       "snap_member_student_eligible",
       "snap_member_work_requirement_eligible",
       "snap_member_work_requirement_ineligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_residency_citizenship_eligible",
+       "gates": [
+        "snap_member_citizenship_or_alien_status_eligible"
+       ]
+      },
+      {
+       "rule": "snap_ssn_eligible",
+       "gates": [
+        "snap_member_ssn_requirement_eligible"
+       ]
+      },
+      {
+       "rule": "snap_student_eligible",
+       "gates": [
+        "snap_member_student_eligible"
+       ]
+      },
+      {
+       "rule": "snap_work_requirement_eligible",
+       "gates": [
+        "snap_member_work_requirement_eligible",
+        "snap_member_work_requirement_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_work_requirement_ineligible"
+       ]
+      }
      ]
     },
     {
@@ -35723,6 +35865,17 @@
      "primary_slot": 1,
      "gate_judgments": [
       "payment_considered_earned_income"
+     ],
+     "aggregations": [
+      {
+       "rule": "household_has_no_earned_income_at_certification",
+       "gates": [
+        "payment_considered_earned_income"
+       ],
+       "exclusionary_gates": [
+        "payment_considered_earned_income"
+       ]
+      }
      ]
     },
     {
@@ -35733,6 +35886,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "person_receives_pa_benefit"
+     ],
+     "aggregations": [
+      {
+       "rule": "pa_household",
+       "gates": [
+        "person_receives_pa_benefit"
+       ]
+      }
      ]
     }
    ],
@@ -71238,6 +71399,39 @@
      "gate_judgments": [
       "ctc_other_dependent_under_subsection_h",
       "ctc_qualifying_child_under_subsection_h"
+     ],
+     "aggregations": [
+      {
+       "rule": "ctc_other_dependents_under_subsection_h",
+       "gates": [
+        "ctc_other_dependent_under_subsection_h"
+       ],
+       "quantity_gates": [
+        "ctc_other_dependent_under_subsection_h"
+       ],
+       "quantity_readers": [
+        "ctc_after_advance_payments",
+        "ctc_before_advance_payments",
+        "ctc_maximum_before_phase_out_under_subsection_h",
+        "ctc_maximum_before_phaseout"
+       ]
+      },
+      {
+       "rule": "ctc_qualifying_children_under_subsection_h",
+       "gates": [
+        "ctc_qualifying_child_under_subsection_h"
+       ],
+       "quantity_gates": [
+        "ctc_qualifying_child_under_subsection_h"
+       ],
+       "quantity_readers": [
+        "ctc_after_advance_payments",
+        "ctc_before_advance_payments",
+        "ctc_maximum_before_phase_out_under_subsection_h",
+        "ctc_maximum_before_phaseout",
+        "ctc_refundable_maximum_under_subsection_h"
+       ]
+      }
      ]
     },
     {
@@ -71248,6 +71442,22 @@
      "primary_slot": 1,
      "gate_judgments": [
       "ctc_qualifying_child"
+     ],
+     "aggregations": [
+      {
+       "rule": "ctc_qualifying_children_count",
+       "gates": [
+        "ctc_qualifying_child"
+       ],
+       "quantity_gates": [
+        "ctc_qualifying_child"
+       ],
+       "quantity_readers": [
+        "ctc_after_advance_payments",
+        "ctc_before_advance_payments",
+        "ctc_maximum_before_phaseout"
+       ]
+      }
      ]
     },
     {
@@ -71258,6 +71468,36 @@
      "primary_slot": 1,
      "gate_judgments": [
       "exemption_individual_eligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "section_151_exemption_deduction",
+       "gates": [
+        "exemption_individual_eligible"
+       ],
+       "quantity_gates": [
+        "exemption_individual_eligible"
+       ],
+       "quantity_readers": [
+        "alternative_minimum_tax",
+        "amt_base_tax",
+        "amt_exemption",
+        "amt_exemption_before_kiddie_tax_limit",
+        "amt_exemption_phaseout",
+        "amt_higher_base_tax",
+        "amt_income",
+        "amt_income_for_exemption_offset",
+        "amt_income_less_exemptions",
+        "amt_lower_base_tax",
+        "amt_separate_addition",
+        "amt_tax_before_foreign_tax_credit",
+        "income_tax_before_credits",
+        "income_tax_before_refundable_credits",
+        "income_tax_capped_non_refundable_credits",
+        "income_tax_unavailable_non_refundable_credits",
+        "tentative_minimum_tax_after_amtftc"
+       ]
+      }
      ]
     },
     {
@@ -71268,6 +71508,36 @@
      "primary_slot": 1,
      "gate_judgments": [
       "senior_deduction_qualified_individual"
+     ],
+     "aggregations": [
+      {
+       "rule": "senior_deduction",
+       "gates": [
+        "senior_deduction_qualified_individual"
+       ],
+       "quantity_gates": [
+        "senior_deduction_qualified_individual"
+       ],
+       "quantity_readers": [
+        "alternative_minimum_tax",
+        "amt_base_tax",
+        "amt_exemption",
+        "amt_exemption_before_kiddie_tax_limit",
+        "amt_exemption_phaseout",
+        "amt_higher_base_tax",
+        "amt_income",
+        "amt_income_for_exemption_offset",
+        "amt_income_less_exemptions",
+        "amt_lower_base_tax",
+        "amt_separate_addition",
+        "amt_tax_before_foreign_tax_credit",
+        "income_tax_before_credits",
+        "income_tax_before_refundable_credits",
+        "income_tax_capped_non_refundable_credits",
+        "income_tax_unavailable_non_refundable_credits",
+        "tentative_minimum_tax_after_amtftc"
+       ]
+      }
      ]
     },
     {
@@ -71278,6 +71548,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "living_apart_child_has_required_abode_and_deduction"
+     ],
+     "aggregations": [
+      {
+       "rule": "taxpayer_not_considered_married_when_living_apart",
+       "gates": [
+        "living_apart_child_has_required_abode_and_deduction"
+       ]
+      }
      ]
     },
     {
@@ -71288,6 +71566,29 @@
      "primary_slot": 1,
      "gate_judgments": [
       "eitc_qualifying_child"
+     ],
+     "aggregations": [
+      {
+       "rule": "eitc_child_count",
+       "gates": [
+        "eitc_qualifying_child"
+       ],
+       "quantity_gates": [
+        "eitc_qualifying_child"
+       ],
+       "quantity_readers": [
+        "eitc",
+        "eitc_before_eligibility",
+        "eitc_capped_child_count",
+        "eitc_earned_income_amount",
+        "eitc_maximum",
+        "eitc_phase_in_rate",
+        "eitc_phase_out_rate",
+        "eitc_phase_out_start",
+        "eitc_phased_in",
+        "eitc_reduction"
+       ]
+      }
      ]
     }
    ],
@@ -74510,7 +74811,23 @@
      {
       "name": "qualifying_child_name_age_and_tin_included_on_return",
       "dtype": "bool",
-      "default": false
+      "default": false,
+      "read_by": [
+       "eitc",
+       "eitc_allowed",
+       "eitc_before_eligibility",
+       "eitc_capped_child_count",
+       "eitc_child_count",
+       "eitc_demographic_eligible",
+       "eitc_earned_income_amount",
+       "eitc_maximum",
+       "eitc_phase_in_rate",
+       "eitc_phase_out_rate",
+       "eitc_phase_out_start",
+       "eitc_phased_in",
+       "eitc_qualifying_child",
+       "eitc_reduction"
+      ]
      },
      {
       "name": "qualifying_child_name_included_on_return",
@@ -75370,6 +75687,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "snap_member_eligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_eligible_core",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      }
      ]
     },
     {
@@ -115214,6 +115539,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "snap_member_eligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_eligible_core",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      }
      ]
     },
     {
@@ -115238,6 +115571,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "assistance_unit_member_receives_tanf_wsp_or_ssi"
+     ],
+     "aggregations": [
+      {
+       "rule": "categorically_eligible_for_snap",
+       "gates": [
+        "assistance_unit_member_receives_tanf_wsp_or_ssi"
+       ]
+      }
      ]
     },
     {
@@ -125933,6 +126274,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "snap_member_eligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_eligible_core",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      }
      ]
     },
     {
@@ -141511,6 +141860,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "snap_member_eligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_eligible_core",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      }
      ]
     },
     {
@@ -141535,6 +141892,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "individual_disqualified_or_ineligible_for_snap_case_termination"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_case_requires_adverse_action_notice_to_terminate",
+       "gates": [
+        "individual_disqualified_or_ineligible_for_snap_case_termination"
+       ]
+      }
      ]
     }
    ],
@@ -185315,6 +185680,47 @@
       "snap_member_ssn_requirement_ineligible",
       "snap_member_student_ineligible",
       "snap_member_work_requirement_ineligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_household_member_eligible",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      },
+      {
+       "rule": "snap_household_residency_and_citizenship_eligible",
+       "gates": [
+        "snap_member_citizenship_or_alien_status_eligible"
+       ]
+      },
+      {
+       "rule": "snap_ssn_eligible",
+       "gates": [
+        "snap_member_ssn_requirement_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_ssn_requirement_ineligible"
+       ]
+      },
+      {
+       "rule": "snap_student_eligible",
+       "gates": [
+        "snap_member_student_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_student_ineligible"
+       ]
+      },
+      {
+       "rule": "snap_work_requirement_eligible",
+       "gates": [
+        "snap_member_work_requirement_ineligible"
+       ],
+       "exclusionary_gates": [
+        "snap_member_work_requirement_ineligible"
+       ]
+      }
      ]
     },
     {
@@ -185332,6 +185738,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "member_has_family_assistance_nonemergency_safety_net_or_ssi_categorical_status"
+     ],
+     "aggregations": [
+      {
+       "rule": "ny_snap_all_members_public_assistance_categorical_path_satisfied",
+       "gates": [
+        "member_has_family_assistance_nonemergency_safety_net_or_ssi_categorical_status"
+       ]
+      }
      ]
     }
    ],
@@ -194525,6 +194939,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "snap_member_eligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_eligible_core",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      }
      ]
     },
     {
@@ -194542,6 +194964,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "person_at_least_esap_elderly_age"
+     ],
+     "aggregations": [
+      {
+       "rule": "esap_household",
+       "gates": [
+        "person_at_least_esap_elderly_age"
+       ]
+      }
      ]
     }
    ],
@@ -246357,6 +246787,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "snap_member_eligible"
+     ],
+     "aggregations": [
+      {
+       "rule": "snap_eligible_core",
+       "gates": [
+        "snap_member_eligible"
+       ]
+      }
      ]
     },
     {
@@ -246374,6 +246812,14 @@
      "primary_slot": 1,
      "gate_judgments": [
       "person_considered_striker"
+     ],
+     "aggregations": [
+      {
+       "rule": "household_contains_striking_member",
+       "gates": [
+        "person_considered_striker"
+       ]
+      }
      ]
     }
    ],

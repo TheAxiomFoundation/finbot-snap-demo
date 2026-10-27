@@ -164,6 +164,29 @@ interface CatalogRelation {
   /** Judgment rules referenced inside aggregators over this relation — the
    *  checks that decide whether a member counts (e.g. ctc_qualifying_child). */
   gate_judgments?: string[];
+  /** The rules that count members over this relation through gates, one
+   *  entry per rule (eitc_child_count through eitc_qualifying_child): a trace
+   *  edge from that rule to one of its gates is a count of members. */
+  aggregations?: CatalogAggregation[];
+}
+
+interface CatalogAggregation {
+  rule: string;
+  /** Gate judgments read inside the rule's aggregators over the relation. */
+  gates: string[];
+  /** Gates the rule reads exclusionary (`count(where: gate) == 0`, or under a
+   *  `not`): no member holding one is the expected case. */
+  exclusionary_gates?: string[];
+  /** Gates the rule counts as a number of members (multiplied, subtracted,
+   *  capped, or the rule's own value) rather than testing the count
+   *  (`> 0`, `== 0`, all-of `count(where) == count()`): counting none of
+   *  them gives the rule a different value, not a failed test. */
+  quantity_gates?: string[];
+  /** With quantity_gates: the rules that read this rule's value as a number,
+   *  directly or through other rules that do (eitc_maximum, through
+   *  eitc_capped_child_count). A rule that only compares it
+   *  (eitc_demographic_eligible: `eitc_child_count > 0`) isn't one. */
+  quantity_readers?: string[];
 }
 
 interface CatalogProgram {
@@ -592,23 +615,159 @@ function analyzeProgram(
   const relationOuterEntities = new Map<string, Set<string>>();
   const relationBodyInputs = new Map<string, Set<string>>();
   const relationGateJudgments = new Map<string, Set<string>>();
-  const aggregatorRefs = (node: unknown): Array<{ kind: string; name: string }> => {
-    const refs: Array<{ kind: string; name: string }> = [];
-    const visit = (n: unknown) => {
-      if (Array.isArray(n)) { n.forEach(visit); return; }
-      if (n === null || typeof n !== "object") return;
-      const obj = n as IRNode;
-      if ((obj.kind === "input" || obj.kind === "derived") && typeof obj.name === "string") {
-        refs.push({ kind: obj.kind as string, name: obj.name });
+  /** Per relation, the rules aggregating over it through gates: which gates
+   *  each reads exclusionary (a member holding the gate pushes the rule
+   *  toward failing: `count(where: gate) == 0`, or a `not` around the gate or
+   *  the count) and which it counts as a quantity. */
+  const relationAggregations = new Map<
+    string,
+    Map<string, { gates: Set<string>; exclusionary: Set<string>; quantity: Set<string> }>
+  >();
+  const literal = (n: unknown): unknown =>
+    (n as IRNode | null)?.kind === "literal" ? ((n as IRNode).value as IRNode | undefined)?.value : undefined;
+  /** A numeric literal's value; decimal literals carry theirs as a string. */
+  const numeric = (n: unknown): number | undefined => {
+    const value = literal(n);
+    if (typeof value === "number") return value;
+    return typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value)) ? Number(value) : undefined;
+  };
+  /** Whether `child` reads opposite to `parent`'s own polarity: a `not`'s
+   *  operand, what a `sub` subtracts, a side compared `== false`/`!= true`. */
+  const flips = (parent: IRNode, child: unknown): boolean => {
+    if (parent.kind === "not") return true;
+    if (parent.kind === "sub") return child === parent.right;
+    if (parent.kind !== "comparison" || (child !== parent.left && child !== parent.right)) return false;
+    const other = literal(child === parent.left ? parent.right : parent.left);
+    return (parent.op === "eq" && other === false) || (parent.op === "ne" && other === true);
+  };
+  const visitPolarity = (
+    n: unknown,
+    negated: boolean,
+    onNode: (node: IRNode, negated: boolean, parent: IRNode | null) => boolean,
+    parent: IRNode | null = null
+  ) => {
+    if (Array.isArray(n)) { n.forEach((item) => visitPolarity(item, negated, onNode, parent)); return; }
+    if (n === null || typeof n !== "object") return;
+    const obj = n as IRNode;
+    if (!onNode(obj, negated, parent)) return;
+    for (const value of Object.values(obj)) visitPolarity(value, flips(obj, value) ? !negated : negated, onNode, obj);
+  };
+  /** Aggregator nodes of one rule read exclusionary: flipped an odd number
+   *  of times on the way down, or the count side of a test for zero. */
+  const exclusionaryAggregators = (exprs: unknown[]): Set<IRNode> => {
+    const found = new Set<IRNode>();
+    const zeroTest = (cmp: IRNode | null, count: IRNode): boolean => {
+      if (cmp?.kind !== "comparison") return false;
+      const op = cmp.op as string;
+      if (cmp.left === count) {
+        return (numeric(cmp.right) === 0 && (op === "eq" || op === "lte")) || (numeric(cmp.right) === 1 && op === "lt");
       }
-      Object.values(obj).forEach(visit);
+      if (cmp.right === count) {
+        return (numeric(cmp.left) === 0 && (op === "eq" || op === "gte")) || (numeric(cmp.left) === 1 && op === "gt");
+      }
+      return false;
     };
-    visit(node);
+    visitPolarity(exprs, false, (node, negated, parent) => {
+      if (!isAggregator(node)) return true;
+      if (negated !== zeroTest(parent, node)) found.add(node);
+      return false;
+    });
+    return found;
+  };
+  const isJudgmentRule = (rule: DerivedRule | undefined) => rule?.semantics === "judgment" || rule?.dtype === "judgment";
+  /** Whether a comparison reads `side` as a number. It tests it instead when
+   *  the other side is a zero or a one in a test for zero or for any
+   *  (`count > 0`, `count == 0`, `count >= 1`), or is another aggregator
+   *  (all-of `count(where) == count()`). Any other literal or value reads it
+   *  as a number: eitc_maximum picks its amount by
+   *  `eitc_capped_child_count == 1`, `== 2`. So does a side nested in
+   *  arithmetic. */
+  const comparisonReadsAsNumber = (cmp: IRNode, side: unknown): boolean => {
+    if (side !== cmp.left && side !== cmp.right) return true;
+    const onLeft = side === cmp.left;
+    const other = onLeft ? cmp.right : cmp.left;
+    const value = numeric(other);
+    if (value !== undefined) {
+      const op = cmp.op as string;
+      const zeroOps = onLeft ? ["eq", "ne", "lte", "gt"] : ["eq", "ne", "gte", "lt"];
+      const oneOps = onLeft ? ["lt", "gte"] : ["gt", "lte"];
+      return !((value === 0 && zeroOps.includes(op)) || (value === 1 && oneOps.includes(op)));
+    }
+    return !isAggregator(other as IRNode);
+  };
+  /** Walk `n` with the nearest comparison above each node, calling `onRead`
+   *  for each derived ref and aggregator with whether that read is a number. */
+  const visitReads = (
+    n: unknown,
+    cmp: IRNode | null,
+    onRead: (node: IRNode, asNumber: boolean) => void
+  ) => {
+    if (Array.isArray(n)) { n.forEach((item) => visitReads(item, cmp, onRead)); return; }
+    if (n === null || typeof n !== "object") return;
+    const obj = n as IRNode;
+    const aggregator = isAggregator(obj);
+    if (aggregator || (obj.kind === "derived" && typeof obj.name === "string")) {
+      onRead(obj, cmp === null || comparisonReadsAsNumber(cmp, obj));
+      if (aggregator) return;
+    }
+    for (const value of Object.values(obj)) visitReads(value, obj.kind === "comparison" ? obj : cmp, onRead);
+  };
+  // Rule name → the scalar rules that read its value as a number. A
+  // judgment's value is holds or not, never a number of members.
+  // eitc_capped_child_count reads eitc_child_count as a number;
+  // eitc_demographic_eligible only tests it.
+  const valueReaders = new Map<string, Set<string>>();
+  for (const rule of rules) {
+    if (isJudgmentRule(rule)) continue;
+    visitReads(ruleExpressions(rule), null, (node, asNumber) => {
+      if (node.kind !== "derived" || !asNumber) return;
+      const name = node.name as string;
+      if (!valueReaders.has(name)) valueReaders.set(name, new Set());
+      valueReaders.get(name)!.add(rule.name);
+    });
+  }
+  /** The rules that read `name`'s value as a number, directly or through
+   *  other rules that do. */
+  const numericReaders = (name: string): string[] => {
+    const reached = new Set<string>();
+    const queue = [name];
+    while (queue.length) {
+      for (const reader of valueReaders.get(queue.shift()!) ?? []) {
+        if (reader === name || reached.has(reader)) continue;
+        reached.add(reader);
+        queue.push(reader);
+      }
+    }
+    return [...reached].sort();
+  };
+  /** Aggregator nodes of one scalar rule that its value uses as a number of
+   *  members: the rule's whole value, multiplied, subtracted, capped, or
+   *  compared other than as a test (see comparisonReadsAsNumber). Whether
+   *  an output uses that number in turn is the aggregation's
+   *  `quantity_readers`. */
+  const quantityAggregators = (rule: DerivedRule): Set<IRNode> => {
+    const found = new Set<IRNode>();
+    if (isJudgmentRule(rule)) return found;
+    visitReads(ruleExpressions(rule), null, (node, asNumber) => {
+      if (isAggregator(node) && asNumber) found.add(node);
+    });
+    return found;
+  };
+  const aggregatorRefs = (node: unknown): Array<{ kind: string; name: string; negated: boolean }> => {
+    const refs: Array<{ kind: string; name: string; negated: boolean }> = [];
+    visitPolarity(node, false, (obj, negated) => {
+      if ((obj.kind === "input" || obj.kind === "derived") && typeof obj.name === "string") {
+        refs.push({ kind: obj.kind as string, name: obj.name, negated });
+      }
+      return true;
+    });
     return refs;
   };
 
   for (const rule of rules) {
     const outerEntity = rule.entity ?? "Household";
+    const exclusionary = exclusionaryAggregators(ruleExpressions(rule));
+    const quantity = quantityAggregators(rule);
     for (const { node } of walkRefs(ruleExpressions(rule), null, outerEntity, new Map())) {
       if (!isAggregator(node)) continue;
       const relation = node.relation as string;
@@ -624,14 +783,23 @@ function analyzeProgram(
       if (!relationBodyInputs.has(relation)) relationBodyInputs.set(relation, new Set());
       const votes = relationVotes.get(relation)!;
       if (!relationGateJudgments.has(relation)) relationGateJudgments.set(relation, new Set());
+      if (!relationAggregations.has(relation)) relationAggregations.set(relation, new Map());
+      const aggregations = relationAggregations.get(relation)!;
       for (const key of AGGREGATOR_INNER_KEYS) {
         if (!(key in node)) continue;
         for (const ref of aggregatorRefs(node[key])) {
           if (ref.kind === "input") relationBodyInputs.get(relation)!.add(ref.name);
           if (ref.kind === "derived") {
             const target = ruleByName.get(ref.name);
-            if (target && (target.semantics === "judgment" || target.dtype === "judgment")) {
+            if (isJudgmentRule(target)) {
               relationGateJudgments.get(relation)!.add(ref.name);
+              if (!aggregations.has(rule.name)) {
+                aggregations.set(rule.name, { gates: new Set(), exclusionary: new Set(), quantity: new Set() });
+              }
+              const aggregation = aggregations.get(rule.name)!;
+              aggregation.gates.add(ref.name);
+              if (ref.negated !== exclusionary.has(node)) aggregation.exclusionary.add(ref.name);
+              if (quantity.has(node)) aggregation.quantity.add(ref.name);
             }
           }
           if (ref.kind === "derived") {
@@ -737,12 +905,22 @@ function analyzeProgram(
     }
     const slots = relationSlots.get(rel.name) ?? { member_slot: 0, primary_slot: 1 };
     const gates = [...(relationGateJudgments.get(rel.name) ?? [])].sort();
+    const sorted = (set: Set<string>) => [...set].sort();
+    const aggregations: CatalogAggregation[] = [...(relationAggregations.get(rel.name) ?? new Map())]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([rule, { gates: read, exclusionary, quantity }]) => ({
+        rule,
+        gates: sorted(read),
+        ...(exclusionary.size > 0 && { exclusionary_gates: sorted(exclusionary) }),
+        ...(quantity.size > 0 && { quantity_gates: sorted(quantity), quantity_readers: numericReaders(rule) }),
+      }));
     return {
       name: rel.name,
       related_entity: relatedEntity,
       used,
       ...slots,
       ...(gates.length > 0 && { gate_judgments: gates }),
+      ...(aggregations.length > 0 && { aggregations }),
     };
   });
 

@@ -110,6 +110,20 @@ export const SCENARIOS: Scenario[] = [
     truth_note: "the EITC starter (single dad); PE eitc 3,923.23; IRS Rev. Proc. 2025-32 two-child 2026 parameters",
   },
   {
+    id: "eitc-max-2kids",
+    area: "tax",
+    question: "What's the maximum earned income tax credit for a family with two children in tax year 2026?",
+    truth: [7316],
+    truth_note: "IRS Rev. Proc. 2025-32: two-child maximum $7,316. The engine side headlined the childless $664 on 2026-10-25: no child counted (qualifying_child_name_age_and_tin_included_on_return unset, lookups showed no member checks)",
+  },
+  {
+    id: "eitc-max-parent70",
+    area: "tax",
+    question: "I'm single and my 70-year-old mother lives with me. What's the most earned income tax credit I could get for tax year 2026?",
+    truth: [664],
+    truth_note: "IRS Rev. Proc. 2025-32: maximum with no qualifying child $664. A parent fails the qualifying-child relationship test (26 USC 152(c)(2)), so she doesn't count. Guards the lookup warning for a listed member who fails eitc_qualifying_child only on unstated facts: the model must not make her a qualifying child",
+  },
+  {
     id: "il-elig-70k",
     area: "property-tax",
     question: "I'm 70 and own my home in Illinois. Our household income is $70,000. Can I defer my property taxes?",

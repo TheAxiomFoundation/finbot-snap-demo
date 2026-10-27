@@ -9,6 +9,7 @@
 export const ASSUMED_MEMBER_SLOTS = [
   "member_is_us_citizen",
   "qualified_individual_social_security_number_included_on_return",
+  "qualifying_child_name_age_and_tin_included_on_return",
 ] as const;
 
 export type AssumedMemberSlot = (typeof ASSUMED_MEMBER_SLOTS)[number];

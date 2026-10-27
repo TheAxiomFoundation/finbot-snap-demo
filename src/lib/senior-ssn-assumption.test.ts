@@ -40,17 +40,23 @@ describe("senior-deduction prerequisites the user never mentions", () => {
     expect(ssnRecords(built, "person:1").every((i) => i.value.value === true)).toBe(true);
     expect(ssnRecords(built, "person:2").every((i) => i.value.value === true)).toBe(true);
     // Before the compute every assumed member is listed; shapeResult narrows it.
-    expect(built.applied.assumed_facts).toEqual([expect.objectContaining({ slot: SSN, value: true, members: [1, 2] })]);
+    expect(built.applied.assumed_facts?.find((a) => a.slot === SSN)).toEqual(
+      expect.objectContaining({ slot: SSN, value: true, members: [1, 2] })
+    );
   });
 
   it("keeps a stated SSN fact, and an SSN fact stated false anywhere turns the assumption off", () => {
     const stated = buildRequest({ ...RUN_10, members: [{ facts: { ...RUN_10.members[0].facts, [SSN]: false } }] });
     expect(ssnRecords(stated, "person:1").every((i) => i.value.value === false)).toBe(true);
-    expect(stated.applied.assumed_facts).toBeUndefined();
+    expect(stated.applied.assumed_facts?.find((a) => a.slot === SSN)).toBeUndefined();
 
     const itin = buildRequest({ ...RUN_10, facts: { ...RUN_10.facts, taxpayer_includes_required_social_security_number_on_return: false } });
     expect(ssnRecords(itin, "person:1").every((i) => i.value.value === false)).toBe(true);
-    expect(itin.applied.assumed_facts).toBeUndefined();
+    expect(itin.applied.assumed_facts?.find((a) => a.slot === SSN)).toBeUndefined();
+    // The filer's own SSN says nothing about a child's: the child-TIN
+    // assumption stays on (shapeResult then discloses it only for a child
+    // who counts for the EITC).
+    expect(itin.applied.assumed_facts?.map((a) => a.slot)).toEqual(["qualifying_child_name_age_and_tin_included_on_return"]);
   });
 
   it("assumes nothing outside us-fiit", () => {
@@ -103,10 +109,10 @@ describe.skipIf(!hasEngine)("real-engine senior deduction from the run-10 facts"
     expect(withChild.applied.assumed_facts).toEqual([expect.objectContaining({ slot: SSN, members: [1] })]);
   }, 30_000);
 
-  it("keeps the disclosure on the lookup path, which runs no member checks", async () => {
+  it("keeps the disclosure on the lookup path, which checks only the gate the deduction counts through", async () => {
     const result = await computeProgram({ ...RUN_10, outputsOverride: ["senior_deduction"] });
     expect(numericOutput(result, "senior_deduction")).toBe(4500);
-    expect(result.member_checks).toBeUndefined();
+    expect(result.member_checks).toEqual([{ member: 1, checks: [expect.objectContaining({ name: CHECK, value: "holds" })] }]);
     expect(result.applied.assumed_facts).toEqual([expect.objectContaining({ slot: SSN, members: [1] })]);
   }, 30_000);
 });
