@@ -73,6 +73,15 @@ export interface CatalogOutput {
   /** Earliest `due` among the annually reissued parameters this output
    *  reaches (see CatalogAnnualUpdate); absent when it reaches none. */
   annual_update_due?: string;
+  /** The rule's dated formula versions (`effective_to` inclusive) when the
+   *  compiled artifact carries them: the engine applies the version whose
+   *  window holds the period's start. Absent for single-formula rules. */
+  versions?: FormulaVersion[];
+}
+
+export interface FormulaVersion {
+  effective_from: string;
+  effective_to?: string;
 }
 
 /** Parameters reissued every year (classified in src/lib/annual-updates.ts),

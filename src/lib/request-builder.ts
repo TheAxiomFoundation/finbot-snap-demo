@@ -38,7 +38,8 @@ import {
   type CatalogProgram,
   type Requirement,
 } from "./catalog";
-import { legalIdToUrl } from "./legal-links";
+import { amendmentRef, appliedAmendment, type AmendmentRef } from "./amendments";
+import { citationUrl } from "./citations";
 import artifactsLock from "../../artifacts.lock.json";
 import { programDisclosures } from "./catalog-overlay";
 import type { AssumedMemberSlot } from "./assumed-slots";
@@ -1066,8 +1067,11 @@ export interface ShapedOutput {
   /** Attached when a judgment came back not_holds and the explain trace
    *  shows why: the deepest sub-judgments on its failing path, with their
    *  legal ids and sources (e.g. snap_member_eligible ←
-   *  snap_member_citizenship_or_alien_status_eligible, 7 CFR 273.4(a)). */
-  failed_because?: Array<{ name: string; legal_id: string | null; source: string | null }>;
+   *  snap_member_citizenship_or_alien_status_eligible, 7 CFR 273.4(a)).
+   *  `amended_by` names the amended statute a sub-judgment's formula in
+   *  force applies when its cited text predates the amendment
+   *  (amendments.ts). */
+  failed_because?: Array<{ name: string; legal_id: string | null; source: string | null; amended_by?: AmendmentRef }>;
   /** Attached when a scalar came back 0 because a judgment gating it failed
    *  (the catalog's `zero_unless`: us-fiit `eitc` ← `eitc_allowed`). Each
    *  entry reads like a failed judgment output. Member gates are left to
@@ -1347,6 +1351,7 @@ export function shapeResult(
   // judgment output.
   const outputByName = new Map(program.outputs.map((o) => [o.name, o]));
   const reported = new Set(built.queried.map((o) => o.name));
+  const periodStart = periodStartDate(built.applied.period);
   const failedZeroGates = (
     output: CatalogOutput,
     scopeTrace: Record<string, DerivedTraceNode>,
@@ -1375,6 +1380,11 @@ export function shapeResult(
     const failedJudgment = output.semantics === "judgment" && value === "not_holds";
     const failedBecause = failedJudgment
       ? failingSubJudgments(scopeTrace, queryKey(output), output.name, (name) => outputByName.get(name)?.negated_judgments)
+          .map((failed) => {
+            const rule = outputByName.get(failed.name);
+            const amendment = rule && appliedAmendment(rule, periodStart);
+            return amendment ? { ...failed, amended_by: amendmentRef(amendment, citationUrl(amendment.provision.legal_id)) } : failed;
+          })
       : [];
     const open = failedJudgment ? openAlternatives(output, entityId, scopeTrace) : [];
     // Name only the requirements this entity's own inputs fail. us-fiit's
@@ -1479,7 +1489,6 @@ export function shapeResult(
   // With no allowance added, an answer that read the allowance rules counted
   // no utility costs: say which facts claim it (false by default) so a user
   // who stated them gets one recompute and one who didn't hears it.
-  const periodStart = periodStartDate(built.applied.period);
   for (const slot of allowanceSlots(program)) {
     const traced = slot.added_allowances.map((a) => ({ rule: a.rule, value: tracedValue(trace, a.rule) }));
     const added = traced
@@ -1532,7 +1541,7 @@ function citationsFor(outputs: ShapedOutput[]): Array<{ id: string; url: string 
     const base = output.legal_id.split("#")[0];
     if (!base.includes(":") || seen.has(base)) continue;
     seen.add(base);
-    citations.push({ id: base, url: legalIdToUrl(base) });
+    citations.push({ id: base, url: citationUrl(base) });
   }
   return citations;
 }

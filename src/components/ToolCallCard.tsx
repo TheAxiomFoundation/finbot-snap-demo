@@ -402,6 +402,23 @@ function CitationCard({ result }: { result: any }) {
             : "The Axiom corpus has this document but no body text."}
         </div>
       )}
+      {result.amended_by && <AmendedProvision amended={result.amended_by} />}
+    </div>
+  );
+}
+
+/** The amended statute a citation's rules apply (citations.ts `amended_by`),
+ *  shown under the older text so the card shows the law the result used. */
+function AmendedProvision({ amended }: { amended: any }) {
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div className="tool-note">{amended.note}</div>
+      <a className="cite" href={amended.url} target="_blank" rel="noreferrer">{amended.legal_id}</a>
+      <span className="tool-foot"> · {amended.citation}, as amended by {amended.enacted_by}</span>
+      {amended.heading && <div style={{ fontWeight: 600, fontSize: 13, marginTop: 4 }}>{amended.heading}</div>}
+      {amended.body_excerpt && (
+        <div style={{ color: "#374151", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>{amended.body_excerpt}</div>
+      )}
     </div>
   );
 }
