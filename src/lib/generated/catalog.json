@@ -9423,7 +9423,8 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_minimum_wage_applies",
@@ -9440,7 +9441,8 @@
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "fortieth_quarter_earned_before_benefit_application_in_same_quarter",
@@ -19165,13 +19167,15 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0,
+      "default": 7.25,
+      "default_source": "overlay",
       "aux": true
      },
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
-      "default": 0,
+      "default": 7.25,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -32132,13 +32136,14 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
       "default": 7.25,
-      "default_source": "fixture"
+      "default_source": "overlay"
      },
      {
       "name": "federal_state_local_income_taxes_claimed_as_actual_cost",
@@ -65648,7 +65653,8 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_minimum_wage_is_applicable",
@@ -65660,7 +65666,7 @@
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
       "default": 7.25,
-      "default_source": "fixture"
+      "default_source": "overlay"
      },
      {
       "name": "federal_poverty_level_amount",
@@ -81294,12 +81300,14 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_state_or_local_court_finding_of_trading_controlled_substance_for_benefits",
@@ -122744,12 +122752,14 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_state_or_local_court_finding_of_trading_controlled_substance_for_benefits",
@@ -139015,12 +139025,14 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "fortieth_quarter_earned_before_benefit_application_in_same_quarter",
@@ -178807,7 +178819,8 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_minimum_wage_weekly_equivalent_for_minimum_requirement",
@@ -178818,7 +178831,8 @@
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "felony_involved_possession_use_or_distribution_of_controlled_substance",
@@ -191768,13 +191782,14 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
       "default": 7.25,
-      "default_source": "fixture"
+      "default_source": "overlay"
      },
      {
       "name": "federal_state_or_local_court_finding_of_trading_controlled_substance_for_benefits",
@@ -193986,7 +194001,8 @@
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
-      "default": 0,
+      "default": 7.25,
+      "default_source": "overlay",
       "aux": true
      },
      {
@@ -240323,12 +240339,14 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "first_name_on_dss_form_3800_matches_signature",
@@ -264995,7 +265013,8 @@
      {
       "name": "federal_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_minimum_wage_hourly_amount",
@@ -265006,7 +265025,8 @@
      {
       "name": "federal_or_state_minimum_wage",
       "dtype": "decimal",
-      "default": 0
+      "default": 7.25,
+      "default_source": "overlay"
      },
      {
       "name": "federal_poverty_level_for_others_household_size",
