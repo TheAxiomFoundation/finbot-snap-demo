@@ -164,23 +164,7 @@ function ZeroBecause({ output }: { output: any }) {
   );
 }
 
-const memberList = (members: number[]) => `member${members.length === 1 ? "" : "s"} ${members.join(", ")}`;
-
-/** What the engine's earlier-formula run says about one check: on a
- *  member's check or a lookup, `changed_outcome`; on a household-level
- *  entry, the failing members each way. */
-function amendedOutcome(amended: any): string {
-  if (amended.changed_outcome === true) return " · the amendment changed this check's result";
-  if (amended.changed_outcome === false) return " · this check gives the same result under the earlier formula";
-  const parts = [
-    ...(amended.changed_for_members?.length ? [`the amendment changed this check for ${memberList(amended.changed_for_members)}`] : []),
-    ...(amended.unchanged_for_members?.length ? [`same under the earlier formula for ${memberList(amended.unchanged_for_members)}`] : []),
-  ];
-  return parts.length ? ` · ${parts.join("; ")}` : "";
-}
-
-/** One amended statute a check applied (`amended_by`), and whether the
- *  amendment changed that check's result. */
+/** One amended statute a check applied (`amended_by`). */
 function AmendedLine({ name, amended }: { name?: string; amended: any }) {
   const when = amended.effective
     ? ` (effective ${amended.effective}; encoded for periods from ${amended.applies_from})`
@@ -192,7 +176,6 @@ function AmendedLine({ name, amended }: { name?: string; amended: any }) {
         {amended.citation}
       </a>
       {` as amended by ${amended.enacted_by}${when}`}
-      {amendedOutcome(amended)}
     </div>
   );
 }
@@ -206,8 +189,8 @@ const amendedIn = (checks: any[]): any[] =>
     ...(check?.failed_because ?? []).filter((f: any) => f.amended_by),
   ]);
 
-/** The `amended_by` entries under a set of failed checks, once per check
- *  and outcome: a household's outputs repeat the same failed sub-check.
+/** The `amended_by` entries under a set of failed checks, once per check:
+ *  a household's outputs repeat the same failed sub-check.
  *  Checks in `shownPerMember` are left out: rows of their own show them
  *  (Arizona gates a member on the 7 CFR 273.4 check and on
  *  snap_member_eligible, which fails because of it; so do CA and NY). */
@@ -215,12 +198,9 @@ function AmendedChecks({ checks, shownPerMember }: { checks: any[]; shownPerMemb
   const seen = new Set<string>();
   const lines = amendedIn(checks)
     .flatMap((f: any) => {
-      if (shownPerMember?.has(f.name)) return [];
-      const { changed_outcome, changed_for_members, unchanged_for_members } = f.amended_by;
-      const key = `${f.name}|${JSON.stringify([changed_outcome, changed_for_members, unchanged_for_members])}`;
-      if (seen.has(key)) return [];
-      seen.add(key);
-      return [{ key, f }];
+      if (shownPerMember?.has(f.name) || seen.has(f.name)) return [];
+      seen.add(f.name);
+      return [{ key: f.name, f }];
     });
   return <>{lines.map(({ key, f }) => <AmendedLine key={key} name={f.name} amended={f.amended_by} />)}</>;
 }

@@ -180,24 +180,21 @@ async function artifactPath(slug: string): Promise<string> {
  *    - unset → spawn the local binary against the local artifact (dev path).
  *
  *  Both transports share the same request/response shape so callers don't
- *  care which is in use. An aborted `signal` cancels the request or kills
- *  the subprocess, and the call rejects.
+ *  care which is in use.
  */
 export async function runCompiled(
   slug: string,
-  request: ExecutionRequest,
-  { signal }: { signal?: AbortSignal } = {}
+  request: ExecutionRequest
 ): Promise<ExecutionResponse> {
-  if (ENGINE_URL) return runViaHttp(slug, request, signal);
-  return runViaSubprocess(slug, request, signal);
+  if (ENGINE_URL) return runViaHttp(slug, request);
+  return runViaSubprocess(slug, request);
 }
 
-async function runViaHttp(slug: string, request: ExecutionRequest, signal?: AbortSignal): Promise<ExecutionResponse> {
+async function runViaHttp(slug: string, request: ExecutionRequest): Promise<ExecutionResponse> {
   const r = await fetch(`${ENGINE_URL}/run`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ program: slug, request }),
-    signal,
   });
   if (!r.ok) {
     const body = await r.text();
@@ -208,23 +205,19 @@ async function runViaHttp(slug: string, request: ExecutionRequest, signal?: Abor
 
 async function runViaSubprocess(
   slug: string,
-  request: ExecutionRequest,
-  signal?: AbortSignal
+  request: ExecutionRequest
 ): Promise<ExecutionResponse> {
   await ensureBinary();
   const artifact = await artifactPath(slug);
   return new Promise((resolve, reject) => {
     const child = spawn(BINARY, ["run-compiled", "--artifact", artifact], {
       stdio: ["pipe", "pipe", "pipe"],
-      signal,
     });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (b) => (stdout += b.toString()));
     child.stderr.on("data", (b) => (stderr += b.toString()));
     child.on("error", reject);
-    // A child killed mid-write (an aborted signal) breaks the pipe.
-    child.stdin.on("error", reject);
     child.on("close", (code) => {
       if (code !== 0) {
         reject(new Error(`axiom-rules-engine exited ${code}: ${stderr.trim()}`));

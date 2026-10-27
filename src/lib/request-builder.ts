@@ -38,16 +38,7 @@ import {
   type CatalogProgram,
   type Requirement,
 } from "./catalog";
-import {
-  amendmentForModule,
-  amendmentRef,
-  appliedAmendment,
-  earlierFormulaEnd,
-  formulaVersionAt,
-  withEarlierOutcome,
-  withMemberOutcomes,
-  type AmendmentRef,
-} from "./amendments";
+import { amendmentRef, appliedAmendment, type AmendmentRef } from "./amendments";
 import { citationUrl } from "./citations";
 import artifactsLock from "../../artifacts.lock.json";
 import { programDisclosures } from "./catalog-overlay";
@@ -1574,34 +1565,24 @@ function citationsFor(outputs: ShapedOutput[], memberChecks: MemberChecks[] = []
   return citations;
 }
 
-/** The failed judgments in `gates` that carry an `amended_by`: each gate's
- *  own, then its `failed_because` entries'. */
-function amendedIn(gates: GateCheck[]): Array<{ name: string; amended_by?: AmendmentRef }> {
+/** Every judgment in a result that carries an `amended_by`: outputs, the
+ *  gates in their `zero_because` and member checks, each with its
+ *  `failed_because` entries. */
+function amendedEntries(outputs: ShapedOutput[], memberChecks: MemberChecks[] = []) {
+  const gates: GateCheck[] = [
+    ...outputs,
+    ...outputs.flatMap((o) => o.zero_because ?? []),
+    ...memberChecks.flatMap((m) => m.checks ?? []),
+  ];
   return gates.flatMap((g) => [...(g.amended_by ? [g] : []), ...(g.failed_because ?? []).filter((f) => f.amended_by)]);
 }
 
-/** The outputs of a result and the gates in their `zero_because`. */
-const householdGates = (outputs: ShapedOutput[]): GateCheck[] => [...outputs, ...outputs.flatMap((o) => o.zero_because ?? [])];
-
-/** Every judgment in a result that carries an `amended_by`: outputs, the
- *  gates in their `zero_because` and member checks, with their
- *  `failed_because` entries. */
-function amendedEntries(outputs: ShapedOutput[], memberChecks: MemberChecks[] = []) {
-  return amendedIn([...householdGates(outputs), ...memberChecks.flatMap((m) => m.checks ?? [])]);
-}
-
-/** End-to-end compute: build → run → shape, then, side by side, the
- *  unstated-age check and the earlier-formula runs behind each
- *  `amended_by`. They write different parts of the result: the first adds
- *  `applied` notes, the second annotates `amended_by` and `member_checks`. */
+/** End-to-end compute: build → run → shape, then the unstated-age check. */
 export async function computeProgram(options: BuildOptions): Promise<ShapedResult> {
   const built = buildRequest(options);
   const response = await runCompiled(options.program.slug, built.request);
   const shaped = shapeResult(options.program, built, response);
-  await Promise.all([
-    options.outputsOverride ? undefined : checkUnstatedAges(options, response, shaped, built),
-    attributeAmendments(options, shaped),
-  ]);
+  if (!options.outputsOverride) await checkUnstatedAges(options, response, shaped, built);
   return shaped;
 }
 
@@ -1612,173 +1593,11 @@ export function outputPeriodStart(program: CatalogProgram, output: CatalogOutput
   return periodForOutput(output, resolvePeriod(program, period), program).interval.start;
 }
 
-/** How long the earlier-formula runs for one rule may take before their
- *  answers are dropped (`changed_outcome` is then left out). */
-const EARLIER_FORMULA_TIMEOUT_MS = 10_000;
-
-type EarlierValue = { period: string; value: string | number | boolean };
-
-/** The period to run a rule's formula from before its amendment in: the
- *  month (the year, for a yearly rule) that formula's span ends in, when
- *  that formula is in force at the period's start. */
-function earlierPeriodFor(rule: CatalogOutput): string | undefined {
-  const amendment = rule.id ? amendmentForModule(rule.id) : undefined;
-  const end = amendment && earlierFormulaEnd(rule, amendment);
-  if (!end) return undefined;
-  const period = rule.period === "Month" ? end.slice(0, 7) : rule.period === "Year" ? end.slice(0, 4) : undefined;
-  return period && formulaVersionAt(rule.versions ?? [], periodStartDate(period))?.effective_to === end
-    ? period
-    : undefined;
-}
-
-/** What `rule` gives each of `members` (1-based) when the same request runs
- *  in `period`, under its formula from before the amendment. One engine
- *  call queries the rule at every member, as a compute's member checks do;
- *  a rule on another entity is queried once, as member 1's answer.
- *
- *  Where the module also encodes that formula branch by branch (the
- *  amendment's `earlier_formula_detail`), the same call queries those rules,
- *  and a member's answer counts only when it agrees with whether any of them
- *  holds. The pinned 7 CFR 273.4 check from before the amendment is one flat
- *  OR: it passes a child under 18 with no immigration status, and a parolee
- *  on the 40-quarter exception, which 7 CFR 273.4(a)(6)(ii)(A) grants only
- *  to permanent residents. The module's (a)(6) rule fails them both. A
- *  member is left out when the encodings disagree, or the run fails or
- *  times out. */
-async function valuesUnderEarlierFormula(
-  options: BuildOptions,
-  rule: CatalogOutput,
-  members: number[],
-  period: string
-): Promise<Map<number, EarlierValue>> {
-  const { program } = options;
-  const values = new Map<number, EarlierValue>();
-  const detailNames =
-    amendmentForModule(rule.id ?? "")?.earlier_formula_detail?.find((d) => d.rule === rule.name)?.detailed_by ?? [];
-  const detail = detailNames.map((name) => program.outputs.find((o) => o.name === name));
-  if (detail.some((o) => !o || o.entity !== rule.entity)) return values;
-  try {
-    const built = buildRequest({
-      ...options,
-      period,
-      outputsOverride: [rule.name, ...detailNames],
-      extraOutputs: undefined,
-    });
-    const query = built.request.queries.find((q) => q.outputs.includes(queryKey(rule)));
-    if (!query) return values;
-    const memberEntity = rule.entity === program.member_entity ? program.member_entity : undefined;
-    const ids = members.map((m) => (memberEntity ? instanceId(memberEntity, m) : query.entity_id));
-    const outputs = [rule, ...(detail as CatalogOutput[])].map(queryKey);
-    const response = await runCompiled(
-      program.slug,
-      {
-        ...built.request,
-        queries: [...new Set(ids)].map((entity_id) => ({ entity_id, period: query.period, outputs })),
-      },
-      { signal: AbortSignal.timeout(EARLIER_FORMULA_TIMEOUT_MS) }
-    );
-    members.forEach((member, i) => {
-      const result = response.results.find((r) => r.entity_id === ids[i]);
-      const [value, ...parts] = outputs.map((key) => {
-        const r = result?.outputs?.[key] && readOutput(result.outputs[key]);
-        return r ? ((r.kind === "judgment" ? r.outcome : r.numeric) ?? undefined) : undefined;
-      });
-      if (value === undefined || parts.includes(undefined)) return;
-      if (parts.length > 0 && (value === "holds") !== parts.includes("holds")) return;
-      values.set(member, { period, value });
-    });
-  } catch (err) {
-    console.error("[finbot] earlier-formula run failed:", err, "program:", program.slug, "rule:", rule.name, "period:", period);
-  }
-  return values;
-}
-
-/** A lookup's `amended_by`: the amendment its rule applies for the period,
- *  with what the formula from before it gives for the same facts. */
-export async function lookupAmendment(
-  options: BuildOptions,
-  rule: CatalogOutput,
-  period: string,
-  now: ShapedOutput["value"]
-): Promise<AmendmentRef | undefined> {
-  const amendment = appliedAmendment(rule, outputPeriodStart(options.program, rule, period));
-  if (!amendment) return undefined;
-  const ref = amendmentRef(amendment, citationUrl(amendment.provision.legal_id));
-  const earlier = earlierPeriodFor(rule);
-  if (!earlier || now === null) return ref;
-  const run = (await valuesUnderEarlierFormula(options, rule, [1], earlier)).get(1);
-  return run ? withEarlierOutcome(ref, now, run) : ref;
-}
-
-/** Say on each `amended_by` whether the amendment changed the result: run
- *  the same facts under the rule's formula from before it, for every member
- *  that failed the rule. The refugee starter fails the 7 CFR 273.4 check
- *  because P.L. 119-21 §10108 dropped refugees, but a lawful permanent
- *  resident short of the five-year wait fails it under both formulas, and
- *  citing the amendment as the reason would be false. A member's check, and
- *  an output's own amended rule, get that entity's answer; a household-level
- *  failed sub-check lists the failing members each way, since they can
- *  differ. */
-async function attributeAmendments(options: BuildOptions, shaped: ShapedResult): Promise<void> {
-  const { program } = options;
-  const checks = shaped.member_checks ?? [];
-  const byMember = new Map(checks.map((m) => [m.member, m]));
-  const resolved = (m: MemberChecks) => (m.same_as ? byMember.get(m.same_as)?.checks : m.checks) ?? [];
-  const failing = new Map<string, number[]>(); // rule → members whose judgment of it failed
-  const add = (rule: string, member: number) => {
-    const members = failing.get(rule) ?? [];
-    if (!members.includes(member)) failing.set(rule, [...members, member]);
-  };
-  for (const m of checks) for (const { name } of amendedIn(resolved(m))) add(name, m.member);
-  // An output is judged at member 1 (a member rule) or once (any other),
-  // and the earlier run answers the latter as member 1. A household-level
-  // sub-check no member check failed is answered the same way.
-  const gates = householdGates(shaped.outputs);
-  for (const g of gates) if (g.amended_by) add(g.name, 1);
-  for (const f of gates.flatMap((g) => g.failed_because ?? [])) if (f.amended_by && !failing.has(f.name)) add(f.name, 1);
-  if (failing.size === 0) return;
-
-  const earlier = new Map<string, Map<number, EarlierValue>>(); // rule → member → run
-  await Promise.all(
-    [...failing].map(async ([rule, members]) => {
-      const meta = program.outputs.find((o) => o.name === rule);
-      const period = meta && earlierPeriodFor(meta);
-      if (meta && period) earlier.set(rule, await valuesUnderEarlierFormula(options, meta, members, period));
-    })
-  );
-  const run = (rule: string, member: number) => earlier.get(rule)?.get(member);
-
-  // Members with equal checks can differ under the earlier formula (a
-  // refugee and an undocumented member both fail the check now): each
-  // member points at the first member equal to it both ways, else gets its
-  // own copy of the checks.
-  if (shaped.member_checks) {
-    const firstWith = new Map<string, number>();
-    shaped.member_checks = checks.map((m) => {
-      const key = JSON.stringify([resolved(m), [...failing.keys()].map((rule) => run(rule, m.member)?.value ?? null)]);
-      const match = firstWith.get(key);
-      if (match !== undefined) return match === m.same_as ? m : { member: m.member, same_as: match };
-      firstWith.set(key, m.member);
-      return m.same_as ? { member: m.member, checks: structuredClone(resolved(m)) } : m;
-    });
-  }
-  const annotate = (entry: { name: string; amended_by?: AmendmentRef }, member: number) => {
-    const value = run(entry.name, member);
-    if (entry.amended_by && value) entry.amended_by = withEarlierOutcome(entry.amended_by, "not_holds", value);
-  };
-  for (const m of shaped.member_checks ?? []) for (const entry of amendedIn(m.checks ?? [])) annotate(entry, m.member);
-  for (const g of gates) annotate(g, 1);
-  for (const entry of gates.flatMap((g) => g.failed_because ?? [])) {
-    if (!entry.amended_by) continue;
-    const known = (failing.get(entry.name) ?? [1]).flatMap((member) => {
-      const value = run(entry.name, member);
-      return value ? [{ member, value }] : [];
-    });
-    if (known.length === 0) continue;
-    const changed = known.filter((k) => k.value.value !== "not_holds").map((k) => k.member);
-    const unchanged = known.filter((k) => k.value.value === "not_holds").map((k) => k.member);
-    entry.amended_by = withMemberOutcomes(entry.amended_by, known[0].value.period, changed, unchanged);
-  }
+/** A lookup's `amended_by`: the amendment its rule applies in the period
+ *  the engine evaluates it, whatever the value. */
+export function lookupAmendment(program: CatalogProgram, rule: CatalogOutput, period: string): AmendmentRef | undefined {
+  const amendment = appliedAmendment(rule, outputPeriodStart(program, rule, period));
+  return amendment && amendmentRef(amendment, citationUrl(amendment.provision.legal_id));
 }
 
 /** The trace of member 1's own queries (its member checks, or member-entity
