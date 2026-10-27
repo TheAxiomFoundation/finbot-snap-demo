@@ -72,6 +72,7 @@ jobs:
           AXIOM_RULES_ENGINE_BINARY: ${{ github.workspace }}/engine-src/target/release/axiom-rules-engine
           AXIOM_ARTIFACTS_DIR: ${{ github.workspace }}/engine/artifacts
         run: |
+          bun run test
           bun run test:smoke
           bun run test:regression
           bun run test:oracle

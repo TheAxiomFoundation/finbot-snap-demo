@@ -145,6 +145,12 @@ function Sources({ invocations, indented }: { invocations: ToolInvocation[]; ind
         seen.add(id);
         citations.push({ legal_id: id, url: r.url });
       }
+      // The amended statute the cited rules apply is a source of the answer too.
+      const amended = r.amended_by as { legal_id?: unknown; url?: unknown } | undefined;
+      if (amended && typeof amended.legal_id === "string" && typeof amended.url === "string" && !seen.has(amended.legal_id)) {
+        seen.add(amended.legal_id);
+        citations.push({ legal_id: amended.legal_id, url: amended.url });
+      }
     }
   }
   if (citations.length === 0) return null;

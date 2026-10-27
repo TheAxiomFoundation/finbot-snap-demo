@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { annualUpdateNoticesAt, periodStartDate } from "@/lib/annual-updates";
 import { getCatalog, getProgram } from "@/lib/catalog";
 import { programDisclosures } from "@/lib/catalog-overlay";
-import { legalIdToUrl } from "@/lib/legal-links";
+import { citationUrl } from "@/lib/citations";
 import { programCoverageStatus } from "@/lib/coverage";
 import { defaultPeriodFor } from "@/lib/request-builder";
 
@@ -120,7 +120,7 @@ export default async function ProgramPage({ params }: PageProps) {
               </div>
               {output.id && (
                 <div style={{ marginTop: 4 }}>
-                  <a className="cite" style={{ fontSize: 11 }} href={legalIdToUrl(output.id)} target="_blank" rel="noreferrer">
+                  <a className="cite" style={{ fontSize: 11 }} href={citationUrl(output.id)} target="_blank" rel="noreferrer">
                     {output.id}
                   </a>
                 </div>
