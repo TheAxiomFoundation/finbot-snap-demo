@@ -135,6 +135,11 @@ export interface CatalogRelation {
   /** Judgment rules referenced inside aggregators over this relation — the
    *  checks that decide whether a member counts. */
   gate_judgments?: string[];
+  /** Rules holding an aggregator over this relation, e.g. eitc_child_count. */
+  aggregated_by?: string[];
+  /** Gates some aggregator reads exclusionary (`count(where: gate) == 0`, or
+   *  under a `not`): no member holding one is the expected case. */
+  negated_gate_judgments?: string[];
 }
 
 export interface CatalogProgram {

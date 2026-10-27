@@ -333,6 +333,10 @@ export interface BuiltRequest {
   /** "counted" on a lookup with a members list: shapeResult reports only
    *  the gates the looked-up outputs count members through. */
   memberChecksScope: "all" | "counted";
+  /** Per member instance, in order: the member relations it is linked
+   *  through, and whether it carries a filer role (RETURN_SCOPED_MEMBER_FACTS;
+   *  null in a program without filer roles). */
+  memberLinks: Array<{ relations: string[]; filer: boolean | null }>;
   applied: {
     period: string;
     member_count: number;
@@ -421,6 +425,12 @@ export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">
   return MEMBER_COUNT_INPUTS.has(slot.name) && (slot.dtype === "integer" || slot.dtype === "decimal");
 }
 
+/** A relation's short name, as members[].relations may give it
+ *  ("dependent_of_tax_unit"). */
+function shortName(name: string): string {
+  return name.split("#").pop()!.replace(/^relation\./, "");
+}
+
 /** Member-entity judgments that gate whether a member counts inside a
  *  member relation's aggregations (ctc_qualifying_child,
  *  snap_member_eligible), in relation order. */
@@ -451,6 +461,16 @@ const IMMIGRATION_STATUS_FACT =
   /citizen|national|alien|refugee|asylee|entrant|amerasian|immigra|lawful|parolee|compact|qualified_alien|qualifying_quarters|lawfully_residing/;
 /** Fact names about an SSN or TIN on the return. */
 const SSN_FACT = /(^|_)(ssn|tin)(_|$)|social_security_number/;
+/** Facts saying part of a person's identification is missing from the return:
+ *  an SSN/TIN or other included-on-return fact set false (a child's name),
+ *  or the CTC's missing-identification flag set true. */
+function statesMissingIdentification(facts: Facts): boolean {
+  return Object.entries(facts).some(
+    ([name, value]) =>
+      ((SSN_FACT.test(name) || /included_on_return|issued_on_or_before_return_due_date/.test(name)) && value === false) ||
+      (name === "ctc_child_missing_identification" && value === true)
+  );
+}
 
 /** A member-scope fact the app assumes when the user stated nothing that
  *  bears on it — disclosed in applied.assumed_facts so the answer says so and
@@ -505,14 +525,15 @@ const MEMBER_ASSUMPTIONS: MemberAssumption[] = [
     // qualifying_child_tin_included_on_return). Asked for the 2026 maximum
     // EITC with two children, gpt-6-luna set every other qualifying-child
     // fact plus the CTC lookalikes, so eitc_child_count came out 0 and
-    // eitc_maximum gave the childless $664 instead of $7,316. The same
-    // statement as the senior-deduction SSN keeps it off.
+    // eitc_maximum gave the childless $664 instead of $7,316. Setting the
+    // slot, or saying any part of a person's identification is missing from
+    // the return (the child's name or TIN not included, an SSN fact false,
+    // the CTC's ctc_child_missing_identification), keeps it off.
     slot: "qualifying_child_name_age_and_tin_included_on_return",
     value: true,
     applies: (program) => program.slug === "us-fiit",
     stated: (facts) =>
-      "qualifying_child_name_age_and_tin_included_on_return" in facts ||
-      Object.entries(facts).some(([n, v]) => SSN_FACT.test(n) && v === false),
+      "qualifying_child_name_age_and_tin_included_on_return" in facts || statesMissingIdentification(facts),
     gate: "eitc_qualifying_child",
     why: "Nothing was said about this child's SSN, so the child's name, age and SSN are assumed to be on the return, as the EITC's qualifying-child test requires. Say so in Assumptions and invite the user to correct it (a child without an SSN doesn't count for the EITC).",
   },
@@ -591,7 +612,6 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         (r) => r.related_entity === program.member_entity && (r.used || program.relations.length === 1)
       )
     : [];
-  const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
   const relationNames = new Set(memberRelations.flatMap((r) => [r.name, shortName(r.name)]));
   const knownRelations = [...new Set(memberRelations.map((r) => shortName(r.name)))];
   const unknownRelations: UnknownRelationError["unknown"] = [];
@@ -872,6 +892,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
   // facts that name member-scope slots (so "member_age: 34" works without an
   // explicit members list).
   const relations: RelationRecord[] = [];
+  const memberLinks: BuiltRequest["memberLinks"] = [];
   /** Assumption → the 1-based members it was set on. */
   const assumedMembers = new Map<MemberAssumption, number[]>();
   if (memberEntity && memberCount > 0) {
@@ -922,6 +943,12 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
       for (const slot of memberSlots) {
         record(slot, memberEntity, memberId, memberFacts[slot.name]);
       }
+      const filerRoles = RETURN_SCOPED_MEMBER_FACTS[program.slug]?.filerRoles;
+      const links = {
+        relations: [] as string[],
+        filer: filerRoles ? filerRoles.some((role) => memberFacts[role] === true) : null,
+      };
+      memberLinks.push(links);
       const wanted = spec?.relations;
       for (const relation of memberRelations) {
         if (
@@ -935,6 +962,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
           ? [memberId, primaryId]
           : [primaryId, memberId];
         relations.push({ name: relation.name, tuple, interval: inputInterval });
+        links.relations.push(relation.name);
       }
     }
     for (const [slot, members] of withheld) {
@@ -1036,6 +1064,7 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     memberCheckNames,
     memberCheckIds,
     memberChecksScope,
+    memberLinks,
     applied: {
       period: resolved.label,
       member_count: memberCount,
@@ -1240,32 +1269,63 @@ function reachableKeys(trace: Record<string, DerivedTraceNode>, rootKey: string)
   return reached;
 }
 
-/** Member gates the outputs count members through, each with the outputs
- *  that do. A relation aggregation's trace node lists its gate's rule among
- *  its dependencies (us-fiit eitc_child_count → eitc_qualifying_child). The
- *  walk stops at a gate: past it lies member 1's own check, not the
- *  output's chain. A branch the engine short-circuited isn't in the trace,
- *  so a gate it would have counted through can't move the value. */
+/** A member gate the looked-up outputs count members through. */
+interface CountedGate {
+  /** The outputs whose chains count through it. */
+  outputs: string[];
+  /** The member relations whose aggregations count through it: only the
+   *  members linked through one of them can count. */
+  relations: string[];
+  /** Some such aggregation reads it exclusionary (snap_ssn_eligible needs no
+   *  member to hold snap_member_ssn_requirement_ineligible), so no member
+   *  holding it is the expected case. */
+  exclusionary: boolean;
+}
+
+/** Member gates the outputs count members through. The walk follows the
+ *  outputs' trace and keeps a gate where a rule the catalog lists as
+ *  aggregating over a relation that gates on it depends on it (us-fiit
+ *  eitc_child_count → eitc_qualifying_child). A member rule that reads a
+ *  gate directly (snap_member_ssn_requirement_eligible reads
+ *  snap_member_ssn_requirement_ineligible) counts nothing. The walk stops at
+ *  a gate: past it lies member 1's own check, not the output's chain. A
+ *  branch the engine short-circuited isn't in the trace, so a gate it would
+ *  have counted through can't move the value. */
 function countedGates(
+  program: CatalogProgram,
   trace: Record<string, DerivedTraceNode>,
   outputs: CatalogOutput[],
   gates: CatalogOutput[]
-): Map<string, string[]> {
+): Map<string, CountedGate> {
   const gateByKey = new Map(gates.map((gate) => [queryKey(gate), gate.name]));
-  const counted = new Map<string, string[]>();
+  const memberRelations = program.relations.filter((r) => r.related_entity === program.member_entity);
+  const counted = new Map<string, CountedGate>();
   for (const output of outputs) {
     const seen = new Set<string>();
-    const queue = [...(trace[queryKey(output)]?.dependencies ?? [])];
+    const queue = [queryKey(output)];
     while (queue.length) {
       const key = queue.shift()!;
       if (seen.has(key)) continue;
       seen.add(key);
-      const gate = gateByKey.get(key);
-      if (gate) {
-        counted.set(gate, [...(counted.get(gate) ?? []), output.name]);
-        continue;
+      const node = trace[key];
+      for (const dependency of node?.dependencies ?? []) {
+        const gate = gateByKey.get(dependency);
+        if (!gate) {
+          queue.push(dependency);
+          continue;
+        }
+        const relations = memberRelations.filter(
+          (r) => r.gate_judgments?.includes(gate) && r.aggregated_by?.includes(node.name)
+        );
+        if (relations.length === 0) continue;
+        const entry = counted.get(gate) ?? { outputs: [], relations: [], exclusionary: false };
+        if (!entry.outputs.includes(output.name)) entry.outputs.push(output.name);
+        for (const relation of relations) {
+          if (!entry.relations.includes(relation.name)) entry.relations.push(relation.name);
+          if (relation.negated_gate_judgments?.includes(gate)) entry.exclusionary = true;
+        }
+        counted.set(gate, entry);
       }
-      queue.push(...(trace[key]?.dependencies ?? []));
     }
   }
   return counted;
@@ -1480,12 +1540,13 @@ export function shapeResult(
     .map((o) => shapeOne(o, merged, trace));
 
   const gates = built.queried.filter((o) => built.memberCheckNames.has(o.name));
+  const lookup = built.memberChecksScope === "counted";
+  const counted = gates.length > 0
+    ? countedGates(program, trace, built.queried.filter((o) => !built.memberCheckNames.has(o.name)), gates)
+    : new Map<string, CountedGate>();
   // A lookup shows only the gates its outputs count members through; the
   // rest can't move the value it reads.
-  const counted = built.memberChecksScope === "counted"
-    ? countedGates(trace, built.queried.filter((o) => !built.memberCheckNames.has(o.name)), gates)
-    : null;
-  const shownGates = counted ? gates.filter((gate) => counted.has(gate.name)) : gates;
+  const shownGates = lookup ? gates.filter((gate) => counted.has(gate.name)) : gates;
   const firstMemberWith = new Map<string, number>();
   const heldAt = new Set<string>(); // `${gate}|${member}` for every gate that holds
   const memberChecks: MemberChecks[] = shownGates.length === 0 ? [] : built.memberCheckIds.map((id, index) => {
@@ -1505,17 +1566,42 @@ export function shapeResult(
     }
   });
 
-  // A lookup's value read through a gate no listed member holds counted
-  // none of them: the childless $664 EITC maximum for a taxpayer and two
-  // children whose qualifying-child facts were incomplete. One listed
-  // member failing it (a single filer) is the ordinary case.
-  if (counted && built.memberCheckIds.length > 1) {
-    for (const gate of shownGates) {
-      if (built.memberCheckIds.some((_, index) => heldAt.has(`${gate.name}|${index + 1}`))) continue;
+  // A value counts the members linked through the relation it counts over
+  // that hold the gate. Two ways it can count none of the members the user
+  // meant. A member holds the gate but isn't linked through that relation (a
+  // child listed under dependent_of_tax_unit only): flagged on computes and
+  // lookups alike. Or no linked member holds it (the childless $664 EITC
+  // maximum for a taxpayer and two children whose qualifying-child facts
+  // were incomplete): flagged on lookups, whose member_checks used to show
+  // nothing; computes have always shown them. An exclusionary gate held by
+  // no one is the expected case, and so is a gate failed by the filers alone
+  // (a single filer, a childless couple): only a linked member past them, or
+  // in a program without filer roles more than one linked member, was
+  // plausibly meant to count.
+  const again = lookup ? "look the value up again once" : "compute again once";
+  for (const gate of shownGates) {
+    const entry = counted.get(gate.name);
+    if (!entry || entry.exclusionary) continue;
+    const { outputs, relations } = entry;
+    const members = built.memberCheckIds.map((_, index) => index + 1);
+    const holds = (member: number) => heldAt.has(`${gate.name}|${member}`);
+    const linked = members.filter((m) => built.memberLinks[m - 1]?.relations.some((r) => relations.includes(r)));
+    const through = relations.map(shortName).join(" or ");
+    const unlinked = members.filter((m) => holds(m) && !linked.includes(m));
+    if (unlinked.length > 0) {
+      const one = unlinked.length === 1;
       built.applied.notes.push(
-        `WARNING: ${counted.get(gate.name)!.join(", ")} counts members through ${gate.name}, which holds for none of the ${built.memberCheckIds.length} listed members, so none of them counted (member_checks show what each one lacks). If the user's description says a listed member should count, set the facts its \`requires\` names on that member and look the value up again once; otherwise this value stands.`
+        `WARNING: ${one ? `member ${unlinked[0]} holds` : `members ${unlinked.join(", ")} hold`} ${gate.name} but ${one ? "isn't" : "aren't"} linked through ${through}, the relation ${outputs.join(", ")} ${outputs.length === 1 ? "counts" : "count"} members over, so ${one ? "it" : "they"} didn't count. If ${one ? "it" : "they"} should, add ${through} to ${one ? "that member's" : "their"} \`relations\` (or leave \`relations\` out to link every member relation) and ${again}.`
       );
+      continue;
     }
+    if (!lookup || linked.some(holds)) continue;
+    const pastFilers = linked.filter((m) => built.memberLinks[m - 1]?.filer === false);
+    const filerRoles = built.memberLinks.some((links) => links.filer !== null);
+    if (linked.length < 2 || (filerRoles && pastFilers.length === 0)) continue;
+    built.applied.notes.push(
+      `WARNING: ${outputs.join(", ")} ${outputs.length === 1 ? "counts" : "count"} members through ${gate.name}, which holds for none of the ${linked.length} listed members linked through ${through}, so none of them counted (member_checks show what each one lacks). If the user's description says a listed member should count, set the facts its \`requires\` names on that member and ${again}; otherwise this value stands.`
+    );
   }
 
   // An assumption tied to a member gate changed nothing where that gate
@@ -1660,7 +1746,7 @@ async function lookupMemberChecks(
   const { program } = options;
   const trace: Record<string, DerivedTraceNode> = {};
   for (const result of response.results) Object.assign(trace, result.trace ?? {});
-  const counted = countedGates(trace, built.queried, memberGates(program));
+  const counted = countedGates(program, trace, built.queried, memberGates(program));
   if (counted.size === 0) return null;
   try {
     const checkedBuilt = buildRequest({ ...options, memberChecks: [...counted.keys()] });

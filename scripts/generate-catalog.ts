@@ -160,6 +160,13 @@ interface CatalogRelation {
   /** Judgment rules referenced inside aggregators over this relation — the
    *  checks that decide whether a member counts (e.g. ctc_qualifying_child). */
   gate_judgments?: string[];
+  /** Rules holding an aggregator over this relation (with gate_judgments
+   *  only), e.g. eitc_child_count: a trace edge from one of them to a gate
+   *  is a count of members through it. */
+  aggregated_by?: string[];
+  /** Gates some aggregator reads exclusionary (`count(where: gate) == 0`, or
+   *  under a `not`): no member holding one is the expected case. */
+  negated_gate_judgments?: string[];
 }
 
 interface CatalogProgram {
@@ -588,23 +595,71 @@ function analyzeProgram(
   const relationOuterEntities = new Map<string, Set<string>>();
   const relationBodyInputs = new Map<string, Set<string>>();
   const relationGateJudgments = new Map<string, Set<string>>();
-  const aggregatorRefs = (node: unknown): Array<{ kind: string; name: string }> => {
-    const refs: Array<{ kind: string; name: string }> = [];
-    const visit = (n: unknown) => {
-      if (Array.isArray(n)) { n.forEach(visit); return; }
-      if (n === null || typeof n !== "object") return;
-      const obj = n as IRNode;
-      if ((obj.kind === "input" || obj.kind === "derived") && typeof obj.name === "string") {
-        refs.push({ kind: obj.kind as string, name: obj.name });
+  /** Rules holding an aggregator over the relation, and the gates some
+   *  aggregator reads exclusionary: a member holding the gate pushes the
+   *  rule toward failing (`count(where: gate) == 0`, or a `not` around the
+   *  gate or the count), so no member holding it is the expected case. */
+  const relationAggregators = new Map<string, Set<string>>();
+  const relationNegatedGates = new Map<string, Set<string>>();
+  const literal = (n: unknown): unknown =>
+    (n as IRNode | null)?.kind === "literal" ? ((n as IRNode).value as IRNode | undefined)?.value : undefined;
+  /** Whether `child` reads opposite to `parent`'s own polarity: a `not`'s
+   *  operand, what a `sub` subtracts, a side compared `== false`/`!= true`. */
+  const flips = (parent: IRNode, child: unknown): boolean => {
+    if (parent.kind === "not") return true;
+    if (parent.kind === "sub") return child === parent.right;
+    if (parent.kind !== "comparison" || (child !== parent.left && child !== parent.right)) return false;
+    const other = literal(child === parent.left ? parent.right : parent.left);
+    return (parent.op === "eq" && other === false) || (parent.op === "ne" && other === true);
+  };
+  const visitPolarity = (
+    n: unknown,
+    negated: boolean,
+    onNode: (node: IRNode, negated: boolean, parent: IRNode | null) => boolean,
+    parent: IRNode | null = null
+  ) => {
+    if (Array.isArray(n)) { n.forEach((item) => visitPolarity(item, negated, onNode, parent)); return; }
+    if (n === null || typeof n !== "object") return;
+    const obj = n as IRNode;
+    if (!onNode(obj, negated, parent)) return;
+    for (const value of Object.values(obj)) visitPolarity(value, flips(obj, value) ? !negated : negated, onNode, obj);
+  };
+  /** Aggregator nodes of one rule read exclusionary: flipped an odd number
+   *  of times on the way down, or the count side of a test for zero. */
+  const exclusionaryAggregators = (exprs: unknown[]): Set<IRNode> => {
+    const found = new Set<IRNode>();
+    const zeroTest = (cmp: IRNode | null, count: IRNode): boolean => {
+      if (cmp?.kind !== "comparison") return false;
+      const op = cmp.op as string;
+      if (cmp.left === count) {
+        return (literal(cmp.right) === 0 && (op === "eq" || op === "lte")) || (literal(cmp.right) === 1 && op === "lt");
       }
-      Object.values(obj).forEach(visit);
+      if (cmp.right === count) {
+        return (literal(cmp.left) === 0 && (op === "eq" || op === "gte")) || (literal(cmp.left) === 1 && op === "gt");
+      }
+      return false;
     };
-    visit(node);
+    visitPolarity(exprs, false, (node, negated, parent) => {
+      if (!isAggregator(node)) return true;
+      if (negated !== zeroTest(parent, node)) found.add(node);
+      return false;
+    });
+    return found;
+  };
+  const aggregatorRefs = (node: unknown): Array<{ kind: string; name: string; negated: boolean }> => {
+    const refs: Array<{ kind: string; name: string; negated: boolean }> = [];
+    visitPolarity(node, false, (obj, negated) => {
+      if ((obj.kind === "input" || obj.kind === "derived") && typeof obj.name === "string") {
+        refs.push({ kind: obj.kind as string, name: obj.name, negated });
+      }
+      return true;
+    });
     return refs;
   };
 
   for (const rule of rules) {
     const outerEntity = rule.entity ?? "Household";
+    const exclusionary = exclusionaryAggregators(ruleExpressions(rule));
     for (const { node } of walkRefs(ruleExpressions(rule), null, outerEntity, new Map())) {
       if (!isAggregator(node)) continue;
       const relation = node.relation as string;
@@ -620,6 +675,8 @@ function analyzeProgram(
       if (!relationBodyInputs.has(relation)) relationBodyInputs.set(relation, new Set());
       const votes = relationVotes.get(relation)!;
       if (!relationGateJudgments.has(relation)) relationGateJudgments.set(relation, new Set());
+      if (!relationAggregators.has(relation)) relationAggregators.set(relation, new Set());
+      relationAggregators.get(relation)!.add(rule.name);
       for (const key of AGGREGATOR_INNER_KEYS) {
         if (!(key in node)) continue;
         for (const ref of aggregatorRefs(node[key])) {
@@ -628,6 +685,10 @@ function analyzeProgram(
             const target = ruleByName.get(ref.name);
             if (target && (target.semantics === "judgment" || target.dtype === "judgment")) {
               relationGateJudgments.get(relation)!.add(ref.name);
+              if (ref.negated !== exclusionary.has(node)) {
+                if (!relationNegatedGates.has(relation)) relationNegatedGates.set(relation, new Set());
+                relationNegatedGates.get(relation)!.add(ref.name);
+              }
             }
           }
           if (ref.kind === "derived") {
@@ -733,12 +794,16 @@ function analyzeProgram(
     }
     const slots = relationSlots.get(rel.name) ?? { member_slot: 0, primary_slot: 1 };
     const gates = [...(relationGateJudgments.get(rel.name) ?? [])].sort();
+    const aggregators = [...(relationAggregators.get(rel.name) ?? [])].sort();
+    const negatedGates = [...(relationNegatedGates.get(rel.name) ?? [])].sort();
     return {
       name: rel.name,
       related_entity: relatedEntity,
       used,
       ...slots,
       ...(gates.length > 0 && { gate_judgments: gates }),
+      ...(gates.length > 0 && aggregators.length > 0 && { aggregated_by: aggregators }),
+      ...(negatedGates.length > 0 && { negated_gate_judgments: negatedGates }),
     };
   });
 

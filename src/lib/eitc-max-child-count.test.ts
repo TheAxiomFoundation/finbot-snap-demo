@@ -22,6 +22,7 @@ import { engineAvailable, memberCheck, numericOutput } from "../../scripts/snap-
 const fiit = getProgram("us-fiit")!;
 const TIN = "qualifying_child_name_age_and_tin_included_on_return";
 const GATE = "eitc_qualifying_child";
+const EITC_RELATION = "us:statutes/26/32#relation.qualifying_child_of_tax_unit";
 const context = { toolCallId: "eitc-max-child-count-test", messages: [] };
 const hasEngine = engineAvailable();
 if (process.env.REQUIRE_ENGINE === "1" && !hasEngine) {
@@ -122,6 +123,30 @@ describe("the child-TIN assumption", () => {
     expect(built.applied.assumed_facts?.find((a) => a.slot === TIN)?.members).toEqual([1, 3]);
   });
 
+  it("stays off a member whose name or TIN is stated missing from the return", () => {
+    // The aux component slots feed no rule, so before this a child stated
+    // with no name on the return still got the aggregate slot assumed true.
+    const statements: Facts[] = [
+      { qualifying_child_name_included_on_return: false },
+      { qualifying_child_tin_included_on_return: false },
+      { qualifying_child_tin_issued_on_or_before_return_due_date: false },
+      { ctc_child_missing_identification: true },
+    ];
+    for (const missing of statements) {
+      const stated: MemberSpec = { facts: { ...probeChild.facts, ...missing } };
+      const built = buildRequest({ program: fiit, period: "2026", members: [taxpayer, stated, child()] });
+      expect(tinRecords(built, "person:2").every((i) => i.value.value === false)).toBe(true);
+      expect(built.applied.assumed_facts?.find((a) => a.slot === TIN)?.members).toEqual([1, 3]);
+    }
+    const topLevel = buildRequest({
+      program: fiit,
+      period: "2026",
+      facts: { qualifying_child_name_included_on_return: false },
+      members: [taxpayer, child(), child()],
+    });
+    expect(topLevel.applied.assumed_facts?.find((a) => a.slot === TIN)).toBeUndefined();
+  });
+
   it("stays out of lookups that don't read it and programs other than us-fiit", () => {
     const lookup = buildRequest({ program: fiit, period: "2026", outputsOverride: ["exemption_amount"] });
     expect(lookup.applied.assumed_facts).toBeUndefined();
@@ -143,6 +168,58 @@ describe("member checks on the lookup path", () => {
 
     const bare = buildRequest({ program: fiit, period: "2026", outputsOverride: ["eitc_maximum"], memberChecks: [GATE] });
     expect(bare.memberCheckIds).toEqual([]);
+  });
+
+  it("records each member's relations and filer role", () => {
+    const built = buildRequest({
+      program: fiit,
+      period: "2026",
+      members: [taxpayer, { ...child(), relations: ["dependent_of_tax_unit"] }],
+    });
+    expect(built.memberLinks[0]).toEqual({ relations: expect.arrayContaining([EITC_RELATION]), filer: true });
+    expect(built.memberLinks[1]).toEqual({ relations: ["us:statutes/26/24/h#relation.dependent_of_tax_unit"], filer: false });
+    const snap = buildRequest({ program: getProgram("us-az-snap")!, period: "2026-01", members: [{}, {}] });
+    expect(snap.memberLinks.map((links) => links.filer)).toEqual([null, null]);
+  });
+});
+
+// The catalog records which rules count members over each relation, and the
+// gates some aggregation reads exclusionary, so a lookup's gate walk follows
+// real aggregation edges (review r1: a member rule reading a gate directly
+// raised a false warning, and an exclusionary gate's warning pointed the
+// wrong way).
+describe("relation aggregation edges in the catalog", () => {
+  const relation = (slug: string, name: string) =>
+    getProgram(slug)!.relations.find((r) => r.name === name)!;
+
+  it("lists eitc_child_count as counting through eitc_qualifying_child, positively", () => {
+    const eitc = relation("us-fiit", EITC_RELATION);
+    expect(eitc.gate_judgments).toEqual([GATE]);
+    expect(eitc.aggregated_by).toEqual(["eitc_child_count"]);
+    expect(eitc.negated_gate_judgments).toBeUndefined();
+  });
+
+  it("marks the ineligibility gates SNAP counts against zero as exclusionary", () => {
+    // snap_ssn_eligible: count(where: snap_member_ssn_requirement_ineligible) == 0.
+    const household = getProgram("us-az-snap")!.relations.find((r) => r.aggregated_by?.includes("snap_ssn_eligible"))!;
+    expect(household.negated_gate_judgments).toEqual(
+      expect.arrayContaining(["snap_member_ssn_requirement_ineligible", "snap_member_student_ineligible"])
+    );
+    expect(household.negated_gate_judgments).not.toContain("snap_member_eligible");
+    // household_has_no_earned_income_at_certification: count(...) == 0.
+    const pays = getProgram("us-co-snap")!.relations.find((r) =>
+      r.aggregated_by?.includes("household_has_no_earned_income_at_certification")
+    )!;
+    expect(pays.negated_gate_judgments).toEqual(["payment_considered_earned_income"]);
+  });
+
+  it("lists an aggregator only on relations whose aggregations read a gate", () => {
+    for (const program of ["us-fiit", "us-az-snap", "us-co-snap", "us-ny-snap"].map((slug) => getProgram(slug)!)) {
+      for (const r of program.relations) {
+        if (r.aggregated_by) expect(r.gate_judgments?.length).toBeGreaterThan(0);
+        for (const gate of r.negated_gate_judgments ?? []) expect(r.gate_judgments).toContain(gate);
+      }
+    }
   });
 });
 
@@ -195,6 +272,67 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
     expect(result.applied.notes.some((n: string) => n.startsWith("WARNING"))).toBe(false);
   }, 30_000);
 
+  it("counts no child whose name is stated missing from the return", async () => {
+    const noName = (): MemberSpec => ({ facts: { ...probeChild.facts, qualifying_child_name_included_on_return: false } });
+    const lookup = (members: MemberSpec[]) =>
+      computeProgram({ program: fiit, period: "2026", facts: { filing_status: 3 }, members, outputsOverride: ["eitc_maximum"] });
+    expect(numericOutput(await lookup([taxpayer, noName(), child()]), "eitc_maximum")).toBe(4427);
+    const neither = await lookup([taxpayer, noName(), noName()]);
+    expect(numericOutput(neither, "eitc_maximum")).toBe(664);
+    expect(neither.applied.assumed_facts).toBeUndefined();
+  }, 30_000);
+
+  it("names a child who qualifies but isn't linked through the EITC relation, on lookups and computes", async () => {
+    const members = [taxpayer, { ...child(), relations: ["dependent_of_tax_unit"] }];
+    const options = { program: fiit, period: "2026", facts: { filing_status: 3 } as Facts, members };
+    const lookup = await computeProgram({ ...options, outputsOverride: ["eitc_maximum"] });
+    expect(numericOutput(lookup, "eitc_maximum")).toBe(664);
+    expect(memberCheck(lookup, 2, GATE).value).toBe("holds");
+    expect(lookup.applied.notes).toContainEqual(
+      expect.stringMatching(/^WARNING: member 2 holds eitc_qualifying_child but isn't linked through qualifying_child_of_tax_unit, .* look the value up again once\.$/)
+    );
+    const compute = await computeProgram({ ...options, extraOutputs: ["eitc_maximum"] });
+    expect(numericOutput(compute, "eitc_maximum")).toBe(664);
+    expect(compute.applied.notes).toContainEqual(
+      expect.stringMatching(/^WARNING: member 2 holds eitc_qualifying_child but isn't linked through qualifying_child_of_tax_unit, .* compute again once\.$/)
+    );
+    // Linked through every relation, the same child counts and nothing warns.
+    const linked = await computeProgram({ ...options, members: [taxpayer, child()], outputsOverride: ["eitc_maximum"] });
+    expect(numericOutput(linked, "eitc_maximum")).toBe(4427);
+    expect(linked.applied.notes.some((n) => n.startsWith("WARNING: member"))).toBe(false);
+  }, 60_000);
+
+  it("doesn't warn a childless couple filing jointly", async () => {
+    const spouse: MemberSpec = { facts: { is_spouse_of_taxpayer: true, age: 40, individual_age_at_close_of_calendar_year: 40 } };
+    for (const output of ["eitc_maximum", "senior_deduction"]) {
+      const result = await computeProgram({
+        program: fiit,
+        period: "2026",
+        facts: { filing_status: 1 },
+        members: [taxpayer, spouse],
+        outputsOverride: [output],
+      });
+      expect(result.member_checks?.length).toBeGreaterThan(0);
+      expect(result.applied.notes.some((n) => n.startsWith("WARNING"))).toBe(false);
+    }
+  }, 60_000);
+
+  it("doesn't warn on AZ SNAP member rules or exclusionary gates", async () => {
+    const az = getProgram("us-az-snap")!;
+    const lookup = (output: string) =>
+      computeProgram({ program: az, period: "2026-01", members: [{}, {}], outputsOverride: [output] });
+    // A member rule reads its gate directly: no count, so no member checks.
+    const member = await lookup("snap_member_ssn_requirement_eligible");
+    expect(member.member_checks).toBeUndefined();
+    expect(member.applied.notes.some((n) => n.startsWith("WARNING"))).toBe(false);
+    // count(where: snap_member_ssn_requirement_ineligible) == 0: no member
+    // holding it is what makes the household pass.
+    const household = await lookup("snap_ssn_eligible");
+    expect(household.outputs[0].value).toBe("holds");
+    expect(memberCheck(household, 1, "snap_member_ssn_requirement_ineligible").value).toBe("not_holds");
+    expect(household.applied.notes.some((n) => n.startsWith("WARNING"))).toBe(false);
+  }, 60_000);
+
   it("leaves lookup member checks off an output that counts no member", async () => {
     const result = (await tools.lookup_value.execute!(
       { program: "us-fiit", output: "exemption_amount", period: "2026", members: [taxpayer, child()] },
@@ -205,31 +343,49 @@ describe.skipIf(!hasEngine)("real-engine 2026 EITC maximum with two children", (
   }, 30_000);
 
   // Invariants, for any number of children (0–5) each with the TIN unstated,
-  // stated true or stated false:
-  //  - the maximum is the Rev. Proc. 2025-32 amount for the children whose
-  //    TIN isn't stated false (three or more capped at three);
+  // stated true or stated false, and each linked through every member
+  // relation or through dependent_of_tax_unit only:
+  //  - the maximum is the Rev. Proc. 2025-32 amount for the linked children
+  //    whose TIN isn't stated false (three or more capped at three);
   //  - the TIN assumption is disclosed for exactly the unstated children;
+  //  - a warning names exactly the unlinked children whose TIN isn't
+  //    stated false (they hold the gate but can't count), on both paths;
   //  - lookup_value and compute's extra_outputs agree on the value and on
   //    every member's eitc_qualifying_child (two paths, one semantics).
-  it("matches the maximum table for any mix of stated and unstated child TINs", async () => {
+  it("matches the maximum table for any mix of stated and unstated child TINs and links", async () => {
+    const childSpec = fc.record({
+      tin: fc.constantFrom<boolean | undefined>(undefined, true, false),
+      linked: fc.boolean(),
+    });
     await fc.assert(
-      fc.asyncProperty(fc.array(fc.constantFrom<boolean | undefined>(undefined, true, false), { maxLength: 5 }), async (tins) => {
-        const members = [taxpayer, ...tins.map(child)];
+      fc.asyncProperty(fc.array(childSpec, { maxLength: 5 }), async (children) => {
+        const members = [
+          taxpayer,
+          ...children.map(({ tin, linked }) => ({ ...child(tin), ...(!linked && { relations: ["dependent_of_tax_unit"] }) })),
+        ];
         const options = { program: fiit, period: "2026", facts: { filing_status: 3 } as Facts, members };
         const lookup = await computeProgram({ ...options, outputsOverride: ["eitc_maximum"] });
         const compute = await computeProgram({ ...options, extraOutputs: ["eitc_maximum"] });
-        const counted = tins.filter((tin) => tin !== false).length;
+        const counted = children.filter(({ tin, linked }) => tin !== false && linked).length;
         expect(numericOutput(lookup, "eitc_maximum")).toBe(maximumFor(counted));
         expect(numericOutput(compute, "eitc_maximum")).toBe(maximumFor(counted));
-        const unstated = tins.flatMap((tin, i) => (tin === undefined ? [i + 2] : []));
+        const unstated = children.flatMap(({ tin }, i) => (tin === undefined ? [i + 2] : []));
         const disclosed = (r: typeof lookup) => r.applied.assumed_facts?.find((a) => a.slot === TIN)?.members ?? [];
         expect(disclosed(lookup)).toEqual(unstated);
         expect(disclosed(compute)).toEqual(unstated);
+        const stranded = children.flatMap(({ tin, linked }, i) => (tin !== false && !linked ? [i + 2] : []));
+        for (const result of [lookup, compute]) {
+          const named = result.applied.notes
+            .map((n) => /^WARNING: members? ([\d, ]+) holds? eitc_qualifying_child but/.exec(n)?.[1])
+            .filter(Boolean)
+            .flatMap((list) => list!.split(", ").map(Number));
+          expect(named).toEqual(stranded);
+        }
         members.forEach((_, i) => {
           expect(memberCheck(lookup, i + 1, GATE).value).toBe(memberCheck(compute, i + 1, GATE).value);
         });
       }),
       { seed: 20261026, numRuns: 20 }
     );
-  }, 120_000);
+  }, 180_000);
 });
