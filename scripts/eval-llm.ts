@@ -250,14 +250,17 @@ async function evaluate(c: EvalCase): Promise<{ pass: boolean; notes: string[] }
   }
   // Every case: the reply may not present results as certified, verified,
   // validated, guaranteed, or official (the system prompt forbids it; see
-  // prompts.ts). "official" may take up to two words before its noun
-  // ("official eligibility determination"). A match passes only when a
-  // negation modifies the claim directly: the negation, then at most a few
-  // articles or auxiliaries ("not an official determination", "cannot be
-  // guaranteed", "no guaranteed amount"). A negation of anything else in the
-  // reply ("Do not worry; this is guaranteed.") cannot excuse a claim.
-  const claims = /\b(certified|verified|validated|guaranteed|official(?:\s+[a-z-]+){0,2}?\s+(?:determination|decision|answer|amount|figure|result|estimate)s?)\b/gi;
-  const negatedClaim = /(?:\b(?:not|cannot|never|no)|n['’]t)\s+(?:(?:a|an|the|any|be|been|being|yet)\s+)*$/i;
+  // prompts.ts). "official" may take up to three words, or a comma, before
+  // its noun ("official California SNAP benefit amount", "official, final
+  // determination"); "certifies" and "officially determined" claim the same.
+  // A match passes only when a negation modifies the claim directly: the
+  // negation, then only articles, auxiliaries, adverbs ("officially",
+  // "legally") or a coordinated list of other claim words ("not certified,
+  // verified, or guaranteed"). A negation of anything else in the reply
+  // ("Do not worry; this is guaranteed.") cannot excuse a claim.
+  const claims = /\b(certif(?:ied|ies|y)|verified|validated|guaranteed|officially\s+(?:determined|decided|approved|confirmed)|official(?:,?\s+[a-z-]+){0,3}?,?\s+(?:determination|decision|answer|amount|figure|result|estimate)s?)\b/gi;
+  const listWord = "(?:a|an|the|any|your|be|been|being|yet|officially|legally|formally|independently|certified|verified|validated|guaranteed|official|final)";
+  const negatedClaim = new RegExp(`(?:\\b(?:not|cannot|never|no|nor)|n['’]t)\\s+(?:${listWord},?\\s+(?:(?:or|nor|and)\\s+)?)*$`, "i");
   for (const m of turn.text.matchAll(claims)) {
     if (!negatedClaim.test(turn.text.slice(Math.max(0, m.index! - 80), m.index))) {
       pass = false;

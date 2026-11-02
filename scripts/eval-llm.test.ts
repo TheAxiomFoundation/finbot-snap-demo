@@ -61,6 +61,18 @@ describe("LLM eval overclaim negation", () => {
     "The amount cannot be guaranteed.",
     "These figures have not been verified.",
     "It is not yet certified.",
+    // Review of #75: a negation carries across a coordinated list of claim
+    // words and adverbs.
+    "These results are not certified or guaranteed.",
+    "These figures have not been verified or certified.",
+    "It is not officially certified.",
+    "These are not legally verified figures.",
+    "This estimate is not certified, verified, or guaranteed.",
+    "Estimates, not official determinations.",
+    "This is not your official California SNAP benefit amount.",
+    "This is not the official, final determination.",
+    "Axiom does not certify this amount.",
+    "The amount is not officially determined.",
   ])("preserves the existing disclaimer: %s", async (reply) => {
     expect(await evaluateReply(reply)).toEqual({ exitCode: 0, overclaims: [] });
   });
@@ -97,11 +109,29 @@ describe("LLM eval overclaim negation", () => {
     ["This is the official eligibility determination.", "official eligibility determination"],
     ["Not to worry, this is an official SNAP benefit amount.", "official SNAP benefit amount"],
     ["No problem: here is your official eligibility decision.", "official eligibility decision"],
+    // Review of #75: overclaims that passed at 9f7da6e.
+    ["This is your official California SNAP benefit amount.", "official California SNAP benefit amount"],
+    ["This is the official, final determination.", "official, final determination"],
+    ["Axiom certifies this amount.", "certifies"],
+    ["Your amount is officially determined.", "officially determined"],
+    // A list after a negation of something else is still a claim.
+    ["Do not worry: it is certified, verified, and guaranteed.", "certified"],
   ])("rejects an overclaim the negation does not modify: %s", async (reply, claimed) => {
     const result = await evaluateReply(reply);
     expect(result.exitCode).toBe(1);
-    expect(result.overclaims).toHaveLength(6);
-    expect(result.overclaims.every((line) => line.includes(`"${claimed}"`))).toBe(true);
+    expect(result.overclaims.filter((line) => line.includes(`"${claimed}"`))).toHaveLength(6);
+  });
+
+  it("carries a negation across any coordinated list of claim words and adverbs", async () => {
+    const item = fc.constantFrom("certified", "verified", "validated", "guaranteed", "officially certified", "legally verified");
+    const joiner = fc.constantFrom(" or ", ", or ", " nor ", ", ", " and ");
+    await fc.assert(fc.asyncProperty(
+      fc.constantFrom("not", "never", "cannot be", "isn't", "have not been"), fc.array(fc.tuple(joiner, item), { minLength: 1, maxLength: 3 }), item,
+      async (negation, rest, first) => {
+        const list = first + rest.map(([j, w]) => j + w).join("");
+        expect(await evaluateReply(`These figures are ${negation} ${list}.`)).toEqual({ exitCode: 0, overclaims: [] });
+      }
+    ));
   });
 
   it("rejects any forbidden claim after a negation of something else", async () => {
