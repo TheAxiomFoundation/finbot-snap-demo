@@ -63,6 +63,31 @@ describe("conversation privacy", () => {
     }));
   });
 
+  it("pins PostHog network body and header capture off in the client config", async () => {
+    vi.resetModules();
+    vi.stubGlobal("window", {});
+    await import("../instrumentation-client");
+    expect(posthog.init).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      session_recording: expect.objectContaining({ recordBody: false, recordHeaders: false }),
+    }));
+  });
+
+  it("keeps bodies and headers out of replays even when the project enables network capture", async () => {
+    // posthog-js's own merge of local and remote network options (#35). The
+    // dashboard turning body and header capture on must not reach replays.
+    vi.resetModules();
+    vi.mocked(posthog.init).mockClear();
+    vi.stubGlobal("window", {});
+    await import("../instrumentation-client");
+    const { buildNetworkRequestOptions } = await import("posthog-js/lib/src/extensions/replay/external/config");
+    const config = vi.mocked(posthog.init).mock.calls[0]?.[1];
+    expect(config).toBeDefined();
+    const remote = { recordBody: true, recordHeaders: true, recordPerformance: true, payloadHostDenyList: [] };
+    const merged = buildNetworkRequestOptions(config as Parameters<typeof buildNetworkRequestOptions>[0], remote);
+    expect(merged.recordBody).toBe(false);
+    expect(merged.recordHeaders).toBe(false);
+  });
+
   it("keeps household facts out of the client console after a failed compute repair", async () => {
     const facts = { household_size: 3, monthly_income: 1373 };
     const repair = vi.fn().mockRejectedValue(new Error("repair failed"));

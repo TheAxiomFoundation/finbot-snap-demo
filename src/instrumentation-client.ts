@@ -21,5 +21,10 @@ if (typeof window !== "undefined" && !window.__posthogInitialized) {
     capture_pageview: "history_change",
     // Console events bypass ph-no-capture and can contain tool arguments.
     enable_recording_console_log: false,
+    // Request and response bodies carry household facts and replies, both
+    // ways. posthog-js lets a local false override the project's remote
+    // network-capture setting, so replays never record them whatever the
+    // dashboard says (the session notice promises the conversation is masked).
+    session_recording: { recordBody: false, recordHeaders: false },
   });
 }
