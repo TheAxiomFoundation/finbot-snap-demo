@@ -39,10 +39,24 @@ export interface ProgramOverlay {
 /** Defaults applied to ANY program that has the slot (before per-program
  *  overrides). Only for facts that are administratively true for essentially
  *  every user of this app — asking about a state's program presumes applying
- *  in that state. */
+ *  in that state — and for amounts the law fixes for everyone. */
 export const GLOBAL_DEFAULT_OVERRIDES: Record<string, boolean | number | string> = {
   // 7 CFR 273.3 residency: the household applies in the state it lives in.
   household_lives_in_application_state: true,
+  // The Federal minimum wage, $7.25 an hour since July 2009 (29 USC
+  // 206(a)(1)(C)). The SNAP encodings take it as an input. 7 CFR
+  // 273.7(b)(1)(vii) exempts from the work rules a person "earning weekly
+  // wages at least equal to the Federal minimum wage multiplied by 30 hours"
+  // (7 USC 2015(d)(2)(E): the FLSA "minimum hourly rate"); 273.5(b)(5),
+  // 273.7(i)(3)(vii) and 273.7(j)(3) use the same wage times 20 or 30 hours.
+  // At 0, $0 a week met those tests: no member of us-al/fl/ga/ma/nc/sc/tn-
+  // snap was ever subject to the ABAWD time limit or the voluntary quit
+  // rule, and in every SNAP program a student self-employed 20 hours a week
+  // was exempt with no earnings. Each test names the Federal rate, so a
+  // higher state minimum wage doesn't apply to it, whatever the slot's name
+  // says.
+  federal_or_state_minimum_wage: 7.25,
+  federal_minimum_wage: 7.25,
   // Proration inputs (e.g. KS TANF): a full ongoing month. day=1 with 31
   // days makes the proration ratio exactly 1 for any month; defaults of 0
   // zero the benefit instead.

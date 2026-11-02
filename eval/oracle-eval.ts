@@ -280,6 +280,30 @@ const CASES: EvalCase[] = [
     expect_not_match: [HEADLINE_298_WITHOUT_AGE],
   },
   {
+    // The Federal minimum wage defaulted to 0 in the AL/FL/GA/MA/NC/SC/TN
+    // SNAP programs, and $0 a week met 7 CFR 273.7(b)(1)(vii) ("weekly wages
+    // at least equal to the Federal minimum wage multiplied by 30 hours"), so
+    // the work rules never applied there: $298 at every age. At $7.25 these
+    // match the California and New York cases above.
+    id: "fl-snap-abawd-no-age-nl",
+    turns: ["I live alone in Florida. My only income is $300 a month in alimony and my rent is $600. I'm not working, and I've already gotten SNAP for 4 months in the last 3 years without meeting the work requirement. How much SNAP can I get?"],
+    expect_match: [AGE_ASKED_OR_STATED],
+    expect_not_match: [HEADLINE_298_WITHOUT_AGE],
+  },
+  {
+    id: "tn-snap-quit-no-age-nl",
+    turns: ["I live alone in Tennessee. I quit my job last month without a good reason. Now my only income is $300 a month in alimony, and my rent is $600. How much SNAP can I get?"],
+    expect_match: [AGE_ASKED_OR_STATED],
+    expect_not_match: [HEADLINE_298_WITHOUT_AGE],
+  },
+  {
+    // A stated adult of 35: the ABAWD time limit applies (7 USC 2015(o)), $0.
+    id: "al-snap-abawd-adult-nl",
+    turns: ["I'm 35 and live alone in Alabama. My only income is $300 a month in alimony and my rent is $600. I'm not working, and I've already gotten SNAP for 4 months in the last 3 years without meeting the work requirement. How much SNAP can I get?"],
+    expect_match: ["\\$0\\b|not eligible|ineligible"],
+    expect_not_match: ["(^|\\n)\\s*\\*\\*[^*]*\\$\\s?298[^*]*\\*\\*"],
+  },
+  {
     id: "eitc-childless-nl",
     turns: ["I'm 25, single, no kids, and earned $10,000 in 2026. How much EITC do I get?"],
     oracle_id: "fiit-eitc-childless-10k",

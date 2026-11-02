@@ -8,7 +8,7 @@ import { ageRange, rangeLabel, unstatedAgeNote, unstatedAges } from "./unstated-
 import { engineAvailable, numericOutput } from "../../scripts/snap-scenarios";
 
 // An unstated age is 0 (PR #66), and 0 passes every "younger than N" test.
-// In us-ca/co/ny-snap two such tests are work-rule exemptions: 7 CFR
+// In the SNAP programs two such tests are work-rule exemptions: 7 CFR
 // 273.7(b)(1)(i) exempts "a person younger than 16 years of age or a person
 // 60 years of age or older"; 7 USC 2015(o)(3)(A), as P.L. 119-21 amended it,
 // excepts a person "under 18, or over 65, years of age" from the ABAWD time
@@ -17,7 +17,13 @@ import { engineAvailable, numericOutput } from "../../scripts/snap-scenarios";
 // where an adult aged 18 to 59 gets $0.
 const GENERAL = "snap_member_general_work_requirement_exempt";
 const ABAWD = "snap_member_abawd_exception_applies";
-const WORK_RULE_STATES = ["us-ca-snap", "us-co-snap", "us-ny-snap"];
+// us-al/fl/ga/ma/nc/sc/tn-snap joined once the Federal minimum wage stopped
+// defaulting to 0 (minimum-wage-default.test.ts): at 0, $0 a week met 7 CFR
+// 273.7(b)(1)(vii), so every member was exempt at every age.
+const WORK_RULE_STATES = [
+  "us-al-snap", "us-ca-snap", "us-co-snap", "us-fl-snap", "us-ga-snap",
+  "us-ma-snap", "us-nc-snap", "us-ny-snap", "us-sc-snap", "us-tn-snap",
+];
 const CASES: Record<string, Facts> = {
   abawd: { snap_abawd_countable_months_in_three_year_period: 4 },
   quit: { member_voluntarily_quit_or_reduced_work_below_30_hours_without_good_cause: true },
@@ -182,18 +188,5 @@ describe.skipIf(!hasEngine)("unstated ages on the real engine", () => {
       members: [{ facts: { member_age: 35 } }, { facts: {} }],
     });
     expect(result.applied.unstated_ages).toBeUndefined();
-  });
-
-  it("stays quiet where no age decides the work rules (federal_or_state_minimum_wage defaults to 0)", async () => {
-    // 7 CFR 273.7(b)(1)(vii) exempts a person "earning weekly wages at least
-    // equal to the Federal minimum wage multiplied by 30 hours". These
-    // programs default the wage to 0, so $0 a week meets it at every age.
-    for (const slug of ["us-al-snap", "us-fl-snap", "us-ga-snap", "us-ma-snap", "us-nc-snap", "us-sc-snap", "us-tn-snap"]) {
-      for (const caseFacts of Object.values(CASES)) {
-        const result = await compute(slug, caseFacts);
-        expect(numericOutput(result, "snap_benefit"), slug).toBe(298);
-        expect(result.applied.unstated_ages, slug).toBeUndefined();
-      }
-    }
   });
 });
