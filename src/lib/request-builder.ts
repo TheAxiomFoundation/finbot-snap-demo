@@ -399,7 +399,9 @@ const MEMBER_COUNT_INPUTS = new Set([
   // p.189), and gives its minimum benefit to a household_person_count of 1–2
   // (p.357). NC (FNS 220.06(D)(2)) and CA (MPP 63-503.326) test
   // household_member_count against three or more members. Left at its 0
-  // default, a listed household had a benefit-level size of 0.
+  // default, a listed household had a benefit-level size of 0. All three
+  // programs mark these slots auxiliary, so they are filled from the
+  // members and never synthesize them (see synthesizesMembers).
   "household_member_count",
   "household_person_count",
   "family_size",
@@ -437,6 +439,13 @@ const MEMBER_COUNT_INPUTS = new Set([
 
 export function isMemberCountSlot(slot: Pick<CatalogInputSlot, "name" | "dtype">): boolean {
   return MEMBER_COUNT_INPUTS.has(slot.name) && (slot.dtype === "integer" || slot.dtype === "decimal");
+}
+
+/** A count input whose value can synthesize members: one that feeds the
+ *  published outputs. An auxiliary count is only ever filled from the
+ *  household's members, so stating one alone changes no headline. */
+export function synthesizesMembers(slot: Pick<CatalogInputSlot, "name" | "dtype" | "aux">): boolean {
+  return isMemberCountSlot(slot) && !slot.aux;
 }
 
 /** A relation's short name, as members[].relations may give it
@@ -773,23 +782,27 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
     if (options.members?.length) {
       memberCount = options.members.length;
     } else {
-      const sizeFact = Object.entries(facts).find(
-        ([name, value]) => {
-          const slot = slotsByName.get(name);
-          return slot && isMemberCountSlot(slot) && typeof value === "number" && value >= 1;
-        }
-      );
-      memberCount = sizeFact ? Math.min(20, Math.floor(sizeFact[1] as number)) : 1;
-      if (sizeFact) {
-        notes.push(`synthesized ${memberCount} ${memberEntity} member(s) from ${sizeFact[0]}`);
-        // The count fact states the household's headcount, so every other
-        // verified count input the caller left unset takes the same value,
-        // as with an explicit members list. A count past the 20 synthesized
-        // members keeps the stated number, not the cap.
+      // Only a count slot that feeds the published outputs synthesizes
+      // members: an auxiliary count (us-sc-snap household_member_count, us-nc-snap
+      // fns_unit_size) is filled from the household, never the other way, so
+      // the auxiliary-slot WARNING above stays true. Slots are tried in
+      // MEMBER_COUNT_INPUTS order, so the result never depends on the order
+      // of the caller's facts.
+      const sizeSlot = [...MEMBER_COUNT_INPUTS].find((name) => {
+        const slot = slotsByName.get(name);
+        const value = facts[name];
+        return slot && synthesizesMembers(slot) && typeof value === "number" && value >= 1;
+      });
+      memberCount = sizeSlot ? Math.min(20, Math.floor(facts[sizeSlot] as number)) : 1;
+      if (sizeSlot) {
+        notes.push(`synthesized ${memberCount} ${memberEntity} member(s) from ${sizeSlot}`);
+        // The other count inputs the caller left unset take the synthesized
+        // headcount, as with an explicit members list: an integer, capped
+        // and floored like the members themselves.
         for (const slot of slotsByName.values()) {
           if (isMemberCountSlot(slot) && facts[slot.name] === undefined) {
-            facts[slot.name] = sizeFact[1];
-            notes.push(`set ${slot.name}=${sizeFact[1]} to match ${sizeFact[0]}`);
+            facts[slot.name] = memberCount;
+            notes.push(`set ${slot.name}=${memberCount} to match ${sizeSlot}`);
           }
         }
       }
