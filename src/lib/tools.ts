@@ -15,6 +15,7 @@ import { getCatalog, getProgram, searchOutputs, type CatalogProgram } from "./ca
 import { citationUrl, fetchCitation } from "./citations";
 import { programDisclosures } from "./catalog-overlay";
 import { describeProgramPayload } from "./describe";
+import { EngineError } from "./engine";
 import {
   UnknownInputError,
   UnknownOutputError,
@@ -79,26 +80,6 @@ function isErr(x: unknown): x is { error: string } {
 
 /** Convert builder errors into data the model can act on. */
 function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: string) {
-  // Both local and hosted adapters preserve this engine diagnostic. Keep the
-  // missing rule visible as an encoding limitation, without shaping any value.
-  const gap = err instanceof Error
-    ? /derived `([^`]+)` has no formula version at (\d{4}-\d{2}-\d{2})/.exec(err.message)
-    : null;
-  if (gap) {
-    const [, output, atDate] = gap;
-    const period = requestedPeriod ?? defaultPeriodFor(program);
-    const disclosure = `Axiom has no rule in force for ${period} for ${output}.`;
-    return {
-      error: disclosure,
-      kind: "no_formula_version",
-      program: program.slug,
-      period,
-      output,
-      at_date: atDate,
-      applied: { disclosures: [...programDisclosures(program), disclosure] },
-      hint: "Disclose this rule-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",
-    };
-  }
   if (err instanceof NotSettableInputError) {
     return {
       error: err.message,
@@ -162,6 +143,29 @@ function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: st
       error: err.message,
       suggestions: err.suggestions,
       hint: "Use exact output names from describe_program or list_programs search.",
+    };
+  }
+  // Typed builder refusals are handled above, so a malformed input or output
+  // name, which those errors quote, never reads as an engine diagnostic.
+  // Only a failure the engine itself reported (EngineError, from either
+  // transport) can disclose a missing rule. Keep the missing rule visible as
+  // an encoding limitation, without shaping any value.
+  const gap = err instanceof EngineError
+    ? /derived `([^`]+)` has no formula version at (\d{4}-\d{2}-\d{2})/.exec(err.message)
+    : null;
+  if (gap) {
+    const [, output, atDate] = gap;
+    const period = requestedPeriod ?? defaultPeriodFor(program);
+    const disclosure = `Axiom has no rule in force for ${period} for ${output}.`;
+    return {
+      error: disclosure,
+      kind: "no_formula_version",
+      program: program.slug,
+      period,
+      output,
+      at_date: atDate,
+      applied: { disclosures: [...programDisclosures(program), disclosure] },
+      hint: "Disclose this rule-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",
     };
   }
   throw err;
