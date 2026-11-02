@@ -393,6 +393,15 @@ export interface BuiltRequest {
 // such as poverty_income_guideline_for_household_size.
 const MEMBER_COUNT_INPUTS = new Set([
   "household_size",
+  // us-sc-snap, us-nc-snap, us-ca-snap: the household's headcount. SC sizes
+  // the benefit level, standard deduction, income and resource standards by
+  // household_member_count less its SSN/ABAWD-ineligible members (manual
+  // p.189), and gives its minimum benefit to a household_person_count of 1–2
+  // (p.357). NC (FNS 220.06(D)(2)) and CA (MPP 63-503.326) test
+  // household_member_count against three or more members. Left at its 0
+  // default, a listed household had a benefit-level size of 0.
+  "household_member_count",
+  "household_person_count",
   "family_size",
   "assistance_unit_size",
   "filing_unit_size",
@@ -771,7 +780,19 @@ export function buildRequest(options: BuildOptions): BuiltRequest {
         }
       );
       memberCount = sizeFact ? Math.min(20, Math.floor(sizeFact[1] as number)) : 1;
-      if (sizeFact) notes.push(`synthesized ${memberCount} ${memberEntity} member(s) from ${sizeFact[0]}`);
+      if (sizeFact) {
+        notes.push(`synthesized ${memberCount} ${memberEntity} member(s) from ${sizeFact[0]}`);
+        // The count fact states the household's headcount, so every other
+        // verified count input the caller left unset takes the same value,
+        // as with an explicit members list. A count past the 20 synthesized
+        // members keeps the stated number, not the cap.
+        for (const slot of slotsByName.values()) {
+          if (isMemberCountSlot(slot) && facts[slot.name] === undefined) {
+            facts[slot.name] = sizeFact[1];
+            notes.push(`set ${slot.name}=${sizeFact[1]} to match ${sizeFact[0]}`);
+          }
+        }
+      }
     }
     // Keep verified count inputs consistent with an explicit members list.
     if (options.members?.length) {

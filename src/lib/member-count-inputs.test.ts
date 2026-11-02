@@ -104,8 +104,37 @@ describe("members[] on programs with no member entity", () => {
   it("keeps member-entity programs on the counts they already synthesize members from", () => {
     // A count input on a member-entity program also synthesizes members, so a
     // name added for the no-member TANF programs must not appear there.
+    // household_member_count and household_person_count are the SC, NC and
+    // CA SNAP household headcounts (#39), added for these programs.
     const names = new Set(getCatalog().programs.filter((program) => program.member_entity).flatMap(memberCountSlotNames));
-    expect([...names].sort()).toEqual(["fns_unit_size", "household_size"]);
+    expect([...names].sort()).toEqual(["fns_unit_size", "household_member_count", "household_person_count", "household_size"]);
+  });
+
+  // #39: a listed household left household_member_count at its 0 default,
+  // so South Carolina's benefit-level size came out 0 for three members.
+  it("sets every count input of a member-entity program from linked members or any one count fact", () => {
+    const withMemberCounts = getCatalog().programs.filter(
+      (program) => program.member_entity && memberCountSlotNames(program).length > 1
+    );
+    expect(withMemberCounts.map((program) => program.slug).sort()).toEqual(["us-ca-snap", "us-nc-snap", "us-sc-snap"]);
+    fc.assert(fc.property(fc.constantFrom(...withMemberCounts), fc.integer({ min: 1, max: 8 }), (program, size) => {
+      const names = memberCountSlotNames(program);
+      const expected = Object.fromEntries(names.map((name) => [name, size]));
+      const linked = buildRequest({ program, period: "2026-09", members: blank(size) });
+      expect(linked.applied.member_count).toBe(size);
+      expect(linked.applied.facts_applied).toMatchObject(expected);
+      for (const name of names) {
+        const synthesized = buildRequest({ program, period: "2026-09", facts: { [name]: size } });
+        expect(synthesized.applied.member_count).toBe(size);
+        expect(synthesized.applied.facts_applied).toMatchObject(expected);
+      }
+    }), { seed: 20261102, numRuns: 40 });
+  });
+
+  it("keeps a count fact the caller set beside linked members", () => {
+    const program = getProgram("us-sc-snap")!;
+    const built = buildRequest({ program, period: "2026-09", facts: { household_member_count: 4 }, members: blank(3) });
+    expect(built.applied.facts_applied).toMatchObject({ household_member_count: 4, household_person_count: 3, household_size: 3 });
   });
 
   it("sets every count input from the list, building the request the count fact builds", () => {
@@ -249,5 +278,30 @@ describe.skipIf(!hasEngine)("real-engine equivalent household representations", 
     expect(explicitResult.outputs).toEqual(synthesizedResult.outputs);
     expect(explicit.request).toEqual(synthesized.request);
     expect(explicitResult.outputs[0].value).toBe("not_holds");
+  }, 60_000);
+});
+
+describe.skipIf(!hasEngine)("South Carolina benefit-level household size (#39)", () => {
+  const output = "household_size_for_benefit_level_excluding_ssn_or_abawd_ineligible_members";
+  const citizen = { facts: { member_age: 35, member_is_us_citizen: true } };
+  const lookup = async (options: Partial<BuildOptions>) => {
+    const program = getProgram("us-sc-snap")!;
+    const result = await computeProgram({ program, period: "2026-09", outputsOverride: [output], ...options });
+    return result.outputs.find((o) => o.name === output)?.value;
+  };
+
+  it("counts three linked members with no count fact, as an explicit count or synthesized members do", async () => {
+    const members = [citizen, citizen, citizen];
+    expect(await lookup({ members })).toBe(3);
+    expect(await lookup({ members, facts: { household_member_count: 3 } })).toBe(3);
+    expect(await lookup({ facts: { household_size: 3, member_age: 35, member_is_us_citizen: true } })).toBe(3);
+  }, 60_000);
+
+  it("still excludes SSN- or ABAWD-ineligible members from the linked count", async () => {
+    const facts = {
+      household_contains_member_ineligible_for_ssn_refusal_or_abawd_time_limit: true,
+      members_ineligible_for_ssn_refusal_or_abawd_time_limit_count: 1,
+    };
+    expect(await lookup({ members: [citizen, citizen, citizen], facts })).toBe(2);
   }, 60_000);
 });
