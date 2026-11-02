@@ -62,7 +62,7 @@ const PeriodSchema = z
   .regex(/^\d{4}(-\d{2})?$/)
   .optional()
   .describe(
-    "Evaluation period, YYYY-MM or YYYY, subject to encoded formula and parameter coverage. Defaults to the current month (current year for annual programs) — only pass this when the user asks about a different time. A missing formula version returns a rule-coverage limitation instead of an amount or eligibility verdict."
+    "Evaluation period, YYYY-MM or YYYY, subject to encoded formula and parameter coverage. Defaults to the current month (current year for annual programs) — only pass this when the user asks about a different time. A missing formula version or parameter value returns a coverage limitation instead of an amount or eligibility verdict."
   );
 
 function programOr404(slug: string): CatalogProgram | { error: string; known_slugs: string[] } {
@@ -166,6 +166,29 @@ function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: st
       at_date: atDate,
       applied: { disclosures: [...programDisclosures(program), disclosure] },
       hint: "Disclose this rule-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",
+    };
+  }
+  // The same for a parameter table with no value for the requested key at
+  // the period's start (a historical income-limit table not yet encoded).
+  // The rule exists but cannot be evaluated, so this too is a coverage
+  // limitation, never a figure.
+  const missingValue = err instanceof EngineError
+    ? /parameter `([^`]+)` has no value for key `(-?\d+)` at (\d{4}-\d{2}-\d{2})/.exec(err.message)
+    : null;
+  if (missingValue) {
+    const [, parameter, key, atDate] = missingValue;
+    const period = requestedPeriod ?? defaultPeriodFor(program);
+    const disclosure = `Axiom has no value in force for ${period} for the parameter ${parameter}.`;
+    return {
+      error: disclosure,
+      kind: "no_parameter_value",
+      program: program.slug,
+      period,
+      parameter,
+      key: Number(key),
+      at_date: atDate,
+      applied: { disclosures: [...programDisclosures(program), disclosure] },
+      hint: "Disclose this parameter-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",
     };
   }
   throw err;

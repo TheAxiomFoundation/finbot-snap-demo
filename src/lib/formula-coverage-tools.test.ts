@@ -40,6 +40,25 @@ describe("formula coverage at the tool boundary", () => {
     ), { numRuns: 24, seed: 1612 });
   });
 
+  it("returns a parameter-coverage limitation, never a figure, for a missing parameter value", async () => {
+    const parameter = "snap_net_income_limit_100_percent_fpl_48_states_dc_table";
+    for (const prefix of ["axiom-rules-engine exited 1: ", 'axiom-engine 500: {"detail":"axiom-rules-engine exited 1: ']) {
+      vi.mocked(runCompiled).mockRejectedValue(new EngineError(`${prefix}parameter \`${parameter}\` has no value for key \`1\` at 2025-07-01`));
+      for (const result of [
+        await tools.compute.execute!({ program, period: "2025-07" }, context),
+        await tools.lookup_value.execute!({ program, period: "2025-07", output }, context),
+      ]) {
+        const disclosure = `Axiom has no value in force for 2025-07 for the parameter ${parameter}.`;
+        expect(result).toMatchObject({ kind: "no_parameter_value", program, period: "2025-07", parameter, key: 1, at_date: "2025-07-01", error: disclosure });
+        expect(result).toHaveProperty("applied.disclosures", expect.arrayContaining([disclosure]));
+        expect(JSON.stringify(result)).not.toContain("calculation failed");
+        expect(result).not.toHaveProperty("outputs");
+        expect(result).not.toHaveProperty("value");
+        expect(result).not.toHaveProperty("primary_output");
+      }
+    }
+  });
+
   it("keeps unrelated failures distinct from formula gaps", async () => {
     // Returned, not rethrown: a throw inside a tool executor ends the chat
     // stream with an empty reply.
@@ -77,13 +96,18 @@ describe("formula coverage at the tool boundary", () => {
   it("reads the diagnostic only from an error the engine reported", async () => {
     // The same text in an untagged error (not from either engine transport)
     // stays a plain calculation failure.
-    vi.mocked(runCompiled).mockRejectedValue(new Error(`derived \`${output}\` has no formula version at 2025-07-01`));
-    for (const result of [
-      await tools.lookup_value.execute!({ program, period: "2025-07", output }, context),
-      await tools.compute.execute!({ program, period: "2025-07" }, context),
+    for (const text of [
+      `derived \`${output}\` has no formula version at 2025-07-01`,
+      "parameter `snap_net_income_limit_100_percent_fpl_48_states_dc_table` has no value for key `1` at 2025-07-01",
     ]) {
-      expect(result).toMatchObject({ error: expect.stringMatching(/^calculation failed: /), hint: expect.any(String) });
-      expect(result).not.toHaveProperty("kind");
+      vi.mocked(runCompiled).mockRejectedValue(new Error(text));
+      for (const result of [
+        await tools.lookup_value.execute!({ program, period: "2025-07", output }, context),
+        await tools.compute.execute!({ program, period: "2025-07" }, context),
+      ]) {
+        expect(result).toMatchObject({ error: expect.stringMatching(/^calculation failed: /), hint: expect.any(String) });
+        expect(result).not.toHaveProperty("kind");
+      }
     }
   });
 
