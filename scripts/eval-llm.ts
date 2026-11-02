@@ -253,21 +253,33 @@ async function evaluate(c: EvalCase): Promise<{ pass: boolean; notes: string[] }
   // prompts.ts). "official" may take up to three words, or a comma, before
   // its noun ("official California SNAP benefit amount", "official, final
   // determination"); "certifies" and "officially determined" claim the same.
-  // A match passes only when a negation modifies the claim directly: the
-  // negation, then only articles, auxiliaries, adverbs ("officially",
-  // "legally") or a coordinated list of other claim words ("not certified,
-  // verified, or guaranteed"), however long the list. A negation of
-  // anything else in the reply ("Do not worry; this is guaranteed.") cannot
-  // excuse a claim.
+  // A match passes only when a negation modifies the claim directly:
+  //   - right after the negation, articles, possessives, auxiliaries and
+  //     adverbs ("not an official determination", "cannot be guaranteed",
+  //     "not legally verified");
+  //   - then a coordinated list of claim words and adverbs ("not certified,
+  //     verified, or guaranteed"), however long. After a joiner only claim
+  //     words and adverbs continue the list: an article or possessive starts
+  //     a new noun phrase ("not certified, and the official amount is $773"
+  //     is a claim), and so does any other word, punctuation or line break.
+  // A negation of anything else in the reply ("Do not worry; this is
+  // guaranteed.") cannot excuse a claim.
   const claims = /\b(certif(?:ied|ies|y)|verified|validated|guaranteed|officially\s+(?:determined|decided|approved|confirmed)|official(?:,?\s+[a-z-]+){0,3}?,?\s+(?:determination|decision|answer|amount|figure|result|estimate)s?)\b/gi;
-  const listWord = "(?:a|an|the|any|your|be|been|being|yet|officially|legally|formally|independently|certified|verified|validated|guaranteed|official|final)";
-  const listTail = `(?:${listWord},?\\s+(?:(?:or|nor|and)\\s+)?)*`;
-  const negatedClaim = new RegExp(`(?:\\b(?:not|cannot|never|no|nor)|n['’]t)\\s+${listTail}$`, "i");
-  // A later item in an excused list: only a joiner and list words separate
+  const adverb = "(?:officially|legally|formally|independently)";
+  // Allowed only right after the negation.
+  const lead = `(?:a|an|the|any|your|be|been|being|yet|${adverb})`;
+  // Claim words and adverbs: what a list carries past a joiner.
+  const listItem = `(?:certified|verified|validated|guaranteed|${adverb})`;
+  // Within a list, items are separated by spaces or tabs, never a newline.
+  const gap = "[^\\S\\n]+";
+  const joiner = `,?${gap}(?:(?:or|nor|and)${gap})?`;
+  const listTail = `(?:${listItem}${joiner})*`;
+  const negatedClaim = new RegExp(`(?:\\b(?:not|cannot|never|no|nor)|n['’]t)\\s+(?:${lead}\\s+)*${listTail}$`, "i");
+  // A later item in an excused list: only a joiner and list items separate
   // it from the previous excused claim. Chaining claim to claim carries the
   // negation across a list of any length, with no look-back window to
   // outrun.
-  const listContinues = new RegExp(`^,?\\s+(?:(?:or|nor|and)\\s+)?${listTail}$`, "i");
+  const listContinues = new RegExp(`^${joiner}${listTail}$`, "i");
   let excusedEnd = -1;
   for (const m of turn.text.matchAll(claims)) {
     const negated =

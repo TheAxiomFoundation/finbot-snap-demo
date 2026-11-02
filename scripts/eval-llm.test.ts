@@ -73,6 +73,10 @@ describe("LLM eval overclaim negation", () => {
     "This is not the official, final determination.",
     "Axiom does not certify this amount.",
     "The amount is not officially determined.",
+    // Articles may follow the negation itself, and "and" may close a list
+    // without a comma.
+    "This is not a guaranteed or official amount.",
+    "It isn't certified, verified and guaranteed.",
   ])("preserves the existing disclaimer: %s", async (reply) => {
     expect(await evaluateReply(reply)).toEqual({ exitCode: 0, overclaims: [] });
   });
@@ -116,6 +120,23 @@ describe("LLM eval overclaim negation", () => {
     ["Your amount is officially determined.", "officially determined"],
     // A list after a negation of something else is still a claim.
     ["Do not worry: it is certified, verified, and guaranteed.", "certified"],
+    // Delta review of #75: an affirmative claim after a negated list. Only a
+    // joiner and claim words or adverbs continue the list.
+    ["These figures are not certified or guaranteed, and are verified.", "verified"],
+    ["These figures are not certified or guaranteed, and is verified.", "verified"],
+    ["It is not certified or guaranteed, but it is verified.", "verified"],
+    ["It is not certified or guaranteed; verified.", "verified"],
+    ["It is not certified or guaranteed. Verified.", "Verified"],
+    ["This is not certified — verified.", "verified"],
+    // An article or possessive after a joiner starts a new noun phrase. The
+    // first two passed at a68e9b5 and 30d46ee but failed on main; main missed
+    // the last two as well.
+    ["It is not certified or guaranteed, and the official determination is $773.", "official determination"],
+    ["Not certified, and the final official amount is $773.", "official amount"],
+    ["It is not certified, and the official amount is $773.", "official amount"],
+    ["It is not verified, and your official determination is attached.", "official determination"],
+    // A line break ends a list.
+    ["This is not certified\nand verified.", "verified"],
   ])("rejects an overclaim the negation does not modify: %s", async (reply, claimed) => {
     const result = await evaluateReply(reply);
     expect(result.exitCode).toBe(1);
@@ -152,6 +173,23 @@ describe("LLM eval overclaim negation", () => {
     ];
     expect(await evaluateReply(listReply(parts))).toEqual({ exitCode: 0, overclaims: [] });
   });
+
+  // Delta review of #75 (mutation L2): text that is not a joiner plus claim
+  // words or adverbs ends the list, so a claim after it is not excused.
+  it("rejects a claim after a negated list once a non-list word breaks it", async () => {
+    await fc.assert(fc.asyncProperty(
+      negatedList,
+      fc.constantFrom(" is", ", but", ", and it is", ";", ". It is", " —", ", and the", ", and your", "\nand"),
+      claim,
+      async (parts, breaker, word) => {
+        const reply = listReply(parts).replace(/\.$/, `${breaker} ${word}.`);
+        const result = await evaluateReply(reply);
+        expect(result.exitCode, reply).toBe(1);
+        expect(result.overclaims, reply).toHaveLength(6);
+        expect(result.overclaims.every((line) => line.includes(`"${word}"`)), reply).toBe(true);
+      }
+    ), { numRuns: listRuns, ...(listSeed !== undefined && { seed: listSeed }) });
+  }, Math.max(5_000, listRuns * 20));
 
   it("rejects any forbidden claim after a negation of something else", async () => {
     await fc.assert(fc.asyncProperty(
