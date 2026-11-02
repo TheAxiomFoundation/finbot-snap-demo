@@ -148,6 +148,15 @@ export function monthInterval(period: string): { interval: Interval; period: { p
  *  development path on a machine where `bun run engine:setup` has run. */
 const ENGINE_URL = process.env.AXIOM_ENGINE_URL?.replace(/\/$/, "");
 
+/** A failure the rules engine reported: the local binary's non-zero exit or
+ *  the hosted service's error status. Callers read engine diagnostics
+ *  (a missing formula version or parameter value) only from this class, so
+ *  text the caller supplied, such as a malformed input or output name in a
+ *  builder error, can never pass for one. */
+export class EngineError extends Error {
+  readonly kind = "engine_error";
+}
+
 let cachedBinaryOk: boolean | null = null;
 
 async function ensureBinary(): Promise<void> {
@@ -198,7 +207,7 @@ async function runViaHttp(slug: string, request: ExecutionRequest): Promise<Exec
   });
   if (!r.ok) {
     const body = await r.text();
-    throw new Error(`axiom-engine ${r.status}: ${body.slice(0, 500)}`);
+    throw new EngineError(`axiom-engine ${r.status}: ${body.slice(0, 500)}`);
   }
   return (await r.json()) as ExecutionResponse;
 }
@@ -220,7 +229,7 @@ async function runViaSubprocess(
     child.on("error", reject);
     child.on("close", (code) => {
       if (code !== 0) {
-        reject(new Error(`axiom-rules-engine exited ${code}: ${stderr.trim()}`));
+        reject(new EngineError(`axiom-rules-engine exited ${code}: ${stderr.trim()}`));
         return;
       }
       try {

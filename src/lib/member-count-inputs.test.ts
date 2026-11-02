@@ -13,6 +13,7 @@ import {
   type BuildOptions,
   type Facts,
 } from "./request-builder";
+import { describeProgramPayload } from "./describe";
 import { engineAvailable } from "../../scripts/snap-scenarios";
 
 const POVERTY_SLOT = "poverty_income_guideline_for_household_size";
@@ -104,8 +105,115 @@ describe("members[] on programs with no member entity", () => {
   it("keeps member-entity programs on the counts they already synthesize members from", () => {
     // A count input on a member-entity program also synthesizes members, so a
     // name added for the no-member TANF programs must not appear there.
+    // household_member_count and household_person_count are the SC, NC and
+    // CA SNAP household headcounts (#39), added for these programs. Like
+    // fns_unit_size they are auxiliary there: filled, never synthesizing.
     const names = new Set(getCatalog().programs.filter((program) => program.member_entity).flatMap(memberCountSlotNames));
-    expect([...names].sort()).toEqual(["fns_unit_size", "household_size"]);
+    expect([...names].sort()).toEqual(["fns_unit_size", "household_member_count", "household_person_count", "household_size"]);
+  });
+
+  // #39: a listed household left household_member_count at its 0 default,
+  // so South Carolina's benefit-level size came out 0 for three members.
+  // The auxiliary counts are filled from linked members or from the
+  // certified household_size, never the other way.
+  const withMemberCounts = getCatalog().programs.filter(
+    (program) => program.member_entity && memberCountSlotNames(program).length > 1
+  );
+  const auxCounts = (program: CatalogProgram) =>
+    memberCountSlotNames(program).filter((name) => Object.values(program.inputs).flat().find((s) => s.name === name)!.aux);
+  const auxWarning = (name: string) => (note: string) =>
+    note.startsWith(`WARNING: fact "${name}"`) && note.includes("does NOT feed the published outputs");
+
+  it("fills every count input of a member-entity program from linked members or household_size", () => {
+    expect(withMemberCounts.map((program) => program.slug).sort()).toEqual(["us-ca-snap", "us-nc-snap", "us-sc-snap"]);
+    expect(Object.fromEntries(withMemberCounts.map((program) => [program.slug, auxCounts(program).sort()]))).toEqual({
+      "us-ca-snap": ["household_member_count"],
+      "us-nc-snap": ["fns_unit_size", "household_member_count"],
+      "us-sc-snap": ["household_member_count", "household_person_count"],
+    });
+    fc.assert(fc.property(fc.constantFrom(...withMemberCounts), fc.integer({ min: 1, max: 8 }), (program, size) => {
+      const expected = Object.fromEntries(memberCountSlotNames(program).map((name) => [name, size]));
+      for (const built of [
+        buildRequest({ program, period: "2026-09", members: blank(size) }),
+        buildRequest({ program, period: "2026-09", facts: { household_size: size } }),
+      ]) {
+        expect(built.applied.member_count).toBe(size);
+        expect(built.applied.facts_applied).toMatchObject(expected);
+      }
+    }), { seed: 20261102, numRuns: 40 });
+  });
+
+  it("never lets a lone auxiliary count set household_size or add members", () => {
+    const lone = withMemberCounts.flatMap((program) => auxCounts(program).map((name) => [program, name] as const));
+    expect(lone.map(([program, name]) => `${program.slug}:${name}`)).toEqual(expect.arrayContaining([
+      "us-sc-snap:household_member_count", "us-nc-snap:household_member_count", "us-ca-snap:household_member_count",
+      "us-nc-snap:fns_unit_size",
+    ]));
+    for (const [program, name] of lone) {
+      const built = buildRequest({ program, period: "2026-09", facts: { [name]: 3 } });
+      expect(built.applied.member_count, `${program.slug} ${name}`).toBe(1);
+      expect(built.applied.facts_applied, `${program.slug} ${name}`).toEqual({ [name]: 3 });
+      expect(built.applied.notes.some(auxWarning(name)), `${program.slug} ${name}`).toBe(true);
+      expect(built.applied.notes.some((note) => note.startsWith("synthesized ")), `${program.slug} ${name}`).toBe(false);
+      // The request equals the one without the fact except for that slot.
+      const plain = buildRequest({ program, period: "2026-09" });
+      const others = (b: typeof built) => b.request.dataset.inputs.filter((i) => !i.name.endsWith(`#input.${name}`));
+      expect(others(built)).toEqual(others(plain));
+    }
+  });
+
+  it("sizes the household from household_size whatever the order of the facts", () => {
+    for (const slug of ["us-sc-snap", "us-ca-snap", "us-nc-snap"]) {
+      const program = getProgram(slug)!;
+      const builds = [
+        buildRequest({ program, period: "2026-09", facts: { household_member_count: 4, household_size: 3 } }),
+        buildRequest({ program, period: "2026-09", facts: { household_size: 3, household_member_count: 4 } }),
+      ];
+      for (const built of builds) {
+        expect(built.applied.member_count, slug).toBe(3);
+        expect(built.applied.facts_applied, slug).toMatchObject({ household_size: 3, household_member_count: 4 });
+      }
+      expect(builds[0].request).toEqual(builds[1].request);
+    }
+    const nc = getProgram("us-nc-snap")!;
+    const ncBuilds = [
+      buildRequest({ program: nc, period: "2026-09", facts: { fns_unit_size: 4, household_size: 3 } }),
+      buildRequest({ program: nc, period: "2026-09", facts: { household_size: 3, fns_unit_size: 4 } }),
+    ];
+    for (const built of ncBuilds) {
+      expect(built.applied.member_count).toBe(3);
+      expect(built.applied.facts_applied).toMatchObject({ household_size: 3, fns_unit_size: 4, household_member_count: 3 });
+    }
+    expect(ncBuilds[0].request).toEqual(ncBuilds[1].request);
+  });
+
+  it("offers only household_size as the count fact that synthesizes members", () => {
+    // describe_program's Members sentence must not offer an auxiliary count:
+    // stating one alone adds no members (see the lone-count test above).
+    for (const slug of ["us-sc-snap", "us-nc-snap", "us-ca-snap"]) {
+      const notes = (describeProgramPayload(getProgram(slug)!) as { notes: string[] }).notes;
+      expect(notes.filter((note) => note.startsWith("Members:")), slug).toEqual([
+        "Members: pass members[] (facts use Person-scope slots), or a count fact (household_size) to synthesize identical members.",
+      ]);
+    }
+  });
+
+  it("fills the auxiliary counts with the synthesized headcount: an integer, floored and capped at 20", () => {
+    const program = getProgram("us-sc-snap")!;
+    for (const [size, count] of [[2.5, 2], [25, 20]] as const) {
+      const built = buildRequest({ program, period: "2026-09", facts: { household_size: size } });
+      expect(built.applied.member_count).toBe(count);
+      expect(built.applied.facts_applied).toEqual({ household_size: size, household_member_count: count, household_person_count: count });
+      const inputs = built.request.dataset.inputs.filter((i) => /#input\.household_(member|person)_count$/.test(i.name));
+      expect(inputs.length).toBeGreaterThanOrEqual(2);
+      for (const input of inputs) expect(input.value).toEqual({ kind: "integer", value: count });
+    }
+  });
+
+  it("keeps a count fact the caller set beside linked members", () => {
+    const program = getProgram("us-sc-snap")!;
+    const built = buildRequest({ program, period: "2026-09", facts: { household_member_count: 4 }, members: blank(3) });
+    expect(built.applied.facts_applied).toMatchObject({ household_member_count: 4, household_person_count: 3, household_size: 3 });
   });
 
   it("sets every count input from the list, building the request the count fact builds", () => {
@@ -249,5 +357,30 @@ describe.skipIf(!hasEngine)("real-engine equivalent household representations", 
     expect(explicitResult.outputs).toEqual(synthesizedResult.outputs);
     expect(explicit.request).toEqual(synthesized.request);
     expect(explicitResult.outputs[0].value).toBe("not_holds");
+  }, 60_000);
+});
+
+describe.skipIf(!hasEngine)("South Carolina benefit-level household size (#39)", () => {
+  const output = "household_size_for_benefit_level_excluding_ssn_or_abawd_ineligible_members";
+  const citizen = { facts: { member_age: 35, member_is_us_citizen: true } };
+  const lookup = async (options: Partial<BuildOptions>) => {
+    const program = getProgram("us-sc-snap")!;
+    const result = await computeProgram({ program, period: "2026-09", outputsOverride: [output], ...options });
+    return result.outputs.find((o) => o.name === output)?.value;
+  };
+
+  it("counts three linked members with no count fact, as an explicit count or synthesized members do", async () => {
+    const members = [citizen, citizen, citizen];
+    expect(await lookup({ members })).toBe(3);
+    expect(await lookup({ members, facts: { household_member_count: 3 } })).toBe(3);
+    expect(await lookup({ facts: { household_size: 3, member_age: 35, member_is_us_citizen: true } })).toBe(3);
+  }, 60_000);
+
+  it("still excludes SSN- or ABAWD-ineligible members from the linked count", async () => {
+    const facts = {
+      household_contains_member_ineligible_for_ssn_refusal_or_abawd_time_limit: true,
+      members_ineligible_for_ssn_refusal_or_abawd_time_limit_count: 1,
+    };
+    expect(await lookup({ members: [citizen, citizen, citizen], facts })).toBe(2);
   }, 60_000);
 });

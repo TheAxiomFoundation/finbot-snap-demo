@@ -250,12 +250,45 @@ async function evaluate(c: EvalCase): Promise<{ pass: boolean; notes: string[] }
   }
   // Every case: the reply may not present results as certified, verified,
   // validated, guaranteed, or official (the system prompt forbids it; see
-  // prompts.ts). A match only passes when a negation sits right before it
-  // ("not an official determination" or "no guaranteed amount"); an unrelated
-  // "no" elsewhere in the reply cannot excuse a claim.
-  for (const m of turn.text.matchAll(/\b(certified|verified|validated|guaranteed|official (?:determination|decision|answer|amount|figure|result|estimate))\b/gi)) {
-    const before = turn.text.slice(Math.max(0, m.index! - 24), m.index);
-    if (!/(\bnot|n['’]t|\bnever)\b[^.!?]*$/i.test(before) && !/\bno\s+$/i.test(before)) {
+  // prompts.ts). "official" may take up to three words, or a comma, before
+  // its noun ("official California SNAP benefit amount", "official, final
+  // determination"); "certifies" and "officially determined" claim the same.
+  // A match passes only when a negation modifies the claim directly:
+  //   - right after the negation, articles, possessives, auxiliaries and
+  //     adverbs ("not an official determination", "cannot be guaranteed",
+  //     "not legally verified");
+  //   - then a coordinated list of claim words and adverbs ("not certified,
+  //     verified, or guaranteed"), however long. After a joiner only claim
+  //     words and adverbs continue the list: an article or possessive starts
+  //     a new noun phrase ("not certified, and the official amount is $773"
+  //     is a claim), and so does any other word, punctuation or line break.
+  // A negation of anything else in the reply ("Do not worry; this is
+  // guaranteed.") cannot excuse a claim.
+  const claims = /\b(certif(?:ied|ies|y)|verified|validated|guaranteed|officially\s+(?:determined|decided|approved|confirmed)|official(?:,?\s+[a-z-]+){0,3}?,?\s+(?:determination|decision|answer|amount|figure|result|estimate)s?)\b/gi;
+  const adverb = "(?:officially|legally|formally|independently)";
+  // Allowed only right after the negation.
+  const lead = `(?:a|an|the|any|your|be|been|being|yet|${adverb})`;
+  // Claim words and adverbs: what a list carries past a joiner.
+  const listItem = `(?:certified|verified|validated|guaranteed|${adverb})`;
+  // Within a list, items are separated by spaces or tabs, never a newline.
+  const gap = "[^\\S\\n]+";
+  const joiner = `,?${gap}(?:(?:or|nor|and)${gap})?`;
+  const listTail = `(?:${listItem}${joiner})*`;
+  const negatedClaim = new RegExp(`(?:\\b(?:not|cannot|never|no|nor)|n['’]t)\\s+(?:${lead}\\s+)*${listTail}$`, "i");
+  // A later item in an excused list: only a joiner and list items separate
+  // it from the previous excused claim. Chaining claim to claim carries the
+  // negation across a list of any length, with no look-back window to
+  // outrun.
+  const listContinues = new RegExp(`^${joiner}${listTail}$`, "i");
+  let excusedEnd = -1;
+  for (const m of turn.text.matchAll(claims)) {
+    const negated =
+      negatedClaim.test(turn.text.slice(Math.max(0, m.index! - 80), m.index)) ||
+      (excusedEnd >= 0 && listContinues.test(turn.text.slice(excusedEnd, m.index)));
+    if (negated) {
+      excusedEnd = m.index! + m[0].length;
+    } else {
+      excusedEnd = -1;
       pass = false;
       notes.push(`reply overclaims: "${m[0]}"`);
     }

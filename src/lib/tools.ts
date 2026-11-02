@@ -15,6 +15,7 @@ import { getCatalog, getProgram, searchOutputs, type CatalogProgram } from "./ca
 import { citationUrl, fetchCitation } from "./citations";
 import { programDisclosures } from "./catalog-overlay";
 import { describeProgramPayload } from "./describe";
+import { EngineError } from "./engine";
 import {
   UnknownInputError,
   UnknownOutputError,
@@ -61,7 +62,7 @@ const PeriodSchema = z
   .regex(/^\d{4}(-\d{2})?$/)
   .optional()
   .describe(
-    "Evaluation period, YYYY-MM or YYYY, subject to encoded formula and parameter coverage. Defaults to the current month (current year for annual programs) — only pass this when the user asks about a different time. A missing formula version returns a rule-coverage limitation instead of an amount or eligibility verdict."
+    "Evaluation period, YYYY-MM or YYYY, subject to encoded formula and parameter coverage. Defaults to the current month (current year for annual programs) — only pass this when the user asks about a different time. A missing formula version or parameter value returns a coverage limitation instead of an amount or eligibility verdict."
   );
 
 function programOr404(slug: string): CatalogProgram | { error: string; known_slugs: string[] } {
@@ -79,26 +80,6 @@ function isErr(x: unknown): x is { error: string } {
 
 /** Convert builder errors into data the model can act on. */
 function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: string) {
-  // Both local and hosted adapters preserve this engine diagnostic. Keep the
-  // missing rule visible as an encoding limitation, without shaping any value.
-  const gap = err instanceof Error
-    ? /derived `([^`]+)` has no formula version at (\d{4}-\d{2}-\d{2})/.exec(err.message)
-    : null;
-  if (gap) {
-    const [, output, atDate] = gap;
-    const period = requestedPeriod ?? defaultPeriodFor(program);
-    const disclosure = `Axiom has no rule in force for ${period} for ${output}.`;
-    return {
-      error: disclosure,
-      kind: "no_formula_version",
-      program: program.slug,
-      period,
-      output,
-      at_date: atDate,
-      applied: { disclosures: [...programDisclosures(program), disclosure] },
-      hint: "Disclose this rule-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",
-    };
-  }
   if (err instanceof NotSettableInputError) {
     return {
       error: err.message,
@@ -162,6 +143,55 @@ function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: st
       error: err.message,
       suggestions: err.suggestions,
       hint: "Use exact output names from describe_program or list_programs search.",
+    };
+  }
+  // Typed builder refusals are handled above, so a malformed input or output
+  // name, which those errors quote, never reads as an engine diagnostic.
+  // Only a failure the engine itself reported (EngineError, from either
+  // transport) can disclose a missing rule. Keep the missing rule visible as
+  // an encoding limitation, without shaping any value.
+  const gap = err instanceof EngineError
+    ? /derived `([^`]+)` has no formula version at (\d{4}-\d{2}-\d{2})/.exec(err.message)
+    : null;
+  if (gap) {
+    const [, output, atDate] = gap;
+    const period = requestedPeriod ?? defaultPeriodFor(program);
+    const disclosure = `Axiom has no rule in force for ${period} for ${output}.`;
+    return {
+      error: disclosure,
+      kind: "no_formula_version",
+      program: program.slug,
+      period,
+      output,
+      at_date: atDate,
+      applied: { disclosures: [...programDisclosures(program), disclosure] },
+      hint: "Disclose this rule-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",
+    };
+  }
+  // The same for a parameter table with no value for the requested key at
+  // the period's start (a historical income-limit table not yet encoded).
+  // The rule exists but cannot be evaluated, so this too is a coverage
+  // limitation, never a figure. The disclosure names the missing key (for an
+  // income-limit table, the household size) when the diagnostic gives one:
+  // the table may hold values for other keys.
+  const missingValue = err instanceof EngineError
+    ? /parameter `([^`]+)` has no value(?: for key `([^`]+)`)? at (\d{4}-\d{2}-\d{2})/.exec(err.message)
+    : null;
+  if (missingValue) {
+    const [, parameter, rawKey, atDate] = missingValue;
+    const key = rawKey === undefined ? undefined : /^-?\d+$/.test(rawKey) ? Number(rawKey) : rawKey;
+    const period = requestedPeriod ?? defaultPeriodFor(program);
+    const disclosure = `Axiom has no value in force for ${period} for ${key === undefined ? "" : `key ${key} of `}the parameter ${parameter}.`;
+    return {
+      error: disclosure,
+      kind: "no_parameter_value",
+      program: program.slug,
+      period,
+      parameter,
+      ...(key !== undefined && { key }),
+      at_date: atDate,
+      applied: { disclosures: [...programDisclosures(program), disclosure] },
+      hint: "Disclose this parameter-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",
     };
   }
   throw err;

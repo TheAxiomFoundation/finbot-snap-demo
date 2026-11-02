@@ -56,6 +56,27 @@ describe("LLM eval overclaim negation", () => {
     "This isn’t guaranteed.",
     "This is never guaranteed.",
     "This is not an official determination.",
+    "This is not an official eligibility determination.",
+    "This isn't an official SNAP benefit amount.",
+    "The amount cannot be guaranteed.",
+    "These figures have not been verified.",
+    "It is not yet certified.",
+    // Review of #75: a negation carries across a coordinated list of claim
+    // words and adverbs.
+    "These results are not certified or guaranteed.",
+    "These figures have not been verified or certified.",
+    "It is not officially certified.",
+    "These are not legally verified figures.",
+    "This estimate is not certified, verified, or guaranteed.",
+    "Estimates, not official determinations.",
+    "This is not your official California SNAP benefit amount.",
+    "This is not the official, final determination.",
+    "Axiom does not certify this amount.",
+    "The amount is not officially determined.",
+    // Articles may follow the negation itself, and "and" may close a list
+    // without a comma.
+    "This is not a guaranteed or official amount.",
+    "It isn't certified, verified and guaranteed.",
   ])("preserves the existing disclaimer: %s", async (reply) => {
     expect(await evaluateReply(reply)).toEqual({ exitCode: 0, overclaims: [] });
   });
@@ -76,6 +97,105 @@ describe("LLM eval overclaim negation", () => {
       claim, fc.constantFrom(" problem, this is ", " worries; this is ", " delay: this is ", " problem. This is "),
       async (word, between) => {
         const result = await evaluateReply(`No${between}${word}.`);
+        expect(result.exitCode).toBe(1);
+        expect(result.overclaims).toHaveLength(6);
+      }
+    ));
+  });
+
+  // #35: a negation must modify the claim itself, and "official" with words
+  // between it and its noun is still a claim.
+  it.each([
+    ["Do not worry; this is guaranteed.", "guaranteed"],
+    ["Don't worry, this is guaranteed.", "guaranteed"],
+    ["Never mind the details: it is verified.", "verified"],
+    ["It's not complicated, and the result is certified.", "certified"],
+    ["This is the official eligibility determination.", "official eligibility determination"],
+    ["Not to worry, this is an official SNAP benefit amount.", "official SNAP benefit amount"],
+    ["No problem: here is your official eligibility decision.", "official eligibility decision"],
+    // Review of #75: overclaims that passed at 9f7da6e.
+    ["This is your official California SNAP benefit amount.", "official California SNAP benefit amount"],
+    ["This is the official, final determination.", "official, final determination"],
+    ["Axiom certifies this amount.", "certifies"],
+    ["Your amount is officially determined.", "officially determined"],
+    // A list after a negation of something else is still a claim.
+    ["Do not worry: it is certified, verified, and guaranteed.", "certified"],
+    // Delta review of #75: an affirmative claim after a negated list. Only a
+    // joiner and claim words or adverbs continue the list.
+    ["These figures are not certified or guaranteed, and are verified.", "verified"],
+    ["These figures are not certified or guaranteed, and is verified.", "verified"],
+    ["It is not certified or guaranteed, but it is verified.", "verified"],
+    ["It is not certified or guaranteed; verified.", "verified"],
+    ["It is not certified or guaranteed. Verified.", "Verified"],
+    ["This is not certified — verified.", "verified"],
+    // An article or possessive after a joiner starts a new noun phrase. The
+    // first two passed at a68e9b5 and 30d46ee but failed on main; main missed
+    // the last two as well.
+    ["It is not certified or guaranteed, and the official determination is $773.", "official determination"],
+    ["Not certified, and the final official amount is $773.", "official amount"],
+    ["It is not certified, and the official amount is $773.", "official amount"],
+    ["It is not verified, and your official determination is attached.", "official determination"],
+    // A line break ends a list.
+    ["This is not certified\nand verified.", "verified"],
+  ])("rejects an overclaim the negation does not modify: %s", async (reply, claimed) => {
+    const result = await evaluateReply(reply);
+    expect(result.exitCode).toBe(1);
+    expect(result.overclaims.filter((line) => line.includes(`"${claimed}"`))).toHaveLength(6);
+  });
+
+  const listItem = fc.constantFrom("certified", "verified", "validated", "guaranteed", "officially certified", "legally verified");
+  const listJoiner = fc.constantFrom(" or ", ", or ", " nor ", ", ", " and ");
+  const negatedList = fc.tuple(
+    fc.constantFrom("not", "never", "cannot be", "isn't", "have not been"),
+    fc.array(fc.tuple(listJoiner, listItem), { minLength: 1, maxLength: 6 }),
+    listItem
+  );
+  const listReply = ([negation, rest, first]: [string, Array<[string, string]>, string]) =>
+    `These figures are ${negation} ${first}${rest.map(([j, w]) => j + w).join("")}.`;
+  // EVAL_LIST_RUNS / EVAL_LIST_SEED widen the property for a local soak run.
+  const listRuns = Number(process.env.EVAL_LIST_RUNS ?? 100);
+  const listSeed = process.env.EVAL_LIST_SEED === undefined ? undefined : Number(process.env.EVAL_LIST_SEED);
+
+  it("carries a negation across any coordinated list of claim words and adverbs", async () => {
+    await fc.assert(fc.asyncProperty(negatedList, async (parts) => {
+      expect(await evaluateReply(listReply(parts))).toEqual({ exitCode: 0, overclaims: [] });
+    }), { numRuns: listRuns, ...(listSeed !== undefined && { seed: listSeed }) });
+  }, Math.max(5_000, listRuns * 20));
+
+  // CI counterexample at a68e9b5 (seed 1973988329, path "93:3"): the last
+  // claim sat more than 80 characters after the negation, outside the window
+  // the check looked back over, so "verified" was reported.
+  it("carries a negation across a list longer than the look-back window", async () => {
+    const parts: [string, Array<[string, string]>, string] = [
+      "cannot be",
+      [[" or ", "officially certified"], [" or ", "guaranteed"], [" and ", "legally verified"]],
+      "officially certified",
+    ];
+    expect(await evaluateReply(listReply(parts))).toEqual({ exitCode: 0, overclaims: [] });
+  });
+
+  // Delta review of #75 (mutation L2): text that is not a joiner plus claim
+  // words or adverbs ends the list, so a claim after it is not excused.
+  it("rejects a claim after a negated list once a non-list word breaks it", async () => {
+    await fc.assert(fc.asyncProperty(
+      negatedList,
+      fc.constantFrom(" is", ", but", ", and it is", ";", ". It is", " —", ", and the", ", and your", "\nand"),
+      claim,
+      async (parts, breaker, word) => {
+        const reply = listReply(parts).replace(/\.$/, `${breaker} ${word}.`);
+        const result = await evaluateReply(reply);
+        expect(result.exitCode, reply).toBe(1);
+        expect(result.overclaims, reply).toHaveLength(6);
+        expect(result.overclaims.every((line) => line.includes(`"${word}"`)), reply).toBe(true);
+      }
+    ), { numRuns: listRuns, ...(listSeed !== undefined && { seed: listSeed }) });
+  }, Math.max(5_000, listRuns * 20));
+
+  it("rejects any forbidden claim after a negation of something else", async () => {
+    await fc.assert(fc.asyncProperty(
+      claim, fc.constantFrom("Do not worry; this is ", "Don't panic, it is ", "Never fear: this is ", "It is not hard, and this is "),
+      async (word, lead) => {
+        const result = await evaluateReply(`${lead}${word}.`);
         expect(result.exitCode).toBe(1);
         expect(result.overclaims).toHaveLength(6);
       }

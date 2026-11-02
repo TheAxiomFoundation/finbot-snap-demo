@@ -8,7 +8,7 @@ import { allowanceDescribeNote, allowanceSlots } from "./added-allowances";
 import { annualUpdateNoticesAt, periodStartDate } from "./annual-updates";
 import { slotDefaultAt, type CatalogProgram } from "./catalog";
 import { programDisclosures } from "./catalog-overlay";
-import { defaultPeriodFor, isMemberCountSlot, memberCountSlotNames } from "./request-builder";
+import { defaultPeriodFor, memberCountSlotNames, synthesizesMembers } from "./request-builder";
 
 /** Compact one-token slot description:
  *  `name:dtype`, `=default` when non-zero/false, `{1=joint,2=separate}` for
@@ -66,7 +66,7 @@ export function describeProgramPayload(program: CatalogProgram, inputsSearch?: s
     }
   }
   const shortName = (name: string) => name.split("#").pop()!.replace(/^relation\./, "");
-  const memberCountSlots = (program.inputs[program.primary_entity] ?? []).filter(isMemberCountSlot).map((slot) => slot.name);
+  const memberCountSlots = (program.inputs[program.primary_entity] ?? []).filter(synthesizesMembers).map((slot) => slot.name);
   // With no member entity, members[] sets the count inputs on any entity.
   const noMemberCountSlots = program.member_entity ? [] : memberCountSlotNames(program);
   return {
