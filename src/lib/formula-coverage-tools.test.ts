@@ -40,21 +40,33 @@ describe("formula coverage at the tool boundary", () => {
     ), { numRuns: 24, seed: 1612 });
   });
 
-  it("returns a parameter-coverage limitation, never a figure, for a missing parameter value", async () => {
+  it("returns a parameter-coverage limitation naming the missing key, never a figure", async () => {
     const parameter = "snap_net_income_limit_100_percent_fpl_48_states_dc_table";
+    // [key as the engine names it, key in the result, words in the disclosure]
+    const keys: Array<[string | null, number | string | undefined, string]> = [
+      ["1", 1, `key 1 of the parameter ${parameter}`],
+      ["-2", -2, `key -2 of the parameter ${parameter}`],
+      ["SC", "SC", `key SC of the parameter ${parameter}`],
+      [null, undefined, `the parameter ${parameter}`],
+    ];
     for (const prefix of ["axiom-rules-engine exited 1: ", 'axiom-engine 500: {"detail":"axiom-rules-engine exited 1: ']) {
-      vi.mocked(runCompiled).mockRejectedValue(new EngineError(`${prefix}parameter \`${parameter}\` has no value for key \`1\` at 2025-07-01`));
-      for (const result of [
-        await tools.compute.execute!({ program, period: "2025-07" }, context),
-        await tools.lookup_value.execute!({ program, period: "2025-07", output }, context),
-      ]) {
-        const disclosure = `Axiom has no value in force for 2025-07 for the parameter ${parameter}.`;
-        expect(result).toMatchObject({ kind: "no_parameter_value", program, period: "2025-07", parameter, key: 1, at_date: "2025-07-01", error: disclosure });
-        expect(result).toHaveProperty("applied.disclosures", expect.arrayContaining([disclosure]));
-        expect(JSON.stringify(result)).not.toContain("calculation failed");
-        expect(result).not.toHaveProperty("outputs");
-        expect(result).not.toHaveProperty("value");
-        expect(result).not.toHaveProperty("primary_output");
+      for (const [engineKey, key, named] of keys) {
+        const forKey = engineKey === null ? "" : ` for key \`${engineKey}\``;
+        vi.mocked(runCompiled).mockRejectedValue(new EngineError(`${prefix}parameter \`${parameter}\` has no value${forKey} at 2025-07-01`));
+        for (const result of [
+          await tools.compute.execute!({ program, period: "2025-07" }, context),
+          await tools.lookup_value.execute!({ program, period: "2025-07", output }, context),
+        ]) {
+          const disclosure = `Axiom has no value in force for 2025-07 for ${named}.`;
+          expect(result).toMatchObject({ kind: "no_parameter_value", program, period: "2025-07", parameter, at_date: "2025-07-01", error: disclosure });
+          if (key === undefined) expect(result).not.toHaveProperty("key");
+          else expect(result).toHaveProperty("key", key);
+          expect(result).toHaveProperty("applied.disclosures", expect.arrayContaining([disclosure]));
+          expect(JSON.stringify(result)).not.toContain("calculation failed");
+          expect(result).not.toHaveProperty("outputs");
+          expect(result).not.toHaveProperty("value");
+          expect(result).not.toHaveProperty("primary_output");
+        }
       }
     }
   });

@@ -171,21 +171,24 @@ function asToolError(err: unknown, program: CatalogProgram, requestedPeriod?: st
   // The same for a parameter table with no value for the requested key at
   // the period's start (a historical income-limit table not yet encoded).
   // The rule exists but cannot be evaluated, so this too is a coverage
-  // limitation, never a figure.
+  // limitation, never a figure. The disclosure names the missing key (for an
+  // income-limit table, the household size) when the diagnostic gives one:
+  // the table may hold values for other keys.
   const missingValue = err instanceof EngineError
-    ? /parameter `([^`]+)` has no value for key `(-?\d+)` at (\d{4}-\d{2}-\d{2})/.exec(err.message)
+    ? /parameter `([^`]+)` has no value(?: for key `([^`]+)`)? at (\d{4}-\d{2}-\d{2})/.exec(err.message)
     : null;
   if (missingValue) {
-    const [, parameter, key, atDate] = missingValue;
+    const [, parameter, rawKey, atDate] = missingValue;
+    const key = rawKey === undefined ? undefined : /^-?\d+$/.test(rawKey) ? Number(rawKey) : rawKey;
     const period = requestedPeriod ?? defaultPeriodFor(program);
-    const disclosure = `Axiom has no value in force for ${period} for the parameter ${parameter}.`;
+    const disclosure = `Axiom has no value in force for ${period} for ${key === undefined ? "" : `key ${key} of `}the parameter ${parameter}.`;
     return {
       error: disclosure,
       kind: "no_parameter_value",
       program: program.slug,
       period,
       parameter,
-      key: Number(key),
+      ...(key !== undefined && { key }),
       at_date: atDate,
       applied: { disclosures: [...programDisclosures(program), disclosure] },
       hint: "Disclose this parameter-coverage limitation. Do not present a dollar amount or eligibility verdict, change the requested period, or retry with different eligibility facts.",

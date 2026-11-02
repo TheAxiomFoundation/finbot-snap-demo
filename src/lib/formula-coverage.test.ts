@@ -30,7 +30,7 @@ describe.skipIf(!hasEngine)("missing historical formula coverage", () => {
   // household (#40): a full compute discloses that, never a raw engine error.
   it("discloses a missing historical parameter value on a full July compute", async () => {
     const parameter = "snap_net_income_limit_100_percent_fpl_48_states_dc_table";
-    const disclosure = `Axiom has no value in force for ${period} for the parameter ${parameter}.`;
+    const disclosure = `Axiom has no value in force for ${period} for key 1 of the parameter ${parameter}.`;
     const result = await tools.compute.execute!({ program, period, members }, context);
     expect(result).toMatchObject({
       kind: "no_parameter_value",
