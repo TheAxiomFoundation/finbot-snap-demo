@@ -122,16 +122,35 @@ describe("LLM eval overclaim negation", () => {
     expect(result.overclaims.filter((line) => line.includes(`"${claimed}"`))).toHaveLength(6);
   });
 
+  const listItem = fc.constantFrom("certified", "verified", "validated", "guaranteed", "officially certified", "legally verified");
+  const listJoiner = fc.constantFrom(" or ", ", or ", " nor ", ", ", " and ");
+  const negatedList = fc.tuple(
+    fc.constantFrom("not", "never", "cannot be", "isn't", "have not been"),
+    fc.array(fc.tuple(listJoiner, listItem), { minLength: 1, maxLength: 6 }),
+    listItem
+  );
+  const listReply = ([negation, rest, first]: [string, Array<[string, string]>, string]) =>
+    `These figures are ${negation} ${first}${rest.map(([j, w]) => j + w).join("")}.`;
+  // EVAL_LIST_RUNS / EVAL_LIST_SEED widen the property for a local soak run.
+  const listRuns = Number(process.env.EVAL_LIST_RUNS ?? 100);
+  const listSeed = process.env.EVAL_LIST_SEED === undefined ? undefined : Number(process.env.EVAL_LIST_SEED);
+
   it("carries a negation across any coordinated list of claim words and adverbs", async () => {
-    const item = fc.constantFrom("certified", "verified", "validated", "guaranteed", "officially certified", "legally verified");
-    const joiner = fc.constantFrom(" or ", ", or ", " nor ", ", ", " and ");
-    await fc.assert(fc.asyncProperty(
-      fc.constantFrom("not", "never", "cannot be", "isn't", "have not been"), fc.array(fc.tuple(joiner, item), { minLength: 1, maxLength: 3 }), item,
-      async (negation, rest, first) => {
-        const list = first + rest.map(([j, w]) => j + w).join("");
-        expect(await evaluateReply(`These figures are ${negation} ${list}.`)).toEqual({ exitCode: 0, overclaims: [] });
-      }
-    ));
+    await fc.assert(fc.asyncProperty(negatedList, async (parts) => {
+      expect(await evaluateReply(listReply(parts))).toEqual({ exitCode: 0, overclaims: [] });
+    }), { numRuns: listRuns, ...(listSeed !== undefined && { seed: listSeed }) });
+  }, Math.max(5_000, listRuns * 20));
+
+  // CI counterexample at a68e9b5 (seed 1973988329, path "93:3"): the last
+  // claim sat more than 80 characters after the negation, outside the window
+  // the check looked back over, so "verified" was reported.
+  it("carries a negation across a list longer than the look-back window", async () => {
+    const parts: [string, Array<[string, string]>, string] = [
+      "cannot be",
+      [[" or ", "officially certified"], [" or ", "guaranteed"], [" and ", "legally verified"]],
+      "officially certified",
+    ];
+    expect(await evaluateReply(listReply(parts))).toEqual({ exitCode: 0, overclaims: [] });
   });
 
   it("rejects any forbidden claim after a negation of something else", async () => {

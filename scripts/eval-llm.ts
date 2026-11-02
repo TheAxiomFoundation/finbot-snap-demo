@@ -256,13 +256,27 @@ async function evaluate(c: EvalCase): Promise<{ pass: boolean; notes: string[] }
   // A match passes only when a negation modifies the claim directly: the
   // negation, then only articles, auxiliaries, adverbs ("officially",
   // "legally") or a coordinated list of other claim words ("not certified,
-  // verified, or guaranteed"). A negation of anything else in the reply
-  // ("Do not worry; this is guaranteed.") cannot excuse a claim.
+  // verified, or guaranteed"), however long the list. A negation of
+  // anything else in the reply ("Do not worry; this is guaranteed.") cannot
+  // excuse a claim.
   const claims = /\b(certif(?:ied|ies|y)|verified|validated|guaranteed|officially\s+(?:determined|decided|approved|confirmed)|official(?:,?\s+[a-z-]+){0,3}?,?\s+(?:determination|decision|answer|amount|figure|result|estimate)s?)\b/gi;
   const listWord = "(?:a|an|the|any|your|be|been|being|yet|officially|legally|formally|independently|certified|verified|validated|guaranteed|official|final)";
-  const negatedClaim = new RegExp(`(?:\\b(?:not|cannot|never|no|nor)|n['’]t)\\s+(?:${listWord},?\\s+(?:(?:or|nor|and)\\s+)?)*$`, "i");
+  const listTail = `(?:${listWord},?\\s+(?:(?:or|nor|and)\\s+)?)*`;
+  const negatedClaim = new RegExp(`(?:\\b(?:not|cannot|never|no|nor)|n['’]t)\\s+${listTail}$`, "i");
+  // A later item in an excused list: only a joiner and list words separate
+  // it from the previous excused claim. Chaining claim to claim carries the
+  // negation across a list of any length, with no look-back window to
+  // outrun.
+  const listContinues = new RegExp(`^,?\\s+(?:(?:or|nor|and)\\s+)?${listTail}$`, "i");
+  let excusedEnd = -1;
   for (const m of turn.text.matchAll(claims)) {
-    if (!negatedClaim.test(turn.text.slice(Math.max(0, m.index! - 80), m.index))) {
+    const negated =
+      negatedClaim.test(turn.text.slice(Math.max(0, m.index! - 80), m.index)) ||
+      (excusedEnd >= 0 && listContinues.test(turn.text.slice(excusedEnd, m.index)));
+    if (negated) {
+      excusedEnd = m.index! + m[0].length;
+    } else {
+      excusedEnd = -1;
       pass = false;
       notes.push(`reply overclaims: "${m[0]}"`);
     }
