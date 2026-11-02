@@ -13,6 +13,7 @@ import {
   type BuildOptions,
   type Facts,
 } from "./request-builder";
+import { describeProgramPayload } from "./describe";
 import { engineAvailable } from "../../scripts/snap-scenarios";
 
 const POVERTY_SLOT = "poverty_income_guideline_for_household_size";
@@ -184,6 +185,17 @@ describe("members[] on programs with no member entity", () => {
       expect(built.applied.facts_applied).toMatchObject({ household_size: 3, fns_unit_size: 4, household_member_count: 3 });
     }
     expect(ncBuilds[0].request).toEqual(ncBuilds[1].request);
+  });
+
+  it("offers only household_size as the count fact that synthesizes members", () => {
+    // describe_program's Members sentence must not offer an auxiliary count:
+    // stating one alone adds no members (see the lone-count test above).
+    for (const slug of ["us-sc-snap", "us-nc-snap", "us-ca-snap"]) {
+      const notes = (describeProgramPayload(getProgram(slug)!) as { notes: string[] }).notes;
+      expect(notes.filter((note) => note.startsWith("Members:")), slug).toEqual([
+        "Members: pass members[] (facts use Person-scope slots), or a count fact (household_size) to synthesize identical members.",
+      ]);
+    }
   });
 
   it("fills the auxiliary counts with the synthesized headcount: an integer, floored and capped at 20", () => {
