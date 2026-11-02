@@ -250,12 +250,16 @@ async function evaluate(c: EvalCase): Promise<{ pass: boolean; notes: string[] }
   }
   // Every case: the reply may not present results as certified, verified,
   // validated, guaranteed, or official (the system prompt forbids it; see
-  // prompts.ts). A match only passes when a negation sits right before it
-  // ("not an official determination" or "no guaranteed amount"); an unrelated
-  // "no" elsewhere in the reply cannot excuse a claim.
-  for (const m of turn.text.matchAll(/\b(certified|verified|validated|guaranteed|official (?:determination|decision|answer|amount|figure|result|estimate))\b/gi)) {
-    const before = turn.text.slice(Math.max(0, m.index! - 24), m.index);
-    if (!/(\bnot|n['’]t|\bnever)\b[^.!?]*$/i.test(before) && !/\bno\s+$/i.test(before)) {
+  // prompts.ts). "official" may take up to two words before its noun
+  // ("official eligibility determination"). A match passes only when a
+  // negation modifies the claim directly: the negation, then at most a few
+  // articles or auxiliaries ("not an official determination", "cannot be
+  // guaranteed", "no guaranteed amount"). A negation of anything else in the
+  // reply ("Do not worry; this is guaranteed.") cannot excuse a claim.
+  const claims = /\b(certified|verified|validated|guaranteed|official(?:\s+[a-z-]+){0,2}?\s+(?:determination|decision|answer|amount|figure|result|estimate)s?)\b/gi;
+  const negatedClaim = /(?:\b(?:not|cannot|never|no)|n['’]t)\s+(?:(?:a|an|the|any|be|been|being|yet)\s+)*$/i;
+  for (const m of turn.text.matchAll(claims)) {
+    if (!negatedClaim.test(turn.text.slice(Math.max(0, m.index! - 80), m.index))) {
       pass = false;
       notes.push(`reply overclaims: "${m[0]}"`);
     }
